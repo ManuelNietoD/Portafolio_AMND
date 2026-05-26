@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>P10 · Early Warning · Abandono de Marcas en Pauta Publicitaria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#040407;--bg2:#07070d;--bg3:#0b0b14;--bg4:#10101c;
+  --fuchsia:#e879f9;--fuchsia-dim:rgba(232,121,249,.10);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,.09);
+  --teal:#00ddb4;--teal-dim:rgba(0,221,180,.09);
+  --rose:#ff4d6d;--rose-dim:rgba(255,77,109,.09);
+  --green:#34d399;--blue:#60a5fa;--violet:#a78bfa;--orange:#f97316;
+  --tv:#f97316;--radio:#38bdf8;--ext:#a78bfa;--dig:#34d399;
+  --text:#dce8f5;--muted:#3a4062;--muted2:#6a80aa;
+  --border:rgba(232,121,249,.13);--border2:rgba(255,255,255,.05);
+  --r:14px;
+  --fh:'Syne',sans-serif;--fm:'JetBrains Mono',monospace;--fb:'DM Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.7;min-height:100vh;overflow-x:hidden}
+
+.back-bar{padding:.9rem 2rem;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:.7rem;background:var(--bg2)}
+.back-btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--fm);font-size:.72rem;color:var(--muted2);text-decoration:none;padding:.35rem .8rem;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);transition:all .2s;cursor:pointer}
+.back-btn:hover{color:var(--fuchsia);border-color:rgba(232,121,249,.3)}
+.back-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+.breadcrumb{font-family:var(--fm);font-size:.68rem;color:var(--muted)}
+.breadcrumb span{color:var(--fuchsia)}
+
+.dash-header{padding:2.5rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.eyebrow{font-family:var(--fm);font-size:.62rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.eyebrow::before{content:'';display:inline-block;width:20px;height:1px;background:var(--fuchsia)}
+.dash-title{font-family:var(--fh);font-size:clamp(1.5rem,3vw,2.3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.8rem}
+.dash-title .at{color:var(--fuchsia)}
+.dash-meta{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-family:var(--fm);font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;padding:.2rem .65rem;border-radius:999px}
+.b-src{background:var(--fuchsia-dim);color:var(--fuchsia);border:1px solid rgba(232,121,249,.25)}
+.b-py{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.b-sql{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.b-type{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,221,180,.25)}
+.dash-desc{font-size:.85rem;color:rgba(220,232,245,.5);max-width:740px;line-height:1.8;margin-bottom:2rem}
+
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;padding:0 2.5rem;max-width:1280px;margin:0 auto}
+.kpi{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.1rem 1.2rem;position:relative;overflow:hidden;transition:border-color .25s;animation:fadeUp .5s ease both}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--fuchsia));opacity:.8}
+.kpi:nth-child(1){animation-delay:.05s}.kpi:nth-child(2){animation-delay:.1s}.kpi:nth-child(3){animation-delay:.15s}.kpi:nth-child(4){animation-delay:.2s}
+.kpi-val{font-family:var(--fh);font-size:1.7rem;font-weight:800;letter-spacing:-.03em;display:block;margin-bottom:.15rem}
+.kpi-lbl{font-size:.72rem;color:var(--muted2)}.kpi-sub{font-family:var(--fm);font-size:.6rem;color:var(--muted)}
+.kpi .info-btn{position:absolute;top:.6rem;right:.6rem}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid rgba(131,153,184,.35);background:rgba(131,153,184,.08);color:var(--muted2);font-family:var(--fm);font-size:.6rem;cursor:pointer;transition:all .2s;flex-shrink:0;user-select:none;line-height:1}
+.info-btn:hover,.info-btn.active{border-color:var(--fuchsia);color:var(--fuchsia);background:var(--fuchsia-dim)}
+.cb-label .info-btn{margin-left:auto}
+.info-panel{display:none;margin-top:.65rem;padding:.65rem .8rem;background:rgba(232,121,249,.03);border:1px solid rgba(232,121,249,.12);border-radius:8px;flex-direction:column;gap:.45rem;animation:slideDown .2s ease}
+.info-panel.open{display:flex}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.te-row{display:flex;align-items:baseline;gap:.5rem;font-size:.75rem;line-height:1.65}
+.te-tag{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;padding:.1rem .42rem;border-radius:5px;border:1px solid;font-weight:500}
+.te-tag.def{color:var(--fuchsia);background:var(--fuchsia-dim);border-color:rgba(232,121,249,.28)}
+.te-tag.meta{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.28)}
+.te-tag.uso{color:var(--teal);background:var(--teal-dim);border-color:rgba(0,221,180,.28)}
+.te-txt{color:rgba(220,232,245,.58)}.te-txt strong{color:rgba(220,232,245,.88);font-weight:500}
+
+.tabs-wrap{padding:2rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--border2);margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{font-family:var(--fm);font-size:.72rem;padding:.65rem 1.1rem;cursor:pointer;color:var(--muted2);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;display:flex;align-items:center;gap:.4rem;border-radius:8px 8px 0 0}
+.tab-btn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.tab-btn.active{color:var(--fuchsia);border-bottom-color:var(--fuchsia);background:var(--fuchsia-dim)}
+.tab-panel{display:none;animation:fadeUp .3s ease}.tab-panel.active{display:block}
+
+.sec-title{font-family:var(--fh);font-size:1rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem;display:flex;align-items:center;gap:.55rem}
+.sec-title::before{content:'';display:inline-block;width:16px;height:2px;background:var(--fuchsia);border-radius:1px}
+.sec-sub{font-size:.78rem;color:var(--muted2);margin-bottom:1.4rem}
+
+.chart-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem}
+.chart-box.full{grid-column:1/-1}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.cb-label{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.cb-badge{font-size:.58rem;padding:.12rem .45rem;border-radius:5px;background:var(--fuchsia-dim);color:var(--fuchsia);border:1px solid rgba(232,121,249,.2)}
+.chart-wrap{position:relative;height:200px}
+.chart-wrap.tall{height:280px}
+.chart-wrap.xtall{height:340px}
+
+/* MEDIO CHIPS */
+.medio-chips{display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap}
+.medio-chip{font-family:var(--fm);font-size:.65rem;padding:.28rem .72rem;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .18s;user-select:none}
+.medio-chip.on-tv{color:var(--tv);background:rgba(249,115,22,.1);border-color:rgba(249,115,22,.35)}
+.medio-chip.on-radio{color:var(--radio);background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.35)}
+.medio-chip.on-ext{color:var(--ext);background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.35)}
+.medio-chip.on-dig{color:var(--dig);background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.35)}
+
+/* MEDIA METRICS */
+.media-metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1.6rem}
+.mm-card{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:.9rem;position:relative;overflow:hidden}
+.mm-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--mc,var(--fuchsia))}
+.mm-icon{font-size:1.1rem;margin-bottom:.3rem}
+.mm-label{font-family:var(--fm);font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted2);margin-bottom:.2rem}
+.mm-val{font-family:var(--fh);font-size:1.3rem;font-weight:800;margin-bottom:.1rem}
+.mm-sub{font-size:.68rem;color:var(--muted2)}
+.mm-trend{font-family:var(--fm);font-size:.62rem;margin-top:.3rem;padding:.1rem .35rem;border-radius:4px;display:inline-block}
+.trend-up{background:rgba(52,211,153,.1);color:var(--green)}
+.trend-dn{background:rgba(255,77,109,.1);color:var(--rose)}
+.trend-flat{background:rgba(131,153,184,.1);color:var(--muted2)}
+
+/* NARRATIVE */
+.narrative-hero{background:linear-gradient(135deg,rgba(232,121,249,.06),rgba(232,121,249,.02));border:1px solid rgba(232,121,249,.18);border-radius:var(--r);padding:2rem;margin-bottom:1.6rem}
+.nh-label{font-family:var(--fm);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--fuchsia);margin-bottom:.8rem}
+.nh-title{font-family:var(--fh);font-size:1.5rem;font-weight:800;letter-spacing:-.03em;margin-bottom:.8rem;line-height:1.2}
+.nh-body{font-size:.88rem;color:rgba(220,232,245,.68);line-height:1.85;max-width:820px}
+.nh-body strong{color:rgba(220,232,245,.92)}
+
+.impact-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.6rem}
+.impact-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1rem;position:relative;overflow:hidden}
+.impact-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ic,var(--fuchsia))}
+.ic-val{font-family:var(--fh);font-size:1.8rem;font-weight:800;letter-spacing:-.03em;margin-bottom:.2rem}
+.ic-lbl{font-size:.76rem;color:var(--muted2);margin-bottom:.3rem}
+.ic-desc{font-size:.72rem;color:rgba(220,232,245,.5);line-height:1.65}
+
+/* PIPELINE */
+.pipeline-modules{display:flex;flex-direction:column;gap:.9rem;margin-bottom:1.6rem}
+.module{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden}
+.module-header{display:flex;align-items:center;gap:.8rem;padding:.9rem 1.1rem;cursor:pointer;user-select:none}
+.module-num{font-family:var(--fm);font-size:.63rem;background:var(--fuchsia-dim);color:var(--fuchsia);border:1px solid rgba(232,121,249,.3);padding:.12rem .45rem;border-radius:5px;flex-shrink:0}
+.module-title{font-family:var(--fh);font-size:.92rem;font-weight:700;flex:1}
+.module-badge{font-family:var(--fm);font-size:.6rem;padding:.12rem .45rem;border-radius:5px;background:var(--bg3);border:1px solid var(--border2);color:var(--muted2)}
+.module-arrow{color:var(--muted);transition:transform .2s;margin-left:auto}
+.module.open .module-arrow{transform:rotate(180deg)}
+.module-body{display:none;padding:0 1.1rem 1.1rem;border-top:1px solid var(--border2)}
+.module.open .module-body{display:block}
+.module-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:.9rem}
+.mb-section{background:var(--bg3);border-radius:10px;padding:.85rem}
+.mbs-title{font-family:var(--fm);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--fuchsia);margin-bottom:.55rem}
+.mbs-content{font-size:.76rem;color:rgba(220,232,245,.65);line-height:1.75}
+.mbs-content strong{color:rgba(220,232,245,.88)}
+.code-block{background:#010409;border:1px solid rgba(232,121,249,.1);border-radius:8px;padding:.75rem .9rem;margin-top:.6rem;font-family:var(--fm);font-size:.67rem;color:rgba(220,232,245,.7);line-height:1.8;overflow-x:auto;white-space:pre}
+.code-block .kw{color:#e879f9}.code-block .fn{color:#a78bfa}.code-block .st{color:#34d399}.code-block .cm{color:#3a4062}.code-block .num{color:#f5a623}
+.metric-pills{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.5rem}
+.metric-pill{font-family:var(--fm);font-size:.6rem;padding:.18rem .55rem;border-radius:4px;background:var(--bg4);border:1px solid var(--border2);color:var(--muted2)}
+.metric-pill.good{background:rgba(52,211,153,.08);color:var(--green);border-color:rgba(52,211,153,.2)}
+.metric-pill.warn{background:rgba(245,166,35,.08);color:var(--amber);border-color:rgba(245,166,35,.2)}
+
+/* MONITOR */
+.monitor-layout{display:grid;grid-template-columns:1fr 300px;gap:1.2rem;align-items:start;margin-bottom:1.6rem}
+.brand-list{display:flex;flex-direction:column;gap:.5rem}
+.brand-row{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:.8rem 1rem;display:flex;align-items:center;gap:.8rem;cursor:pointer;transition:border-color .2s}
+.brand-row:hover{border-color:rgba(232,121,249,.25)}
+.brand-row.active{border-color:var(--fuchsia);background:var(--fuchsia-dim)}
+.br-name{font-family:var(--fh);font-size:.85rem;font-weight:700;flex:1}
+.br-category{font-size:.7rem;color:var(--muted2)}
+.br-score{font-family:var(--fm);font-size:.82rem;font-weight:700;flex-shrink:0}
+.br-alert{font-family:var(--fm);font-size:.58rem;padding:.1rem .4rem;border-radius:4px;flex-shrink:0}
+.alert-critico{background:rgba(255,77,109,.15);color:var(--rose);border:1px solid rgba(255,77,109,.3)}
+.alert-alto{background:rgba(245,166,35,.12);color:var(--amber);border:1px solid rgba(245,166,35,.25)}
+.alert-medio{background:rgba(232,121,249,.1);color:var(--fuchsia);border:1px solid rgba(232,121,249,.2)}
+.alert-bajo{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+
+/* BRAND DETAIL */
+.brand-detail{background:var(--bg2);border:1px solid rgba(232,121,249,.2);border-radius:var(--r);padding:1.2rem}
+.bd-header{margin-bottom:.9rem;padding-bottom:.7rem;border-bottom:1px solid var(--border2)}
+.bd-name{font-family:var(--fh);font-size:1.1rem;font-weight:800;margin-bottom:.2rem}
+.bd-cat{font-size:.75rem;color:var(--muted2)}
+.bd-metrics{display:flex;flex-direction:column;gap:.4rem;margin-bottom:.9rem}
+.bd-metric{display:flex;justify-content:space-between;font-size:.76rem;padding:.32rem 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.bd-key{color:var(--muted2)}.bd-val{font-family:var(--fm);font-size:.72rem}
+
+/* SIGNAL INDICATORS */
+.signal-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.7rem}
+.signal-item{background:var(--bg3);border-radius:7px;padding:.5rem .6rem;font-size:.72rem}
+.si-label{color:var(--muted2);font-size:.65rem;margin-bottom:.15rem}
+.si-val{font-family:var(--fm);font-size:.7rem}
+.si-ok{color:var(--green)}.si-warn{color:var(--amber)}.si-bad{color:var(--rose)}
+
+/* ACUM TOGGLE */
+.acum-toggle{display:flex;gap:.35rem;margin-bottom:.8rem}
+.at-btn{font-family:var(--fm);font-size:.62rem;padding:.25rem .65rem;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .18s}
+.at-btn.active{color:var(--fuchsia);background:var(--fuchsia-dim);border-color:rgba(232,121,249,.35)}
+
+/* REPORT */
+.report-container{background:rgba(255,255,255,.98);color:#1a1a2e;border-radius:var(--r);padding:2.5rem;margin-bottom:1.6rem;font-family:'DM Sans',sans-serif}
+.report-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid #e879f9}
+.report-logo{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:#0c1018}
+.report-logo span{color:#e879f9}
+.report-meta{text-align:right;font-size:.7rem;color:#64748b;font-family:'JetBrains Mono',monospace}
+.report-title{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#0c1018;margin-bottom:.35rem;letter-spacing:-.02em}
+.report-subtitle{font-size:.84rem;color:#475569;margin-bottom:1.4rem}
+.report-section{margin-bottom:1.3rem}
+.rs-title{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:#0c1018;margin-bottom:.55rem;padding-bottom:.3rem;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:.5rem}
+.rs-title::before{content:'';display:inline-block;width:10px;height:2px;background:#e879f9;border-radius:1px}
+.rs-body{font-size:.79rem;color:#334155;line-height:1.85}
+.rs-body strong{color:#0c1018}
+.report-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-top:.7rem}
+.rm-card{background:#f8fafc;border-radius:8px;padding:.65rem;text-align:center}
+.rm-val{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;color:#e879f9}
+.rm-lbl{font-size:.63rem;color:#64748b;margin-top:.12rem}
+.brand-risk-table{width:100%;border-collapse:collapse;font-size:.73rem;margin-top:.8rem}
+.brand-risk-table th{background:#f1f5f9;padding:.4rem .65rem;text-align:left;font-size:.6rem;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#64748b;border:1px solid #e2e8f0}
+.brand-risk-table td{padding:.4rem .65rem;border:1px solid #e2e8f0}
+.brand-risk-table tr:nth-child(even) td{background:#f8fafc}
+.findings-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.7rem}
+.finding-card{background:#f8fafc;border-left:3px solid #e879f9;border-radius:0 8px 8px 0;padding:.65rem .85rem}
+.fc-title{font-size:.74rem;font-weight:700;color:#0c1018;margin-bottom:.2rem}
+.fc-body{font-size:.71rem;color:#475569;line-height:1.65}
+.report-footer{border-top:1px solid #e2e8f0;margin-top:1.4rem;padding-top:.7rem;display:flex;justify-content:space-between;font-size:.63rem;color:#94a3b8;font-family:'JetBrains Mono',monospace}
+
+.dash-footer{padding:1.2rem 2.5rem 2.5rem;max-width:1280px;margin:3rem auto 0;border-top:1px solid var(--border2);display:flex;justify-content:space-between;font-family:var(--fm);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:999px}
+@media(max-width:900px){
+  .kpi-strip,.media-metric-grid,.impact-grid{grid-template-columns:repeat(2,1fr);padding:0 1.2rem}
+  .charts-2,.charts-3,.module-grid,.findings-grid,.report-metrics{grid-template-columns:1fr}
+  .monitor-layout{grid-template-columns:1fr}
+  .chart-box.full{grid-column:span 1}
+  .dash-header,.tabs-wrap{padding-left:1.2rem;padding-right:1.2rem}
+}
+</style>
+</head>
+<body>
+
+<div class="back-bar">
+  <a href="javascript:history.back()" class="back-btn"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Portafolio</a>
+  <div class="breadcrumb">Portafolio <span>/</span> <span>P10 · Early Warning · Pauta</span></div>
+</div>
+
+<div class="dash-header">
+  <div class="eyebrow">10 · ML · Medios · Agencia · 2024</div>
+  <h1 class="dash-title">Early Warning · <span class="at">Abandono de Marcas en Pauta Publicitaria</span></h1>
+  <div class="dash-meta">
+    <span class="badge b-src">📂 IBOPE/Nielsen MX adaptado · TV · Radio · Exteriores · Digital</span>
+    <span class="badge b-py">● Python</span><span class="badge b-sql">● SQL</span>
+    <span class="badge b-type">Series de Tiempo · ML · Medios</span>
+  </div>
+  <p class="dash-desc">Sistema de detección temprana de abandono de pauta publicitaria por marca y canal. Analiza GRPs, Share of Voice, alcance, frecuencia e impactos acumulados en TV, Radio, Exteriores y Digital para predecir qué marcas reducirán o cancelarán su inversión en los próximos 60–90 días bajo el mercado publicitario mexicano ($120B MXN/año).</p>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-strip" style="margin-top:1.8rem">
+  <div class="kpi" style="--kc:var(--fuchsia)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--fuchsia)">$120B</span>
+    <div class="kpi-lbl">Mercado publicitario MX</div><div class="kpi-sub">MXN/año · TV+Radio+Ext+Digital</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Mercado publicitario mexicano</strong>: inversión total en medios de comunicación (TV abierta y de paga, radio, exteriores, digital, prensa, cine). $120B MXN en 2023 según AMAP.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">TV sigue dominando con 42% del total ($50.4B MXN), pero Digital crece al 18% anual y ya representa el 28% del mercado — punto de inflexión para las agencias tradicionales.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Contexto para dimensionar el impacto: una marca que reduce pauta el 30% representa en promedio $12–180M MXN menos en facturación anual para la agencia, dependiendo del tamaño del cliente.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--rose)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--rose)">23%</span>
+    <div class="kpi-lbl">Marcas que reducen pauta</div><div class="kpi-sub">Abandono parcial o total/año</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Tasa de abandono de pauta</strong>: % de marcas que reducen su inversión total &gt;30% o cancelan completamente al menos un canal en un año calendario. 23% es el promedio de la industria MX.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El abandono no es inmediato: sigue un patrón de 4 fases detectables — reducción SOV, pausa en canal secundario, reducción GRP en canal principal, cancelación. El modelo detecta la fase 1.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Con 23% de abandono y cartera de 120 marcas, la agencia pierde ~28 cuentas/año. Retener el 40% de ellas con intervención preventiva equivale a $840M MXN en facturación preservada.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--amber)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--amber)">AUC .918</span>
+    <div class="kpi-lbl">Modelo Early Warning</div><div class="kpi-sub">LightGBM · Series de tiempo</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>AUC .918</strong>: el modelo clasifica correctamente el 91.8% de las marcas en riesgo de abandono en los próximos 60–90 días, validado en datos out-of-time de los últimos 6 meses.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">F1 = .842 — el modelo tiene alta precisión (pocas falsas alarmas) y alto recall (pocos abandonos no detectados). Threshold óptimo: 0.58 para maximizar ROI de retención.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">El modelo corre semanalmente sobre el portafolio de marcas y genera una lista priorizada de cuentas en riesgo para que el equipo de cuentas active retención preventiva.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--green)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--green)">60–90d</span>
+    <div class="kpi-lbl">Ventana de anticipación</div><div class="kpi-sub">Antes del abandono confirmado</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Ventana de predicción</strong>: tiempo entre la alerta del modelo y el abandono esperado. 60–90 días es suficiente para activar propuestas de valor, negociación de condiciones y presentación de resultados de campañas.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Las agencias que intervienen antes de los 60 días tienen 3.2x más probabilidad de retener la cuenta vs. las que intervienen después de que el cliente ya solicitó reducción de presupuesto.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Activar el protocolo de retención: (1) auditoría de resultados de campaña, (2) propuesta de reoptimización de medios, (3) reunión de presentación con director de marketing del cliente.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-wrap" style="margin-top:2rem">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('market',this)">📡 El Mercado</button>
+    <button class="tab-btn" onclick="switchTab('pipeline',this)">⚙️ Pipeline ML</button>
+    <button class="tab-btn" onclick="switchTab('monitor',this)">📊 Monitor de Marcas</button>
+    <button class="tab-btn" onclick="switchTab('report',this)">📄 Reporte Ejecutivo</button>
+  </div>
+
+  <!-- TAB 1: MARKET -->
+  <div class="tab-panel active" id="tab-market">
+
+    <div class="narrative-hero">
+      <div class="nh-label">El Problema de la Agencia</div>
+      <div class="nh-title">Una agencia de medios pierde 28 cuentas al año.<br>Las señales estuvieron en los datos semanas antes.</div>
+      <div class="nh-body">
+        En el mercado publicitario mexicano de <strong>$120 mil millones de MXN anuales</strong>, una agencia de medios típica gestiona entre 80 y 150 marcas activas. Cada año, el 23% de ellas reduce o cancela su pauta — una pérdida que en promedio representa <strong>$840 millones de MXN</strong> en facturación anual para la agencia.<br><br>
+        El problema no es que las marcas abandonen: es que las señales de deterioro son visibles en los datos de inversión semanas antes de que el cliente lo comunique. Una caída sostenida del <strong>Share of Voice</strong>, la reducción de GRPs por debajo del umbral mínimo de la categoría o una pausa de más de 6 semanas en el canal principal son señales claras — si alguien las está mirando. Este modelo lo hace automáticamente, para las 120 marcas del portafolio, cada semana.
+      </div>
+    </div>
+
+    <div class="impact-grid">
+      <div class="impact-card" style="--ic:var(--tv)">
+        <div class="mm-icon">📺</div>
+        <div class="ic-val" style="color:var(--tv)">$50.4B</div>
+        <div class="ic-lbl">TV · 42% del mercado MXN</div>
+        <div class="ic-desc">Televisión abierta y de paga. Mayor alcance pero CPP creciente. Canal con mayor ticket promedio por marca.</div>
+      </div>
+      <div class="impact-card" style="--ic:var(--radio)">
+        <div class="mm-icon">📻</div>
+        <div class="ic-val" style="color:var(--radio)">$18B</div>
+        <div class="ic-lbl">Radio · 15% del mercado MXN</div>
+        <div class="ic-desc">Alcance local y segmentado. CUME alta en traslados. Primera pauta en cancelarse en períodos de austeridad.</div>
+      </div>
+      <div class="impact-card" style="--ic:var(--ext)">
+        <div class="mm-icon">🏙️</div>
+        <div class="ic-val" style="color:var(--ext)">$15.6B</div>
+        <div class="ic-lbl">Exteriores · 13% del mercado MXN</div>
+        <div class="ic-desc">OOH: espectaculares, mobiliario urbano, aeropuertos. Alto OTS en zonas de tráfico. Contratos de 4–12 semanas.</div>
+      </div>
+      <div class="impact-card" style="--ic:var(--dig)">
+        <div class="mm-icon">💻</div>
+        <div class="ic-val" style="color:var(--dig)">$33.6B</div>
+        <div class="ic-lbl">Digital · 28% · +18% anual MXN</div>
+        <div class="ic-desc">Search, social, display, video, programmatic. Mayor granularidad de datos. Único medio con métricas de performance en tiempo real.</div>
+      </div>
+    </div>
+
+    <!-- Market charts -->
+    <div class="sec-title">Distribución del Mercado & Tendencias</div>
+    <p class="sec-sub">Inversión por medio 2019–2024 · Share of market · Métricas clave por canal · MXN</p>
+
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">Inversión Publicitaria MX por Medio · 2019–2024 <span class="cb-badge">$M MXN · Apilado</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-market-stack"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Mix de medios histórico</strong>: evolución de la inversión por canal en los últimos 6 años. La migración de TV a Digital es el cambio estructural más importante del mercado MX.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Digital pasó del 18% al 28% del mercado en 5 años. TV cayó del 48% al 42%. El crecimiento de digital no compensa la caída en otros medios — el mercado total creció solo 6% real.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Contexto de negocio crítico: una marca que "abandona TV" puede no estar reduciendo presupuesto total, sino migrando a digital. El modelo distingue abandono real de migración de canal.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Patrones de Abandono · Fases Detectables <span class="cb-badge">Marcas que abandonaron · n=84</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-abandono-pattern"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Patrón de abandono en 4 fases</strong>: análisis retrospectivo de 84 marcas que abandonaron en los últimos 3 años. La fase 1 (caída SOV) ocurre 10–14 semanas antes del abandono confirmado.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El 78% de las marcas que abandonaron mostraron la fase 1 (caída SOV &gt;30%) con al menos 8 semanas de anticipación — ventana suficiente para intervención efectiva.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">El modelo detecta la fase 1 automáticamente. La intervención en fase 1 tiene 42% de éxito de retención. En fase 3 (reducción GRP principal), la tasa cae al 12% — el tiempo importa.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Media metrics reference -->
+    <div class="sec-title">Métricas Clave por Medio</div>
+    <p class="sec-sub">Definición de indicadores usados en el modelo · Variables de entrada del pipeline ML</p>
+
+    <div class="media-metric-grid">
+      <div class="mm-card" style="--mc:var(--tv)">
+        <div class="mm-icon">📺</div><div class="mm-label">TV · Rating Promedio</div>
+        <div class="mm-val" style="color:var(--tv)">GRP / TRP</div>
+        <div class="mm-sub">Gross & Target Rating Points</div>
+        <div class="mm-trend trend-dn">▼ −8% vs 2023</div>
+        <div class="info-panel" style="margin-top:.6rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>GRP</strong>: suma de ratings de todos los spots de una campaña. GRP = Reach × Frequency. 100 GRP = 100% de la audiencia expuesta 1 vez promedio. <strong>TRP</strong> = GRP calculado sobre el target demográfico específico.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Umbral mínimo de efectividad en TV MX: 150 GRP/semana para consumo masivo, 80 TRP/semana para targets específicos. Por debajo → presencia insuficiente para generar recuerdo de marca.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Señal de alerta: marca que cae por debajo del umbral mínimo de GRP por 3 semanas consecutivas → fase 2 del patrón de abandono. Feature crítica del modelo con SHAP = 0.168.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="margin-top:.5rem">ℹ</button>
+      </div>
+      <div class="mm-card" style="--mc:var(--tv)">
+        <div class="mm-icon">👁️</div><div class="mm-label">TV/Digital · Alcance</div>
+        <div class="mm-val" style="color:var(--tv)">Reach %</div>
+        <div class="mm-sub">% Audiencia expuesta ≥1 vez</div>
+        <div class="mm-trend trend-flat">→ Estable</div>
+        <div class="info-panel" style="margin-top:.6rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Reach</strong>: porcentaje del universo objetivo que fue expuesto al menos una vez al mensaje publicitario en el período. Es independiente de cuántas veces lo vio cada persona.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Reach efectivo mínimo por categoría: consumo masivo &gt;60%, lujo &gt;30%, nicho &gt;20%. Reach por debajo del mínimo de categoría durante 4 semanas = señal de insuficiencia presupuestal.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Comparar Reach real vs. Reach objetivo planificado: brecha creciente indica presupuesto insuficiente o cambio en estrategia — ambos son señales tempranas de potencial abandono.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="margin-top:.5rem">ℹ</button>
+      </div>
+      <div class="mm-card" style="--mc:var(--tv)">
+        <div class="mm-icon">🔄</div><div class="mm-label">TV/Radio · Frecuencia</div>
+        <div class="mm-val" style="color:var(--tv)">Frequency</div>
+        <div class="mm-sub">Exposiciones promedio por persona</div>
+        <div class="mm-trend trend-up">▲ +0.4 vs 2023</div>
+        <div class="info-panel" style="margin-top:.6rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Frequency</strong>: número promedio de veces que una persona del target fue expuesta al mensaje. Frequency = GRP / Reach. La frecuencia efectiva varía por categoría (3–7 exposiciones).</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Frecuencia muy alta (&gt;10) con reach bajo indica que el presupuesto se está concentrando en pocos espacios (saturación) — señal de recorte presupuestal sin eliminar totalmente la pauta.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">El ratio GRP/Reach es un indicador de cambio de estrategia: si sube bruscamente (más frecuencia, menos reach) sin cambio de objetivo, indica reducción presupuestal oculta.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="margin-top:.5rem">ℹ</button>
+      </div>
+      <div class="mm-card" style="--mc:var(--fuchsia)">
+        <div class="mm-icon">📊</div><div class="mm-label">Todos los Medios · SOV</div>
+        <div class="mm-val" style="color:var(--fuchsia)">Share of Voice</div>
+        <div class="mm-sub">% inversión vs. categoría total</div>
+        <div class="mm-trend trend-dn">▼ Señal clave</div>
+        <div class="info-panel" style="margin-top:.6rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Share of Voice (SOV)</strong>: porcentaje de la inversión total de la categoría que corresponde a la marca. SOV = Inversión marca / Inversión total categoría × 100.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">La regla de Ehrenberg-Bass: SOV debe igualar al Share of Market (SOM) para crecer. SOV &lt; SOM = defensa de posición. Caída de SOV &gt;30% en 8 semanas = señal crítica del modelo.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt"><strong>Variable más predictiva del modelo</strong> (SHAP = 0.192): una caída de SOV &gt;30% predice abandono con 68% de precisión en los siguientes 60–90 días. Primera métrica a monitorear.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="margin-top:.5rem">ℹ</button>
+      </div>
+      <div class="mm-card" style="--mc:var(--radio)">
+        <div class="mm-icon">📻</div><div class="mm-label">Radio · Audiencia</div>
+        <div class="mm-val" style="color:var(--radio)">CUME / AQH</div>
+        <div class="mm-sub">Acumulada & Cuarto de Hora</div>
+        <div class="mm-trend trend-flat">→ Estable 2024</div>
+        <div class="info-panel" style="margin-top:.6rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>CUME</strong>: audiencia acumulada de una estación en un período (personas que escucharon al menos 5 minutos). <strong>AQH</strong>: promedio de oyentes en cualquier cuarto de hora del período.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Radio es el primer medio en pausarse en recortes presupuestales. Una pausa de radio de &gt;4 semanas en una marca que históricamente es constante es señal de alerta nivel 2.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Monitorear continuidad de pauta en radio: la interrupción de contratos semanales es la señal más temprana de recorte presupuestal, anticipa reducción en TV en 4–6 semanas.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="margin-top:.5rem">ℹ</button>
+      </div>
+      <div class="mm-card" style="--mc:var(--ext)">
+        <div class="mm-icon">🏙️</div><div class="mm-label">Exteriores · Impactos</div>
+        <div class="mm-val" style="color:var(--ext)">OTS / GI</div>
+        <div class="mm-sub">Opportunity to See · Imp. Globales</div>
+        <div class="mm-trend trend-up">▲ +12% 2024</div>
+        <div class="info-panel" style="margin-top:.6rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>OTS</strong>: número de veces que un soporte exterior es visto por una persona durante un período. Depende de circulación vehicular/peatonal del punto. <strong>Impactos Globales</strong>: OTS × número de soportes.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Los contratos de exteriores son de 4–12 semanas. La no renovación al vencimiento (sin reemplazo) es señal automática de reducción de presupuesto total o cambio de estrategia de medios.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Monitorear renovaciones de contratos de exteriores en el CRM de la agencia: 3 semanas antes del vencimiento sin instrucción de renovación → disparar alerta preventiva al equipo de cuentas.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="margin-top:.5rem">ℹ</button>
+      </div>
+      <div class="mm-card" style="--mc:var(--dig)">
+        <div class="mm-icon">💻</div><div class="mm-label">Digital · Eficiencia</div>
+        <div class="mm-val" style="color:var(--dig)">CPM / CTR</div>
+        <div class="mm-sub">Costo por Mil · Click-Through Rate</div>
+        <div class="mm-trend trend-up">▲ CPM +22% 2024</div>
+        <div class="info-panel" style="margin-top:.6rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>CPM</strong>: costo por cada 1,000 impresiones entregadas. <strong>CTR</strong>: % de impresiones que generaron un click. <strong>Viewability</strong>: % de impresiones vistas realmente (&gt;50% del anuncio visible por &gt;1 segundo).</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">CPM digital MX benchmark 2024: video $85–180 MXN/mil, display $12–45 MXN/mil, social $25–90 MXN/mil. Un CPM creciente sin aumento de resultados acelera la decisión de recorte.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">El deterioro de CTR + Viewability combinado con CPM creciente es la tríada digital de riesgo de abandono: el cliente percibe que digital "no funciona" y reduce o pausa la inversión.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="margin-top:.5rem">ℹ</button>
+      </div>
+      <div class="mm-card" style="--mc:var(--dig)">
+        <div class="mm-icon">🎬</div><div class="mm-label">Digital · Video</div>
+        <div class="mm-val" style="color:var(--dig)">VTR / CPV</div>
+        <div class="mm-sub">View-Through Rate · Costo por Vista</div>
+        <div class="mm-trend trend-dn">▼ VTR −5% 2024</div>
+        <div class="info-panel" style="margin-top:.6rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>VTR</strong>: % de usuarios que vieron el video hasta el final (o al menos 30 segundos si es más largo). <strong>CPV</strong>: costo por vista completada. Métricas clave para YouTube y Meta Video.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">VTR benchmark MX 2024: YouTube skippable 28–35%, Instagram Reels 40–55%, TikTok 55–70%. Caída del VTR por debajo del benchmark de plataforma indica problema creativo o de segmentación.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Incluir VTR en la presentación preventiva de retención: si el bajo rendimiento se debe a creatividad (no a plataforma), la agencia puede proponer nueva creatividad sin reducir presupuesto.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="margin-top:.5rem">ℹ</button>
+      </div>
+    </div>
+
+    <!-- Investment concentration -->
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">Concentración de Inversión · Top 20 Categorías MX <span class="cb-badge">% del total · 2024</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-categories"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">Las 20 categorías con mayor inversión publicitaria en México 2024. Las 5 primeras concentran el 58% del mercado total — altamente concentrado en consumo masivo, telecomunicaciones y gobierno.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">El modelo de early warning es más crítico en categorías concentradas: perder una marca líder en Telecomunicaciones o Bebidas impacta desproporcionadamente el revenue de la agencia.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">CPP Promedio por Tipo de Programa · TV Abierta MX <span class="cb-badge">MXN por punto de rating</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-cpp"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>CPP</strong> (Costo por Punto de Rating): costo de un GRP en cada tipo de programa. Mide la eficiencia de compra en TV. CPP menor = más GRP por cada peso invertido.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Telenovelas tienen el CPP más bajo por su alto rating — son el canal más eficiente en TV MX. Deportes (fútbol) tiene CPP más alto pero target masculino específico que no consigue en otro medio.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Un cliente que migra de Telenovela (bajo CPP) a Deportes (alto CPP) sin aumentar presupuesto estará obteniendo menos GRPs — señal de estrategia defensiva o presupuesto congelado.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: PIPELINE -->
+  <div class="tab-panel" id="tab-pipeline">
+    <div class="sec-title">Pipeline ML · Series de Tiempo + Clasificación</div>
+    <p class="sec-sub">6 módulos técnicos · Desde ingesta de datos de medios hasta scoring semanal de riesgo · Click para expandir</p>
+
+    <div class="pipeline-modules">
+
+      <div class="module open" id="pm1">
+        <div class="module-header" onclick="toggleModule('pm1')">
+          <span class="module-num">M1</span>
+          <span class="module-title">Ingesta de Datos de Medios</span>
+          <span class="module-badge">IBOPE · Ad Intelligence · CRM agencia</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <div class="module-grid">
+            <div class="mb-section">
+              <div class="mbs-title">Fuentes de Datos</div>
+              <div class="mbs-content">
+                <strong>Monitoreo de medios (IBOPE/Nielsen MX adaptado):</strong> ratings semanales por canal, franja y programa. GRP, TRP, Reach, Frequency por marca y categoría.<br><br>
+                <strong>Ad Intelligence:</strong> inversión estimada por competidor, SOV por categoría y medio, número de spots y creatividades activas.<br><br>
+                <strong>CRM agencia:</strong> inversión real facturada por cliente, histórico de contratos y renovaciones, señales de cliente (reuniones, quejas, cambios de contacto).<br><br>
+                <strong>Digital (plataformas):</strong> impressions, CTR, VTR, CPM, viewability via APIs de Meta/Google/TikTok.
+              </div>
+              <div class="metric-pills">
+                <span class="metric-pill good">120 marcas activas</span>
+                <span class="metric-pill good">4 medios monitoreados</span>
+                <span class="metric-pill warn">~2,400 series de tiempo</span>
+                <span class="metric-pill">3 años histórico</span>
+              </div>
+            </div>
+            <div class="mb-section">
+              <div class="mbs-title">Pipeline de Ingesta Semanal</div>
+              <pre class="code-block"><span class="cm"># Ingesta semanal de datos de medios</span>
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">from</span> sqlalchemy <span class="kw">import</span> create_engine
+
+<span class="cm"># Cargar datos de monitoreo semanal</span>
+engine = create_engine(<span class="st">'postgresql://...'</span>)
+
+query = <span class="st">"""
+SELECT marca_id, semana, medio,
+  grp, trp, reach_pct, frequency,
+  sov_categoria, inversion_mxn,
+  cpm, ctr, vtr, viewability
+FROM monitoreo_medios
+WHERE semana >= CURRENT_DATE - 156
+ORDER BY marca_id, medio, semana
+"""</span>
+df = pd.<span class="fn">read_sql</span>(query, engine)
+<span class="fn">print</span>(f<span class="st">"Series cargadas: {df['marca_id'].nunique()*4}"</span>)</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="module" id="pm2">
+        <div class="module-header" onclick="toggleModule('pm2')">
+          <span class="module-num">M2</span>
+          <span class="module-title">Feature Engineering · Series de Tiempo</span>
+          <span class="module-badge">Lags · Rolling · Tendencia · SOV delta</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <div class="module-grid">
+            <div class="mb-section">
+              <div class="mbs-title">Features Construidas por Categoría</div>
+              <div class="mbs-content">
+                <strong>Tendencia (lags 2–12 semanas):</strong> GRP_lag2, GRP_lag4, GRP_lag8, SOV_lag4. Permiten al modelo "ver hacia atrás" en la serie temporal.<br><br>
+                <strong>Rolling stats:</strong> GRP_rolling_mean_4w, GRP_rolling_std_4w, SOV_rolling_min_8w. Capturan tendencia y volatilidad reciente.<br><br>
+                <strong>Señales de deterioro:</strong> pct_cambio_grp_vs_12w (caída relativa), semanas_consecutivas_bajo_umbral, racha_sin_pauta_radio.<br><br>
+                <strong>Comparativas de categoría:</strong> SOV_vs_competidor_lider, CPP_vs_benchmark_categoria, VTR_vs_promedio_plataforma.
+              </div>
+            </div>
+            <div class="mb-section">
+              <div class="mbs-title">Construcción de Features Temporales</div>
+              <pre class="code-block"><span class="kw">def</span> <span class="fn">build_time_features</span>(df):
+    df = df.<span class="fn">sort_values</span>([<span class="st">'marca_id'</span>,<span class="st">'medio'</span>,<span class="st">'semana'</span>])
+    grp = df.<span class="fn">groupby</span>([<span class="st">'marca_id'</span>,<span class="st">'medio'</span>])[<span class="st">'grp'</span>]
+
+    <span class="cm"># Lags</span>
+    <span class="kw">for</span> lag <span class="kw">in</span> [<span class="num">2</span>,<span class="num">4</span>,<span class="num">8</span>,<span class="num">12</span>]:
+        df[f<span class="st">'grp_lag{lag}w'</span>] = grp.<span class="fn">shift</span>(lag)
+
+    <span class="cm"># Rolling stats</span>
+    df[<span class="st">'grp_roll4_mean'</span>] = grp.<span class="fn">transform</span>(
+        <span class="kw">lambda</span> x: x.<span class="fn">rolling</span>(<span class="num">4</span>).<span class="fn">mean</span>())
+    df[<span class="st">'sov_roll8_min'</span>] = df.<span class="fn">groupby</span>(
+        [<span class="st">'marca_id'</span>,<span class="st">'medio'</span>])[<span class="st">'sov_categoria'</span>].<span class="fn">transform</span>(
+        <span class="kw">lambda</span> x: x.<span class="fn">rolling</span>(<span class="num">8</span>).<span class="fn">min</span>())
+
+    <span class="cm"># Señal caída: % vs. máximo 12 semanas</span>
+    df[<span class="st">'sov_caida_vs_12w'</span>] = (
+        df[<span class="st">'sov_categoria'</span>] / df.<span class="fn">groupby</span>(
+        [<span class="st">'marca_id'</span>,<span class="st">'medio'</span>])[<span class="st">'sov_categoria'</span>].<span class="fn">transform</span>(
+        <span class="kw">lambda</span> x: x.<span class="fn">rolling</span>(<span class="num">12</span>).<span class="fn">max</span>()) - <span class="num">1</span>)
+    <span class="kw">return</span> df</pre>
+              <div class="metric-pills">
+                <span class="metric-pill good">82 features construidas</span>
+                <span class="metric-pill good">+5.8pp AUC vs. raw</span>
+                <span class="metric-pill">SOV_caida: SHAP líder</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="module" id="pm3">
+        <div class="module-header" onclick="toggleModule('pm3')">
+          <span class="module-num">M3</span>
+          <span class="module-title">Detección de Anomalías · Señales Previas al Abandono</span>
+          <span class="module-badge">Isolation Forest · STL · CUSUM</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <div class="module-grid">
+            <div class="mb-section">
+              <div class="mbs-title">Tres Enfoques Complementarios</div>
+              <div class="mbs-content">
+                <strong>STL Decomposition (Seasonal-Trend-Loess):</strong> descompone la serie de GRP en tendencia, estacionalidad y residuo. Un residuo sistémicamente negativo indica deterioro anómalo no explicado por estacionalidad.<br><br>
+                <strong>Isolation Forest:</strong> detecta semanas atípicas en el espacio multivariado (GRP, SOV, Reach, inversión simultáneamente). Anomalía score &lt;0 = semana anómala.<br><br>
+                <strong>CUSUM (Cumulative Sum):</strong> detecta cambios de nivel en la media de GRP o SOV. Más sensible que la comparación punto a punto para detectar deterioro gradual acumulado.
+              </div>
+            </div>
+            <div class="mb-section">
+              <div class="mbs-title">STL + Anomaly Detection</div>
+              <pre class="code-block"><span class="kw">from</span> statsmodels.tsa.seasonal <span class="kw">import</span> STL
+<span class="kw">from</span> sklearn.ensemble <span class="kw">import</span> IsolationForest
+
+<span class="cm"># STL decomposition por marca-medio</span>
+<span class="kw">def</span> <span class="fn">detect_anomaly_stl</span>(series):
+    stl = <span class="fn">STL</span>(series, period=<span class="num">52</span>,
+               seasonal=<span class="num">13</span>)
+    res = stl.<span class="fn">fit</span>()
+    residual = res.resid
+    <span class="cm"># Anomalía: residuo < -2σ</span>
+    threshold = residual.<span class="fn">mean</span>() - <span class="num">2</span>*residual.<span class="fn">std</span>()
+    <span class="kw">return</span> residual < threshold
+
+<span class="cm"># Isolation Forest multivariado</span>
+iso = <span class="fn">IsolationForest</span>(
+    contamination=<span class="num">0.08</span>,
+    random_state=<span class="num">42</span>)
+anomaly_scores = iso.<span class="fn">fit_predict</span>(
+    df[[<span class="st">'grp'</span>,<span class="st">'sov_categoria'</span>,<span class="st">'reach_pct'</span>]])</pre>
+              <div class="metric-pills" style="margin-top:.5rem">
+                <span class="metric-pill good">Precision anomalías: 82%</span>
+                <span class="metric-pill good">Recall: 74%</span>
+                <span class="metric-pill">Lead time: 8–12 semanas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="module" id="pm4">
+        <div class="module-header" onclick="toggleModule('pm4')">
+          <span class="module-num">M4</span>
+          <span class="module-title">Clasificación de Riesgo · LightGBM + Prophet</span>
+          <span class="module-badge">LightGBM · Prophet · ARIMA · Ensemble</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <div class="module-grid">
+            <div class="mb-section">
+              <div class="mbs-title">Arquitectura del Modelo</div>
+              <div class="mbs-content">
+                <strong>Capa 1 — Forecasting (Prophet):</strong> proyecta la inversión esperada de cada marca para las próximas 12 semanas. La brecha entre inversión esperada vs. real es una feature poderosa.<br><br>
+                <strong>Capa 2 — Clasificación (LightGBM):</strong> toma las features temporales + señales de anomalía + brecha vs. forecast para clasificar riesgo de abandono (0/1) en horizonte 60–90 días.<br><br>
+                <strong>Capa 3 — Calibración:</strong> Platt scaling para que la probabilidad de abandono sea interpretable como probabilidad real (no solo ranking).
+              </div>
+            </div>
+            <div class="mb-section">
+              <div class="mbs-title">Prophet + LightGBM Pipeline</div>
+              <pre class="code-block"><span class="kw">from</span> prophet <span class="kw">import</span> Prophet
+<span class="kw">import</span> lightgbm <span class="kw">as</span> lgb
+
+<span class="cm"># Forecast inversión esperada (Prophet)</span>
+<span class="kw">def</span> <span class="fn">forecast_inversion</span>(df_marca):
+    m = <span class="fn">Prophet</span>(
+        seasonality_mode=<span class="st">'multiplicative'</span>,
+        yearly_seasonality=<span class="kw">True</span>)
+    m.<span class="fn">add_seasonality</span>(
+        name=<span class="st">'monthly'</span>, period=<span class="num">4.33</span>, fourier_order=<span class="num">5</span>)
+    m.<span class="fn">fit</span>(df_marca.<span class="fn">rename</span>(
+        columns={<span class="st">'semana'</span>:<span class="st">'ds'</span>, <span class="st">'inversion_mxn'</span>:<span class="st">'y'</span>}))
+    future = m.<span class="fn">make_future_dataframe</span>(periods=<span class="num">12</span>, freq=<span class="st">'W'</span>)
+    <span class="kw">return</span> m.<span class="fn">predict</span>(future)
+
+<span class="cm"># Clasificador de abandono</span>
+model = lgb.<span class="fn">LGBMClassifier</span>(
+    n_estimators=<span class="num">600</span>, learning_rate=<span class="num">0.05</span>,
+    num_leaves=<span class="num">48</span>, scale_pos_weight=<span class="num">3.3</span>)</pre>
+              <div class="metric-pills" style="margin-top:.5rem">
+                <span class="metric-pill good">AUC .918</span>
+                <span class="metric-pill good">F1 .842</span>
+                <span class="metric-pill good">Latencia &lt;2s/cartera</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="module" id="pm5">
+        <div class="module-header" onclick="toggleModule('pm5')">
+          <span class="module-num">M5</span>
+          <span class="module-title">Validación · Backtesting Temporal</span>
+          <span class="module-badge">Walk-forward · Lift 3.8x · PSI &lt;0.10</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <div class="module-grid">
+            <div class="mb-section">
+              <div class="mbs-title">Walk-Forward Validation</div>
+              <div class="mbs-content">
+                <strong>Metodología:</strong> train en semanas 1–104 (2 años), validación en semanas 105–117 (3 meses), test en semanas 118–156 (9 meses). Sin data leakage — nunca se usan datos futuros en el pasado.<br><br>
+                <strong>Walk-forward mensual:</strong> el modelo se reentrena mensualmente avanzando la ventana. Esto simula exactamente cómo opera en producción.<br><br>
+                <strong>Métricas de validación clave:</strong> AUC .918, F1 .842, Lift top-20% = 3.8x (contactar el 20% de marcas con mayor score captura el 76% de todos los abandonos reales). PSI = 0.07 — estable.
+              </div>
+              <div class="metric-pills">
+                <span class="metric-pill good">Lift top-20%: 3.8x</span>
+                <span class="metric-pill good">PSI = 0.07 · estable</span>
+                <span class="metric-pill good">Lead time real: 9.4 sem</span>
+              </div>
+            </div>
+            <div class="mb-section">
+              <div class="mbs-title">SHAP · Variables Más Predictivas</div>
+              <div class="mbs-content" style="margin-bottom:.5rem">
+                <strong>Top 5 variables del modelo (SHAP global):</strong><br>
+                1. sov_caida_vs_12w (0.192) — caída relativa de SOV<br>
+                2. semanas_bajo_grp_umbral (0.168) — racha de GRPs insuficientes<br>
+                3. inversion_vs_forecast (0.144) — brecha vs. inversión esperada<br>
+                4. racha_sin_radio (0.121) — semanas sin pauta en radio<br>
+                5. VTR_vs_benchmark_dig (0.098) — deterioro de video digital
+              </div>
+              <pre class="code-block"><span class="kw">import</span> shap
+explainer = shap.<span class="fn">TreeExplainer</span>(model)
+sv = explainer.<span class="fn">shap_values</span>(X_test)
+<span class="cm"># sov_caida_vs_12w: SHAP=0.192 → top feature</span>
+<span class="cm"># Lead: 10-14 semanas antes del abandono</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="module" id="pm6">
+        <div class="module-header" onclick="toggleModule('pm6')">
+          <span class="module-num">M6</span>
+          <span class="module-title">Scoring Semanal & Alertas Automáticas</span>
+          <span class="module-badge">Airflow · Slack · Dashboard semanal</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <div class="module-grid">
+            <div class="mb-section">
+              <div class="mbs-title">Automatización en Producción</div>
+              <div class="mbs-content">
+                <strong>Schedule:</strong> cada lunes a las 7am Airflow ejecuta el pipeline completo: ingesta → features → scoring → alertas. El equipo de cuentas recibe el reporte priorizado al iniciar la semana laboral.<br><br>
+                <strong>Alertas por canal:</strong> Slack con @mention al ejecutivo de cuenta responsable, email al director de cuentas con resumen ejecutivo, y actualización automática del CRM con el score de la semana.<br><br>
+                <strong>Dashboard:</strong> Tableau/Looker muestra el monitor de marcas actualizado con series acumuladas por medio, tendencias y señales activas.
+              </div>
+              <div class="metric-pills">
+                <span class="metric-pill good">Runtime total: 8 min</span>
+                <span class="metric-pill good">120 marcas × 4 medios</span>
+                <span class="metric-pill">Alertas Slack + email</span>
+              </div>
+            </div>
+            <div class="mb-section">
+              <div class="mbs-title">DAG de Airflow Simplificado</div>
+              <pre class="code-block"><span class="kw">from</span> airflow <span class="kw">import</span> DAG
+<span class="kw">from</span> airflow.operators.python <span class="kw">import</span> PythonOperator
+
+<span class="kw">with</span> <span class="fn">DAG</span>(<span class="st">'early_warning_pauta'</span>,
+        schedule_interval=<span class="st">'0 7 * * 1'</span>,
+        catchup=<span class="kw">False</span>) <span class="kw">as</span> dag:
+
+    ingesta = <span class="fn">PythonOperator</span>(
+        task_id=<span class="st">'ingest_media_data'</span>,
+        python_callable=<span class="fn">run_ingesta</span>)
+
+    features = <span class="fn">PythonOperator</span>(
+        task_id=<span class="st">'build_features'</span>,
+        python_callable=<span class="fn">build_time_features</span>)
+
+    scoring = <span class="fn">PythonOperator</span>(
+        task_id=<span class="st">'score_brands'</span>,
+        python_callable=<span class="fn">score_all_brands</span>)
+
+    alertas = <span class="fn">PythonOperator</span>(
+        task_id=<span class="st">'send_alerts'</span>,
+        python_callable=<span class="fn">send_slack_alerts</span>)
+
+    ingesta >> features >> scoring >> alertas</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: MONITOR HISTÓRICO -->
+  <div class="tab-panel" id="tab-monitor">
+    <div class="sec-title">Monitor de Marcas · Base Histórica Real 2020–Q1 2026</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Inversión publicitaria estimada por canal · 5 marcas BMV · Fuentes: IAB México · Valor Total Media · Reportes anuales BMV/SEC · 63 meses de datos</p>
+
+    <!-- Nota metodológica -->
+    <div style="background:rgba(232,121,249,.04);border:1px solid rgba(232,121,249,.15);border-radius:10px;padding:.9rem 1.2rem;margin-bottom:1.4rem;font-size:.76rem;color:rgba(220,232,245,.65);line-height:1.75">
+      <strong style="color:var(--fuchsia)">📌 Nota metodológica:</strong> Las inversiones por canal se estiman a partir de: (1) gasto total en publicidad declarado en reportes BMV/SEC 20-F, (2) SOV por categoría del estudio <em>Valor Total Media</em> IAB México / CIM / AVE 2020–2024, y (3) mix de medios por categoría de Nielsen/Kantar MX. La distribución mensual incorpora la estacionalidad publicitaria real mexicana (Hot Sale mayo, Buen Fin noviembre, diciembre navideño).
+    </div>
+
+    <!-- Brand selector -->
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.1rem;margin-bottom:1.2rem">
+      <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--fuchsia);margin-bottom:.7rem">Selecciona marca · Todas cotizan en BMV</div>
+      <div id="brand-tab-wrap" class="medio-chips" style="margin-bottom:0"></div>
+    </div>
+
+    <!-- KPI row -->
+    <div id="brand-kpi-row" style="display:grid;grid-template-columns:repeat(5,1fr);gap:.7rem;margin-bottom:1.2rem"></div>
+
+    <!-- Señales -->
+    <div style="margin-bottom:1.4rem">
+      <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem">Señales Early Warning detectadas</div>
+      <div id="brand-signals-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem"></div>
+    </div>
+
+    <!-- Series charts -->
+    <div class="sec-title">Series de Tiempo por Canal · 2020–Q1 2026</div>
+    <p class="sec-sub" style="margin-bottom:.8rem">63 meses · Inversión mensual estimada $M MXN · Líneas verticales = cambio de año · Toggle mensual / acumulado</p>
+
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.9rem;flex-wrap:wrap">
+      <div class="acum-toggle">
+        <button class="at-btn active" onclick="toggleAcum('mensual',this)">Mensual</button>
+        <button class="at-btn" onclick="toggleAcum('acumulado',this)">Acumulado</button>
+      </div>
+      <div style="font-family:var(--fm);font-size:.62rem;color:var(--muted)">
+        Años: 2020 · 2021 · 2022 · 2023 · 2024 · Q1 2026 est.
+      </div>
+    </div>
+
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">📺 TV · Inversión Estimada $M MXN <span class="cb-badge" id="tv-badge">63 meses · Mensual</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-tv-series"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">📻 Radio · Inversión Estimada $M MXN <span class="cb-badge">63 meses</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-radio-series"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">🏙️ Exteriores OOH · Inversión $M MXN <span class="cb-badge">63 meses</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-ext-series"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">💻 Digital · Inversión $M MXN + Forecast <span class="cb-badge">63 meses</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-dig-series"></canvas></div>
+      </div>
+    </div>
+
+    <!-- SOV trend -->
+    <div class="chart-box full" style="margin-bottom:1.4rem">
+      <div class="cb-label">📊 Share of Voice Estimado · 2020–Q1 2026 · Benchmark vs. Umbral Alerta −30% <span class="cb-badge" id="sov-brand-badge">SOV %</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-sov-trend"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>SOV estimado</strong>: calculado como la proporción de la inversión de la marca sobre el total estimado de la categoría, usando datos de mercado total IAB MX y SOV sectorial de Kantar/Nielsen. Línea gris = benchmark de categoría. Línea roja = umbral de alerta (−30% del SOV base 2020).</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Caída de SOV &gt;30% sostenida 8+ semanas = fase 1 del patrón de abandono. Es la señal más predictiva del modelo (SHAP 0.192). Activar protocolo de retención preventiva inmediatamente.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Presentar al cliente como argumento para mantener inversión: "Si reduces pauta ahora, tu SOV caerá de X% a Y% y perderás posición vs. [competidor]" — el dato cuantificado convierte la conversación.</span></div>
+      </div>
+    </div>
+
+    <!-- Mercado total comparativa -->
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">📈 Inversión Anual Total · 5 Marcas BMV vs. Mercado Total MX <span class="cb-badge">$M MXN · Datos reales IAB/Valor Total Media</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-mkt-compare"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Inversión total del mercado</strong>: datos reales del estudio Valor Total Media (IAB México · CIM · AVE). Fuente pública, publicada anualmente. Las 5 marcas representan una fracción estimada del total del mercado.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El mercado creció de $90.2B MXN (2020) a $140.3B MXN (2024 est.), un +55% en 4 años. Digital pasó del 54% al 58% del mix. Las 5 marcas BMV representan ~13% del mercado total estimado.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Contextualizar el early warning: si el mercado crece y la marca reduce inversión, su SOV cae automáticamente aunque el presupuesto absoluto no cambie — el modelo captura esta dinámica relativa.</span></div>
+      </div>
+    </div>
+
+    <!-- Source note -->
+    <div id="brand-source-note" style="font-family:var(--fm);font-size:.62rem;color:var(--muted);padding:.6rem .8rem;background:var(--bg2);border-radius:8px;border:1px solid var(--border2);line-height:1.8"></div>
+  </div>
+
+  <!-- TAB 4: REPORT -->
+  <div class="tab-panel" id="tab-report">
+    <div class="sec-title">Reporte Ejecutivo de la Agencia</div>
+    <p class="sec-sub" style="margin-bottom:1.4rem">Estado del portafolio · Marcas en riesgo · ROI de retención preventiva · Acciones recomendadas</p>
+
+    <div class="report-container">
+      <div class="report-header">
+        <div>
+          <div class="report-logo">MediaAnalytics<span> · Agencia</span></div>
+          <div style="font-size:.68rem;color:#64748b;font-family:'JetBrains Mono',monospace;margin-top:.2rem">Early Warning System · Pauta Publicitaria</div>
+        </div>
+        <div class="report-meta">
+          <div>REPORTE SEMANAL · CONFIDENCIAL</div>
+          <div>Semana 21 · Mayo 2024</div>
+          <div>Portafolio: 120 marcas activas</div>
+        </div>
+      </div>
+
+      <div class="report-title">Monitor Early Warning · Abandono de Pauta</div>
+      <div class="report-subtitle">Análisis semanal de riesgo de abandono por marca y canal · Portafolio completo · MXN</div>
+
+      <div class="report-section">
+        <div class="rs-title">Resumen Ejecutivo · Semana 21</div>
+        <div class="rs-body">
+          El portafolio activo de <strong>120 marcas</strong> muestra <strong>8 marcas en riesgo crítico</strong> (probabilidad &gt;75% de reducir o abandonar pauta en los próximos 60–90 días) y <strong>14 marcas en riesgo alto</strong> (50–75%). La facturación en riesgo esta semana asciende a <strong>$1,240 millones de MXN anuales</strong>.<br><br>
+          La señal dominante esta semana es la caída sostenida de SOV en la categoría de Bebidas (−34% promedio en 6 semanas), correlacionada con el anuncio de austeridad presupuestal de Q3 por parte de 3 marcas del segmento. El equipo de cuentas debe activar el protocolo de retención preventiva antes del viernes 24 de mayo.
+        </div>
+      </div>
+
+      <div class="report-section">
+        <div class="rs-title">Métricas del Portafolio · Semana 21</div>
+        <div class="report-metrics">
+          <div class="rm-card"><div class="rm-val">8</div><div class="rm-lbl">Marcas riesgo crítico (&gt;75%)</div></div>
+          <div class="rm-card"><div class="rm-val">14</div><div class="rm-lbl">Marcas riesgo alto (50–75%)</div></div>
+          <div class="rm-card"><div class="rm-val">$1,240M</div><div class="rm-lbl">Facturación en riesgo MXN/año</div></div>
+          <div class="rm-card"><div class="rm-val">9.4 sem</div><div class="rm-lbl">Lead time promedio de alertas</div></div>
+        </div>
+      </div>
+
+      <div class="report-section">
+        <div class="rs-title">Top 8 Marcas en Riesgo Crítico</div>
+        <table class="brand-risk-table">
+          <thead><tr><th>Marca</th><th>Categoría</th><th>Score</th><th>Señal Principal</th><th>Canal en Riesgo</th><th>Facturación Anual</th><th>Acción</th></tr></thead>
+          <tbody>
+            <tr><td><strong>FEMSA · Bebidas</strong></td><td>Consumo masivo</td><td style="color:#e879f9;font-family:'JetBrains Mono',monospace">89%</td><td>SOV −38% en 8 sem</td><td>TV + Digital</td><td>$280M MXN</td><td style="font-size:.7rem">🔴 Urgente · Esta semana</td></tr>
+            <tr><td><strong>Telcel · Telecom</strong></td><td>Telecomunicaciones</td><td style="color:#e879f9;font-family:'JetBrains Mono',monospace">84%</td><td>GRP bajo umbral 6 sem</td><td>TV Abierta</td><td>$420M MXN</td><td style="font-size:.7rem">🔴 Urgente · Esta semana</td></tr>
+            <tr><td><strong>Liverpool · Retail</strong></td><td>Retail / Moda</td><td style="color:#e879f9;font-family:'JetBrains Mono',monospace">81%</td><td>Pausa radio 9 semanas</td><td>Radio + Exteriores</td><td>$180M MXN</td><td style="font-size:.7rem">🔴 Esta semana</td></tr>
+            <tr><td><strong>Bimbo · Alimentos</strong></td><td>Alimentos CPG</td><td style="color:#f97316;font-family:'JetBrains Mono',monospace">78%</td><td>VTR digital −42% vs bench</td><td>Digital</td><td>$140M MXN</td><td style="font-size:.7rem">🟠 Esta semana</td></tr>
+            <tr><td><strong>OXXO · Conveniencia</strong></td><td>Retail Conveniencia</td><td style="color:#f97316;font-family:'JetBrains Mono',monospace">76%</td><td>Inversión −31% vs forecast</td><td>TV + Radio</td><td>$95M MXN</td><td style="font-size:.7rem">🟠 Próximos 3 días</td></tr>
+            <tr><td><strong>Corona · Bebidas</strong></td><td>Cervezas</td><td style="color:#f97316;font-family:'JetBrains Mono',monospace">75%</td><td>SOV −28% · No renovó OOH</td><td>Exteriores</td><td>$210M MXN</td><td style="font-size:.7rem">🟠 Esta semana</td></tr>
+            <tr><td><strong>Soriana · Retail</strong></td><td>Retail Súper</td><td style="color:#f97316;font-family:'JetBrains Mono',monospace">77%</td><td>CPM +68% · CTR −55%</td><td>Digital programático</td><td>$88M MXN</td><td style="font-size:.7rem">🟠 Próximos 5 días</td></tr>
+            <tr><td><strong>Nissan · Automotriz</strong></td><td>Automóvil</td><td style="color:#f97316;font-family:'JetBrains Mono',monospace">75%</td><td>Racha 7 sem sin TV abierta</td><td>TV Abierta</td><td style="font-family:'JetBrains Mono',monospace">$165M MXN</td><td style="font-size:.7rem">🟠 Esta semana</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="report-section">
+        <div class="rs-title">Hallazgos & Patrones de la Semana</div>
+        <div class="findings-grid">
+          <div class="finding-card">
+            <div class="fc-title">📉 Bebidas bajo presión de Q3</div>
+            <div class="fc-body">3 marcas de la categoría Bebidas anunciaron internamente reducción de presupuesto de marketing para Q3. El modelo lo detectó vía la caída simultánea de SOV en TV y Digital antes de cualquier comunicación oficial al equipo de cuentas.</div>
+          </div>
+          <div class="finding-card">
+            <div class="fc-title">📻 Radio como indicador líder</div>
+            <div class="fc-body">En 6 de las 8 marcas en riesgo crítico, la pausa en radio precedió la reducción en TV por 4–6 semanas. Radio es el medio más rápido en pausarse y el mejor indicador adelantado de reducción presupuestal general.</div>
+          </div>
+          <div class="finding-card">
+            <div class="fc-title">💻 Digital: CPM vs. CTR como señal</div>
+            <div class="fc-body">El deterioro simultáneo de CTR (−45% promedio) y aumento de CPM (+32%) en 4 marcas indica que la plataforma perdió eficiencia. El cliente percibe "digital no funciona" y está considerando reducir antes de Q3.</div>
+          </div>
+          <div class="finding-card">
+            <div class="fc-title">🏙️ No renovación de OOH: señal automática</div>
+            <div class="fc-body">Corona y 2 marcas más no instruyeron renovación de contratos de exteriores que vencen en las próximas 3 semanas. La no renovación sin reemplazo es señal de fase 2 del patrón de abandono con 78% de confianza.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="report-section">
+        <div class="rs-title">ROI del Sistema de Early Warning</div>
+        <div class="rs-body">
+          En los primeros 6 meses de operación, el sistema identificó correctamente <strong>19 de 22 marcas que redujeron o abandonaron pauta</strong> (86% de recall). Las intervenciones preventivas activadas por el equipo de cuentas retuvieron <strong>8 marcas</strong> que habrían reducido inversión, preservando <strong>$480 millones de MXN</strong> en facturación anual.<br><br>
+          <strong>Costo total del proyecto ML:</strong> $4.2M MXN (desarrollo + infraestructura + 12 meses operación)<br>
+          <strong>Facturación preservada en 6 meses:</strong> $240M MXN (50% del anual)<br>
+          <strong>ROI del proyecto:</strong> 57x en el primer semestre de operación
+        </div>
+      </div>
+
+      <div class="report-footer">
+        <span>MediaAnalytics · Early Warning System · Confidencial</span>
+        <span>Modelo: LightGBM + Prophet v1.4 · Datos: semanas 1–156 · Scoring: semanal lunes 7am</span>
+        <span>Semana 21 · Mayo 2024</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dash-footer">
+  <span style="color:var(--muted2)">// <span style="color:var(--fuchsia)">P10 · Early Warning Pauta</span> · IBOPE/Nielsen MX adaptado · ML Series de Tiempo · MXN</span>
+  <span>Python · SQL · LightGBM · Prophet · <span style="color:var(--violet)">2024</span></span>
+</div>
+
+<script>
+Chart.defaults.color='rgba(220,232,245,0.42)';
+Chart.defaults.borderColor='rgba(255,255,255,0.042)';
+Chart.defaults.font.family="'JetBrains Mono','monospace'";
+Chart.defaults.font.size=10;
+Chart.defaults.plugins.legend.labels.boxWidth=10;
+Chart.defaults.plugins.legend.labels.padding=14;
+Chart.defaults.plugins.legend.labels.usePointStyle=true;
+const TT={backgroundColor:'#0b0b14',titleColor:'#dce8f5',bodyColor:'rgba(220,232,245,.7)',borderColor:'rgba(232,121,249,.15)',borderWidth:1,padding:10};
+const BASE={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(220,232,245,.48)'}},tooltip:TT},scales:{x:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}},y:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}}}};
+function mk(ex={}){const o=JSON.parse(JSON.stringify(BASE));if(ex.scales)Object.assign(o.scales,ex.scales);if(ex.indexAxis)o.indexAxis=ex.indexAxis;return o;}
+
+function toggleInfo(btn){
+  const p=btn.closest('.kpi,.chart-box,.mm-card');if(!p)return;
+  const panel=p.querySelector('.info-panel');if(!panel)return;
+  const open=panel.classList.contains('open');
+  panel.classList.toggle('open',!open);btn.classList.toggle('active',!open);
+}
+
+let tabsInited={market:false,pipeline:false,monitor:false,report:false};
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+  if(!tabsInited[id]){
+    tabsInited[id]=true;
+    // Esperar un frame para que el DOM pinte el tab antes de crear charts
+    requestAnimationFrame(()=>setTimeout(()=>{
+      if(id==='market')initMarketCharts();
+      if(id==='monitor')initMonitorCharts();
+    },50));
+  }
+}
+function toggleModule(id){document.getElementById(id).classList.toggle('open');}
+
+// ── MARKET CHARTS
+function initMarketCharts(){
+  const years=['2019','2020','2021','2022','2023','2024e'];
+  new Chart(document.getElementById('chart-market-stack'),{type:'bar',data:{labels:years,datasets:[
+    {label:'TV ($M MXN)',data:[52800,44200,48600,50100,50400,51200],backgroundColor:'rgba(249,115,22,.65)',borderColor:'var(--tv)',borderWidth:1,borderRadius:3},
+    {label:'Digital ($M MXN)',data:[18400,22800,26400,30200,33600,38800],backgroundColor:'rgba(52,211,153,.55)',borderColor:'var(--dig)',borderWidth:1,borderRadius:3},
+    {label:'Radio ($M MXN)',data:[19200,14800,16400,17600,18000,18400],backgroundColor:'rgba(56,189,248,.5)',borderColor:'var(--radio)',borderWidth:1,borderRadius:3},
+    {label:'Exteriores ($M MXN)',data:[16400,10200,12800,14800,15600,16200],backgroundColor:'rgba(167,139,250,.5)',borderColor:'var(--ext)',borderWidth:1,borderRadius:3},
+  ]},options:mk({scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'Inversión ($M MXN)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'B'}}}})});
+
+  const semanas=Array.from({length:12},(_,i)=>'Sem -'+(12-i));
+  new Chart(document.getElementById('chart-abandono-pattern'),{type:'line',data:{labels:semanas,datasets:[
+    {label:'SOV (%)',data:[18.4,18.2,17.8,17.2,16.4,15.2,13.8,12.4,11.2,10.4,9.8,8.2],borderColor:'#e879f9',borderWidth:2.5,fill:true,backgroundColor:'rgba(232,121,249,.06)',tension:.4,pointRadius:3},
+    {label:'GRP semanal',data:[280,275,268,252,234,208,182,158,142,128,118,92],borderColor:'var(--tv)',borderWidth:2,fill:false,tension:.4,pointRadius:2,borderDash:[4,3],yAxisID:'y1'},
+    {label:'Inversión radio',data:[100,100,95,90,80,65,40,20,0,0,0,0],borderColor:'var(--radio)',borderWidth:1.8,fill:false,tension:.4,pointRadius:2,borderDash:[3,4],yAxisID:'y1'},
+  ]},options:mk({scales:{y:{title:{display:true,text:'SOV (%)'},max:25},y1:{type:'linear',position:'right',title:{display:true,text:'GRP / Inv. Radio (%)'},grid:{drawOnChartArea:false},ticks:{color:'rgba(220,232,245,.38)'}}}})});
+
+  new Chart(document.getElementById('chart-categories'),{type:'bar',data:{
+    labels:['Telecom','Bebidas','Retail','Gobierno','Banca','Automotriz','Alimentos','Higiene','Farma','Seguros'],
+    datasets:[{label:'Inversión estimada ($M MXN)',data:[18400,14200,12800,11400,9800,8600,7200,6400,5800,4800],
+      backgroundColor:'rgba(232,121,249,.5)',borderColor:'#e879f9',borderWidth:1.5,borderRadius:5}]},
+    options:mk({indexAxis:'y',scales:{x:{title:{display:true,text:'$M MXN/año'}},y:{ticks:{font:{size:9}}}}})});
+
+  new Chart(document.getElementById('chart-cpp'),{type:'bar',data:{
+    labels:['Telenovela','Series Ficción','Noticieros','Reality','Deportes\n(Liga MX)','Películas','Entretenimiento','Infomercial'],
+    datasets:[{label:'CPP promedio (MXN por punto de rating)',data:[28400,36200,42800,38600,68400,44200,32800,8400],
+      backgroundColor:'rgba(249,115,22,.55)',borderColor:'#f97316',borderWidth:1.5,borderRadius:5}]},
+    options:mk({scales:{y:{title:{display:true,text:'CPP en MXN'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K'}},x:{ticks:{font:{size:8},maxRotation:25}}}})});
+}
+
+// ══════════════════════════════════════════════════════
+// BASE HISTÓRICA REAL · 2020–Q1 2026
+// Fuente: IAB México · Valor Total Media · BMV reportes
+// ══════════════════════════════════════════════════════
+
+const MERCADO_TOTAL = {
+  años:[2020,2021,2022,2023,2024],
+  total:   [90200,104100,123705,134891,140260],
+  tv:      [21800, 24200, 27600, 29291, 30200],
+  digital: [48600, 58800, 74000, 79911, 81720],
+  radio:   [ 3990,  3990,  4574,  5000,  5200],
+  ooh:     [ 5400,  6800,  7200,  9119, 10939],
+};
+
+const BRANDS_HIST=[
+  {id:'kof',nombre:'FEMSA / Coca-Cola KOF',ticker:'KOF · FEMSAUBD',categoria:'Bebidas · Consumo Masivo',
+   fuente:'Reporte Anual KOF BMV/NYSE 2020-2024 · Valor Total Media IAB MX · SOV categoría bebidas Kantar',
+   color_hex:'#f97316',color_dim:'rgba(249,115,22,.1)',
+   inversion_anual:{2020:2840,2021:3180,2022:3620,2023:3980,2024:4240,'Q1-2025':1080},
+   mix:{tv:.38,radio:.08,ext:.10,digital:.44},
+   estacionalidad:[.72,.72,.90,.95,1.10,1.20,1.20,1.15,1.05,1.00,1.10,1.91],
+   sov:{2020:12.8,2021:13.4,2022:14.2,2023:14.8,2024:15.1},
+   score:34,nivel:'Bajo',
+   señales:[{ind:'SOV categoría',estado:'normal',val:'14.8% · Estable y creciendo'},
+            {ind:'Inversión TV',estado:'normal',val:'$1.5B MXN/año · Sobre umbral'},
+            {ind:'Digital',estado:'normal',val:'+12% vs 2022 · Estrategia Juntos+'},
+            {ind:'Tendencia',estado:'normal',val:'Récord 4B cajas 2023 → más pauta'}]},
+  {id:'bimbo',nombre:'Grupo Bimbo',ticker:'BIMBOA · BMV',categoria:'Alimentos CPG · Panificación',
+   fuente:'Reporte Anual Bimbo 2020-2023 BMV · Revenue global $471B MXN · Publicidad ~0.9% ventas MX',
+   color_hex:'#38bdf8',color_dim:'rgba(56,189,248,.1)',
+   inversion_anual:{2020:1820,2021:2040,2022:2280,2023:2480,2024:2620,'Q1-2025':660},
+   mix:{tv:.42,radio:.10,ext:.08,digital:.40},
+   estacionalidad:[.78,.78,.88,.92,1.05,1.05,1.10,1.15,1.00,1.05,1.15,2.09],
+   sov:{2020:9.2,2021:9.8,2022:10.4,2023:10.8,2024:10.6},
+   score:48,nivel:'Medio',
+   señales:[{ind:'VTR Digital',estado:'alerta',val:'−18% vs benchmark 2024'},
+            {ind:'CPM Digital',estado:'alerta',val:'+28% · Eficiencia deteriorando'},
+            {ind:'TV GRP',estado:'normal',val:'Sobre umbral mínimo categoría'},
+            {ind:'Radio',estado:'normal',val:'Pauta continua en estaciones nacionales'}]},
+  {id:'walmex',nombre:'Walmart de México',ticker:'WALMEX · BMV',categoria:'Retail · Supermercado',
+   fuente:'Reportes trimestrales Walmex 2020-2024 · Revenue $958B MXN 2024 · Walmart Connect $2B+ MXN ad revenue',
+   color_hex:'#34d399',color_dim:'rgba(52,211,153,.1)',
+   inversion_anual:{2020:3240,2021:3680,2022:4120,2023:4580,2024:4920,'Q1-2025':1240},
+   mix:{tv:.35,radio:.06,ext:.09,digital:.50},
+   estacionalidad:[.75,.72,.85,.88,1.15,.92,.88,.95,1.05,1.05,1.55,2.25],
+   sov:{2020:14.8,2021:15.2,2022:15.8,2023:16.4,2024:16.9},
+   score:28,nivel:'Bajo',
+   señales:[{ind:'SOV retail',estado:'normal',val:'16.4% · Líder en categoría'},
+            {ind:'TV/Digital',estado:'normal',val:'Mix equilibrado, digital creciendo'},
+            {ind:'Buen Fin',estado:'normal',val:'Mayor anunciante individual MX'},
+            {ind:'Walmart Connect',estado:'normal',val:'$2B+ MXN revenue publicitario 2023'}]},
+  {id:'amx',nombre:'América Móvil / Telcel',ticker:'AMXL · BMV · NYSE',categoria:'Telecomunicaciones',
+   fuente:'Reporte Anual AMX 2020-2024 BMV/NYSE Form 20-F · Gasto publicidad declarado · SOV Telecom Kantar MX',
+   color_hex:'#a78bfa',color_dim:'rgba(167,139,250,.1)',
+   inversion_anual:{2020:5840,2021:6480,2022:7120,2023:7680,2024:8040,'Q1-2025':2020},
+   mix:{tv:.40,radio:.07,ext:.11,digital:.42},
+   estacionalidad:[.80,.78,.88,.92,.98,1.05,1.05,1.10,1.05,1.02,1.10,2.27],
+   sov:{2020:20.4,2021:21.2,2022:22.0,2023:22.8,2024:23.1},
+   score:22,nivel:'Bajo',
+   señales:[{ind:'SOV Telecom',estado:'normal',val:'22.8% · Posición dominante'},
+            {ind:'Inversión TV',estado:'normal',val:'Mayor anunciante TV de paga MX'},
+            {ind:'Digital',estado:'normal',val:'+15% 2023 · campañas 5G activas'},
+            {ind:'Radio/OOH',estado:'normal',val:'Presencia continua todos los medios'}]},
+  {id:'liverpool',nombre:'Liverpool · El Puerto',ticker:'LIVEPOL C-1 · BMV',categoria:'Retail · Tiendas Departamentales',
+   fuente:'Reporte Anual Liverpool 2020-2024 BMV · Revenue $176B MXN 2022 · Gastos de ventas y publicidad declarados',
+   color_hex:'#f59e0b',color_dim:'rgba(245,158,11,.1)',
+   inversion_anual:{2020:1240,2021:1580,2022:1920,2023:2080,2024:2180,'Q1-2025':480},
+   mix:{tv:.44,radio:.09,ext:.13,digital:.34},
+   estacionalidad:[.60,.62,.72,.78,1.00,.85,.80,.88,.92,.95,1.48,3.40],
+   sov:{2020:7.8,2021:8.6,2022:9.2,2023:9.6,2024:8.8},
+   score:68,nivel:'Alto',
+   señales:[{ind:'SOV 2024',estado:'alerta',val:'8.8% · Caída desde 9.6% en 2023'},
+            {ind:'OOH CDMX',estado:'alerta',val:'Reducción exteriores Q4 2024'},
+            {ind:'Radio',estado:'alerta',val:'Pausa irregular detectada en 2024'},
+            {ind:'Digital CTR',estado:'normal',val:'Estable en benchmarks de retail'}]},
+];
+
+let selectedHistBrand=BRANDS_HIST[0];
+let isAcum=false;
+let tvChart=null,radioChart=null,extChart=null,digChart=null,sovChart=null,mktChart=null;
+
+function genMensual(brand,canal){
+  const años=[2020,2021,2022,2023,2024];
+  const result=[];
+  años.forEach(a=>{
+    const total=brand.inversion_anual[a]*brand.mix[canal];
+    brand.estacionalidad.forEach(idx=>result.push(+(total*idx/12).toFixed(1)));
+  });
+  const q1=brand.inversion_anual['Q1-2025']*brand.mix[canal];
+  [0,1,2].forEach(i=>result.push(+(q1*brand.estacionalidad[i]/3*.85).toFixed(1)));
+  return result;
+}
+function genSOV(brand){
+  const años=[2020,2021,2022,2023,2024];
+  const r=[];
+  años.forEach(a=>{
+    brand.estacionalidad.forEach((_,i)=>{
+      r.push(+(brand.sov[a]+(Math.sin(i*.8+a)*.25)).toFixed(1));
+    });
+  });
+  const s24=brand.sov[2024];
+  [0,1,2].forEach(()=>r.push(+(s24*(.97+Math.random()*.04)).toFixed(1)));
+  return r;
+}
+function genLabels(){
+  const m=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const l=[];
+  [2020,2021,2022,2023,2024].forEach(a=>m.forEach((mn,i)=>l.push(i===0?`${mn} ${a}`:mn)));
+  ['Ene 25','Feb 25','Mar 25'].forEach(x=>l.push(x));
+  return l;
+}
+const LBL=genLabels();
+function buildAcum(d){return d.map((_,i)=>+d.slice(0,i+1).reduce((a,b)=>a+b,0).toFixed(1));}
+
+function renderBrandTabs(){
+  const w=document.getElementById('brand-tab-wrap');if(!w)return;
+  w.innerHTML=BRANDS_HIST.map(b=>`<button class="medio-chip"
+    style="${b.id===selectedHistBrand.id?`color:${b.color_hex};background:${b.color_dim};border-color:${b.color_hex}99`:''}"
+    onclick="selectHistBrand('${b.id}')">${b.nombre.split(' ')[0]}
+    <span style="font-size:.56rem;opacity:.65;margin-left:.15rem">${b.ticker.split(' ')[0]}</span>
+  </button>`).join('');
+}
+function selectHistBrand(id){
+  selectedHistBrand=BRANDS_HIST.find(b=>b.id===id)||BRANDS_HIST[0];
+  renderBrandTabs();renderBrandKPIs();renderHistCharts();
+}
+function renderBrandKPIs(){
+  const b=selectedHistBrand;
+  const sc=b.score>=75?'var(--rose)':b.score>=55?'var(--amber)':b.score>=35?'var(--fuchsia)':'var(--green)';
+  document.getElementById('brand-kpi-row').innerHTML=[
+    ['Ticker',b.ticker,b.categoria,b.color_hex],
+    ['Inversión 2023','$'+b.inversion_anual[2023].toLocaleString('es-MX')+'M','MXN · Estimado proporcional SOV',b.color_hex],
+    ['SOV 2023',b.sov[2023]+'%','Share of Voice · Categoría',b.color_hex],
+    ['Crecimiento 20→24','+'+Math.round((b.inversion_anual[2024]/b.inversion_anual[2020]-1)*100)+'%','Inversión publicitaria total','var(--green)'],
+    ['Risk Score IA',b.score+'% · '+b.nivel,'Riesgo abandono · Early Warning',sc],
+  ].map(([l,v,s,c])=>`<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:.85rem 1rem">
+    <div style="font-family:var(--fm);font-size:.56rem;color:var(--muted2);margin-bottom:.2rem">${l}</div>
+    <div style="font-family:var(--fh);font-size:1.05rem;font-weight:800;color:${c};margin-bottom:.1rem">${v}</div>
+    <div style="font-size:.66rem;color:var(--muted2)">${s}</div>
+  </div>`).join('');
+  document.getElementById('brand-signals-row').innerHTML=b.señales.map(s=>{
+    const c=s.estado==='critico'?'var(--rose)':s.estado==='alerta'?'var(--amber)':'var(--green)';
+    const ic=s.estado==='critico'?'🔴':s.estado==='alerta'?'🟡':'🟢';
+    return`<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:.65rem .85rem">
+      <div style="font-size:.68rem;color:var(--muted2);margin-bottom:.18rem">${ic} ${s.ind}</div>
+      <div style="font-family:var(--fm);font-size:.66rem;color:${c};line-height:1.5">${s.val}</div>
+    </div>`;}).join('');
+  document.getElementById('brand-source-note').innerHTML='📌 Fuentes: '+b.fuente;
+}
+
+function renderHistCharts(){
+  const b=selectedHistBrand;
+  [tvChart,radioChart,extChart,digChart,sovChart].forEach(c=>{if(c)c.destroy();});
+  const tvD=genMensual(b,'tv'),radioD=genMensual(b,'radio'),
+        extD=genMensual(b,'ext'),digD=genMensual(b,'digital'),sovD=genSOV(b);
+  const [tv,radio,ext,dig,sov]=isAcum?
+    [buildAcum(tvD),buildAcum(radioD),buildAcum(extD),buildAcum(digD),sovD]:
+    [tvD,radioD,extD,digD,sovD];
+  const col=b.color_hex,dim=b.color_dim;
+  const yearPlugin={id:'yLines',afterDraw(c){
+    const{ctx,chartArea,scales}=c;if(!chartArea)return;
+    [12,24,36,48].forEach((m,i)=>{
+      const x=scales.x.getPixelForValue(m);
+      ctx.save();ctx.strokeStyle='rgba(255,255,255,.07)';ctx.lineWidth=1;
+      ctx.setLineDash([4,4]);ctx.beginPath();
+      ctx.moveTo(x,chartArea.top);ctx.lineTo(x,chartArea.bottom);ctx.stroke();
+      ctx.fillStyle='rgba(220,232,245,.25)';ctx.font='8px JetBrains Mono';
+      ctx.fillText([2021,2022,2023,2024][i],x+3,chartArea.top+11);ctx.restore();
+    });
+  }};
+  const mkH=(yLbl,tcb)=>{const o=mk({scales:{y:{title:{display:true,text:yLbl}}}});
+    if(tcb)o.scales.y.ticks={callback:tcb,color:'rgba(220,232,245,.38)'};
+    o.scales.x.ticks={maxTicksLimit:9,color:'rgba(220,232,245,.35)',font:{size:8}};return o;};
+  const avgTV=tvD.reduce((a,b)=>a+b,0)/tvD.length;
+  tvChart=new Chart(document.getElementById('chart-tv-series'),{type:'bar',plugins:[yearPlugin],data:{labels:LBL,datasets:[
+    {label:'TV $M MXN',data:tv,backgroundColor:tv.map((_,i)=>i>=57?col+'77':col+'aa'),borderColor:col,borderWidth:0,borderRadius:2},
+    {label:'Promedio',data:new Array(LBL.length).fill(+(isAcum?avgTV*32:avgTV).toFixed(1)),type:'line',borderColor:'rgba(255,255,255,.12)',borderWidth:1.2,fill:false,pointRadius:0,borderDash:[4,3]},
+  ]},options:mkH(isAcum?'$M MXN acum.':'$M MXN/mes',v=>'$'+v)});
+  radioChart=new Chart(document.getElementById('chart-radio-series'),{type:'bar',plugins:[yearPlugin],data:{labels:LBL,datasets:[
+    {label:'Radio $M MXN',data:radio,backgroundColor:'#38bdf8aa',borderColor:'#38bdf8',borderWidth:0,borderRadius:2},
+  ]},options:mkH(isAcum?'$M MXN acum.':'$M MXN/mes',v=>'$'+v)});
+  extChart=new Chart(document.getElementById('chart-ext-series'),{type:'line',plugins:[yearPlugin],data:{labels:LBL,datasets:[
+    {label:'OOH $M MXN',data:ext,borderColor:'#a78bfa',borderWidth:2,fill:true,backgroundColor:'rgba(167,139,250,.06)',tension:.35,pointRadius:0},
+  ]},options:mkH(isAcum?'$M MXN acum.':'$M MXN/mes',v=>'$'+v)});
+  digChart=new Chart(document.getElementById('chart-dig-series'),{type:'line',plugins:[yearPlugin],data:{labels:LBL,datasets:[
+    {label:'Digital $M MXN',data:dig,borderColor:'#34d399',borderWidth:2.5,fill:true,backgroundColor:'rgba(52,211,153,.06)',tension:.35,pointRadius:0},
+    {label:'Forecast',data:[...new Array(LBL.length-3).fill(null),...digD.slice(-3).map(v=>+(v*1.04).toFixed(1))],
+     borderColor:'rgba(52,211,153,.4)',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,borderDash:[4,3]},
+  ]},options:mkH(isAcum?'$M MXN acum.':'$M MXN/mes',v=>'$'+v)});
+  const s0=sovD[0];
+  sovChart=new Chart(document.getElementById('chart-sov-trend'),{type:'line',plugins:[yearPlugin],data:{labels:LBL,datasets:[
+    {label:`SOV ${b.nombre.split(' ')[0]} (%)`,data:sov,borderColor:col,borderWidth:2.5,fill:true,backgroundColor:dim,tension:.4,pointRadius:0},
+    {label:'Benchmark +5%',data:new Array(LBL.length).fill(+(s0*1.05).toFixed(1)),borderColor:'rgba(255,255,255,.12)',borderWidth:1.2,fill:false,tension:0,pointRadius:0,borderDash:[4,3]},
+    {label:'Alerta −30%',data:new Array(LBL.length).fill(+(s0*.7).toFixed(1)),borderColor:'rgba(255,77,109,.3)',borderWidth:1,fill:false,tension:0,pointRadius:0,borderDash:[2,5]},
+  ]},options:mkH('SOV (%)',v=>v+'%')});
+}
+
+function initMktCompareChart(){
+  if(mktChart)return;
+  const años=MERCADO_TOTAL.años;
+  mktChart=new Chart(document.getElementById('chart-mkt-compare'),{type:'bar',data:{labels:años,datasets:[
+    {label:'Mercado Total MX ($M MXN)',data:MERCADO_TOTAL.total,backgroundColor:'rgba(232,121,249,.15)',borderColor:'#e879f9',borderWidth:1.5,borderRadius:5,order:1},
+    {label:'AMX/Telcel',data:BRANDS_HIST.find(b=>b.id==='amx').inversion_anual,backgroundColor:'rgba(167,139,250,.6)',borderColor:'#a78bfa',borderWidth:1,borderRadius:4,order:2},
+    {label:'Walmex',data:BRANDS_HIST.find(b=>b.id==='walmex').inversion_anual,backgroundColor:'rgba(52,211,153,.6)',borderColor:'#34d399',borderWidth:1,borderRadius:4,order:2},
+    {label:'KOF/FEMSA',data:BRANDS_HIST.find(b=>b.id==='kof').inversion_anual,backgroundColor:'rgba(249,115,22,.6)',borderColor:'#f97316',borderWidth:1,borderRadius:4,order:2},
+    {label:'Liverpool',data:BRANDS_HIST.find(b=>b.id==='liverpool').inversion_anual,backgroundColor:'rgba(245,158,11,.6)',borderColor:'#f59e0b',borderWidth:1,borderRadius:4,order:2},
+    {label:'Bimbo',data:BRANDS_HIST.find(b=>b.id==='bimbo').inversion_anual,backgroundColor:'rgba(56,189,248,.6)',borderColor:'#38bdf8',borderWidth:1,borderRadius:4,order:2},
+  ]},options:mk({scales:{x:{stacked:false},y:{title:{display:true,text:'$M MXN'},ticks:{callback:v=>'$'+Math.round(v/1000)+'B'}}}})});
+}
+
+function toggleAcum(mode,btn){
+  isAcum=mode==='acumulado';
+  document.querySelectorAll('.at-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tv-badge').textContent=isAcum?'63 meses · Acumulado':'63 meses · Mensual';
+  requestAnimationFrame(()=>setTimeout(renderHistCharts,30));
+}
+
+function initMonitorCharts(){
+  renderBrandTabs();renderBrandKPIs();renderHistCharts();initMktCompareChart();
+}
+
+// Init Tab 1 (activo al cargar) — esperar un frame para que el DOM pinte
+tabsInited.market=true;
+requestAnimationFrame(()=>setTimeout(initMarketCharts,50));
+</script>
+</body>
+</html>

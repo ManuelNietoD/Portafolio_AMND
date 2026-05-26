@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>P8 · Riesgo Geográfico · Mitigación con IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#040508;--bg2:#08090e;--bg3:#0d0f16;--bg4:#13151e;
+  --orange:#f97316;--orange-dim:rgba(249,115,22,.10);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,.09);
+  --teal:#00ddb4;--teal-dim:rgba(0,221,180,.09);
+  --rose:#ff4d6d;--rose-dim:rgba(255,77,109,.09);
+  --green:#34d399;--blue:#60a5fa;--violet:#a78bfa;
+  --text:#dce8f5;--muted:#3a4d62;--muted2:#6a8aaa;
+  --border:rgba(249,115,22,.13);--border2:rgba(255,255,255,.05);
+  --r:14px;
+  --fh:'Syne',sans-serif;--fm:'JetBrains Mono',monospace;--fb:'DM Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.7;min-height:100vh;overflow-x:hidden}
+
+.back-bar{padding:.9rem 2rem;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:.7rem;background:var(--bg2)}
+.back-btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--fm);font-size:.72rem;color:var(--muted2);text-decoration:none;padding:.35rem .8rem;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);transition:all .2s;cursor:pointer}
+.back-btn:hover{color:var(--orange);border-color:rgba(249,115,22,.3)}
+.back-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+.breadcrumb{font-family:var(--fm);font-size:.68rem;color:var(--muted)}
+.breadcrumb span{color:var(--orange)}
+
+.dash-header{padding:2.5rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.eyebrow{font-family:var(--fm);font-size:.62rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.eyebrow::before{content:'';display:inline-block;width:20px;height:1px;background:var(--orange)}
+.dash-title{font-family:var(--fh);font-size:clamp(1.5rem,3vw,2.3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.8rem}
+.dash-title .at{color:var(--orange)}
+.dash-meta{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-family:var(--fm);font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;padding:.2rem .65rem;border-radius:999px}
+.b-src{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(249,115,22,.25)}
+.b-py{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.b-r{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.b-sql{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.b-type{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,221,180,.25)}
+.dash-desc{font-size:.85rem;color:rgba(220,232,245,.5);max-width:740px;line-height:1.8;margin-bottom:2rem}
+
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;padding:0 2.5rem;max-width:1280px;margin:0 auto}
+.kpi{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.1rem 1.2rem;position:relative;overflow:hidden;transition:border-color .25s;animation:fadeUp .5s ease both}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--orange));opacity:.8}
+.kpi:nth-child(1){animation-delay:.05s}.kpi:nth-child(2){animation-delay:.1s}.kpi:nth-child(3){animation-delay:.15s}.kpi:nth-child(4){animation-delay:.2s}
+.kpi-val{font-family:var(--fh);font-size:1.7rem;font-weight:800;letter-spacing:-.03em;display:block;margin-bottom:.15rem}
+.kpi-lbl{font-size:.72rem;color:var(--muted2)}.kpi-sub{font-family:var(--fm);font-size:.6rem;color:var(--muted)}
+.kpi .info-btn{position:absolute;top:.6rem;right:.6rem}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid rgba(131,153,184,.35);background:rgba(131,153,184,.08);color:var(--muted2);font-family:var(--fm);font-size:.6rem;cursor:pointer;transition:all .2s;flex-shrink:0;user-select:none;line-height:1}
+.info-btn:hover,.info-btn.active{border-color:var(--orange);color:var(--orange);background:var(--orange-dim)}
+.cb-label .info-btn{margin-left:auto}
+.info-panel{display:none;margin-top:.65rem;padding:.65rem .8rem;background:rgba(249,115,22,.03);border:1px solid rgba(249,115,22,.12);border-radius:8px;flex-direction:column;gap:.45rem;animation:slideDown .2s ease}
+.info-panel.open{display:flex}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.te-row{display:flex;align-items:baseline;gap:.5rem;font-size:.75rem;line-height:1.65}
+.te-tag{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;padding:.1rem .42rem;border-radius:5px;border:1px solid;font-weight:500}
+.te-tag.def{color:var(--orange);background:var(--orange-dim);border-color:rgba(249,115,22,.28)}
+.te-tag.meta{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.28)}
+.te-tag.uso{color:var(--teal);background:var(--teal-dim);border-color:rgba(0,221,180,.28)}
+.te-txt{color:rgba(220,232,245,.58)}.te-txt strong{color:rgba(220,232,245,.88);font-weight:500}
+
+.tabs-wrap{padding:2rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--border2);margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{font-family:var(--fm);font-size:.73rem;padding:.65rem 1.2rem;cursor:pointer;color:var(--muted2);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;display:flex;align-items:center;gap:.4rem;border-radius:8px 8px 0 0}
+.tab-btn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.tab-btn.active{color:var(--orange);border-bottom-color:var(--orange);background:var(--orange-dim)}
+.tab-panel{display:none;animation:fadeUp .3s ease}.tab-panel.active{display:block}
+
+.sec-title{font-family:var(--fh);font-size:1rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem;display:flex;align-items:center;gap:.55rem}
+.sec-title::before{content:'';display:inline-block;width:16px;height:2px;background:var(--orange);border-radius:1px}
+.sec-sub{font-size:.78rem;color:var(--muted2);margin-bottom:1.4rem}
+
+.chart-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem}
+.chart-box.full{grid-column:1/-1}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.cb-label{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.cb-badge{font-size:.58rem;padding:.12rem .45rem;border-radius:5px;background:var(--orange-dim);color:var(--orange);border:1px solid rgba(249,115,22,.2)}
+.chart-wrap{position:relative;height:200px}
+.chart-wrap.tall{height:280px}
+.chart-wrap.xtall{height:340px}
+
+/* MAP */
+.map-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem;margin-bottom:1.6rem}
+.map-svg{width:100%;max-height:320px}
+.state-shape{fill:var(--bg3);stroke:rgba(255,255,255,.06);stroke-width:.6;transition:all .25s;cursor:pointer}
+.state-shape:hover{stroke:var(--orange);stroke-width:1.5;filter:brightness(1.2)}
+.risk-bajo{fill:rgba(52,211,153,.3)}
+.risk-medio{fill:rgba(245,166,35,.4)}
+.risk-alto{fill:rgba(249,115,22,.55)}
+.risk-critico{fill:rgba(155,34,38,.75)}
+.map-legend{display:flex;gap:1.2rem;margin-top:.8rem;flex-wrap:wrap;align-items:center}
+.leg-item{display:flex;align-items:center;gap:.4rem;font-family:var(--fm);font-size:.62rem;color:var(--muted2)}
+.leg-box{width:12px;height:12px;border-radius:3px}
+.map-tooltip{position:absolute;pointer-events:none;background:var(--bg3);border:1px solid rgba(249,115,22,.3);border-radius:8px;padding:.6rem .9rem;font-family:var(--fm);font-size:.68rem;display:none;z-index:10}
+
+/* FACTOR CARDS */
+.factor-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.7rem;margin-bottom:1.6rem}
+.factor-card{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:.9rem;text-align:center;transition:border-color .2s;position:relative}
+.factor-card:hover{border-color:rgba(249,115,22,.25)}
+.fc-icon{font-size:1.4rem;margin-bottom:.4rem}
+.fc-name{font-family:var(--fm);font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2);margin-bottom:.3rem}
+.fc-weight{font-family:var(--fh);font-size:1.2rem;font-weight:800;margin-bottom:.2rem}
+.fc-bar{height:4px;border-radius:2px;background:var(--bg4);overflow:hidden;margin-top:.4rem}
+.fc-fill{height:100%;border-radius:2px}
+
+/* RISK TABLE */
+.risk-table{width:100%;border-collapse:collapse;font-size:.76rem;margin-bottom:1.6rem}
+.risk-table th{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:.5rem .8rem;border-bottom:1px solid var(--border2);text-align:left}
+.risk-table td{padding:.48rem .8rem;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:middle}
+.risk-table tr:hover td{background:rgba(255,255,255,.015)}
+.rt-estado{font-family:var(--fm);font-size:.7rem;color:var(--orange)}
+.rt-tier{font-family:var(--fm);font-size:.6rem;padding:.1rem .45rem;border-radius:4px}
+.tier-bajo{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.tier-medio{background:rgba(245,166,35,.1);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.tier-alto{background:rgba(249,115,22,.1);color:var(--orange);border:1px solid rgba(249,115,22,.2)}
+.tier-critico{background:rgba(155,34,38,.15);color:#e63946;border:1px solid rgba(155,34,38,.3)}
+.score-bar-wrap{width:100px;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;display:inline-block}
+.score-bar{height:100%;border-radius:3px}
+
+/* MUNICIPIO SELECTOR */
+.mun-layout{display:grid;grid-template-columns:260px 1fr;gap:1.2rem;margin-bottom:1.6rem;align-items:start}
+.mun-select-panel{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.2rem}
+.mun-title{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--orange);margin-bottom:.8rem}
+.mun-select{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--fm);font-size:.72rem;padding:.5rem .7rem;outline:none;cursor:pointer;transition:border-color .2s;margin-bottom:.9rem}
+.mun-select:focus{border-color:rgba(249,115,22,.4)}
+.mun-stat{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.035);font-size:.76rem}
+.mun-stat:last-child{border-bottom:none}
+.ms-key{color:var(--muted2)}.ms-val{font-family:var(--fm);font-size:.72rem;color:var(--orange)}
+
+/* EXPOSURE */
+.exposure-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.6rem}
+.exp-card{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem;text-align:center}
+.exp-val{font-family:var(--fh);font-size:1.5rem;font-weight:800;margin-bottom:.15rem}
+.exp-lbl{font-size:.72rem;color:var(--muted2)}
+
+/* AGENT */
+.agent-layout{display:grid;grid-template-columns:1fr 360px;gap:1.2rem;align-items:start}
+.agent-controls{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem;display:flex;flex-direction:column;gap:1rem}
+.agent-output{display:flex;flex-direction:column;gap:.9rem}
+
+.ctrl-title{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--orange);margin-bottom:.7rem;padding-bottom:.4rem;border-bottom:1px solid var(--border2)}
+.ctrl-select{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--fm);font-size:.72rem;padding:.5rem .7rem;outline:none;cursor:pointer;margin-bottom:.7rem}
+.ctrl-select:focus{border-color:rgba(249,115,22,.4)}
+
+.run-btn{width:100%;padding:.75rem;border-radius:10px;border:1px solid rgba(249,115,22,.4);background:linear-gradient(135deg,rgba(249,115,22,.12),rgba(249,115,22,.04));color:var(--orange);font-family:var(--fh);font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.5rem}
+.run-btn:hover:not(:disabled){background:linear-gradient(135deg,rgba(249,115,22,.2),rgba(249,115,22,.08))}
+.run-btn:disabled{opacity:.4;cursor:not-allowed}
+.run-btn.running .ri{animation:spin .8s linear infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* COT */
+.cot-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden}
+.cot-header{padding:.7rem 1rem;border-bottom:1px solid var(--border2);font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:.5rem}
+.cot-body{padding:.8rem;max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:.5rem}
+.cot-body::-webkit-scrollbar{width:3px}.cot-body::-webkit-scrollbar-thumb{background:var(--bg4)}
+.step-row{display:flex;gap:.6rem;align-items:flex-start;animation:fadeUp .2s ease;font-size:.76rem}
+.step-tag{font-family:var(--fm);font-size:.58rem;padding:.1rem .4rem;border-radius:4px;flex-shrink:0;margin-top:.1rem}
+.st-tool{background:rgba(249,115,22,.1);color:var(--orange);border:1px solid rgba(249,115,22,.2)}
+.st-think{background:rgba(167,139,250,.1);color:var(--violet);border:1px solid rgba(167,139,250,.2)}
+.st-ok{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.step-txt{color:rgba(220,232,245,.7);line-height:1.65;flex:1}
+.tool-out{font-family:var(--fm);font-size:.65rem;color:rgba(220,232,245,.4);display:block;margin-top:.15rem}
+
+/* REPORT */
+.report-wrap{background:var(--bg2);border:1px solid rgba(249,115,22,.2);border-radius:var(--r);overflow:hidden}
+.report-hdr{padding:.7rem 1rem;background:rgba(249,115,22,.05);border-bottom:1px solid rgba(249,115,22,.12);font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--orange);display:flex;align-items:center;gap:.5rem}
+.report-body{padding:1.1rem;font-size:.8rem;color:rgba(220,232,245,.78);line-height:1.85;white-space:pre-wrap;min-height:120px}
+.report-body.empty{color:var(--muted);font-style:italic;font-size:.74rem}
+
+/* HISTORY */
+.history-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1rem}
+.hw-title{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.7rem}
+.hw-row{display:flex;align-items:center;gap:.6rem;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.035);font-size:.73rem}
+.hw-row:last-child{border-bottom:none}
+.hw-time{font-family:var(--fm);font-size:.62rem;color:var(--muted2);white-space:nowrap}
+.hw-mun{font-family:var(--fm);font-size:.65rem;color:var(--orange);flex-shrink:0}
+.hw-sum{color:rgba(220,232,245,.5);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.7rem}
+
+/* CONC */
+.conc-list{display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.6rem}
+.conc-item{display:flex;align-items:flex-start;gap:.75rem;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem 1.1rem;font-size:.82rem;color:rgba(220,232,245,.7);line-height:1.75}
+.conc-arrow{font-family:var(--fm);font-size:.72rem;color:var(--orange);flex-shrink:0;background:var(--orange-dim);border-radius:5px;padding:.1rem .38rem}
+
+.dash-footer{padding:1.2rem 2.5rem 2.5rem;max-width:1280px;margin:3rem auto 0;border-top:1px solid var(--border2);display:flex;justify-content:space-between;font-family:var(--fm);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:999px}
+@media(max-width:900px){
+  .kpi-strip{grid-template-columns:repeat(2,1fr);padding:0 1.2rem}
+  .charts-2,.charts-3,.factor-grid,.exposure-grid{grid-template-columns:1fr 1fr}
+  .mun-layout,.agent-layout{grid-template-columns:1fr}
+  .chart-box.full{grid-column:span 1}
+  .dash-header,.tabs-wrap{padding-left:1.2rem;padding-right:1.2rem}
+  .factor-grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="back-bar">
+  <a href="javascript:history.back()" class="back-btn"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Portafolio</a>
+  <div class="breadcrumb">Portafolio <span>/</span> <span>P8 · Riesgo Geográfico</span></div>
+</div>
+
+<div class="dash-header">
+  <div class="eyebrow">08 · Geo + IA · 2024</div>
+  <h1 class="dash-title">Riesgo Geográfico <span class="at">en Tiempo Real · Mitigación con IA</span></h1>
+  <div class="dash-meta">
+    <span class="badge b-src">📂 CENAPRED Atlas Nacional · INEGI API · OpenStreetMap</span>
+    <span class="badge b-py">● Python</span><span class="badge b-r">● R</span><span class="badge b-sql">● SQL</span>
+    <span class="badge b-type">Geo + AI Agent</span>
+  </div>
+  <p class="dash-desc">Índice de riesgo geoespacial compuesto para los 2,469 municipios de México, combinando datos sísmicos, hidrológicos, socioeconómicos y de exposición aseguradora del CENAPRED e INEGI. El agente Claude genera planes de suscripción específicos por municipio en menos de 5 segundos bajo marco CNSF.</p>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-strip" style="margin-top:1.8rem">
+  <div class="kpi" style="--kc:var(--orange)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--orange)">2,469</span>
+    <div class="kpi-lbl">Municipios modelados</div><div class="kpi-sub">Cobertura nacional MX</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Cobertura municipal</strong>: el modelo asigna un índice de riesgo compuesto 0–100 a cada uno de los 2,469 municipios de México usando datos CENAPRED + INEGI + OSM actualizados en tiempo real.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Cobertura del 100% del territorio nacional — diferencia clave vs. análisis estatales que pierden heterogeneidad intra-estatal significativa en riesgo catastrófico.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Pricing diferenciado por municipio: una aseguradora puede cotizar primas técnicas distintas para municipios adyacentes con perfiles de riesgo radicalmente diferentes — imposible con tablas estatales.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--amber)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--amber)">Score 0–100</span>
+    <div class="kpi-lbl">Índice compuesto</div><div class="kpi-sub">5 factores de riesgo</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Índice compuesto ponderado</strong>: combina 5 dimensiones normalizadas [0–100] con pesos calibrados por siniestralidad histórica. Score 0 = mínimo riesgo, 100 = máximo riesgo.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Pesos: Sísmico 25% · Hidrológico 20% · Vulnerabilidad social 20% · Exposición crediticia 20% · Capacidad de respuesta 15%. Calibrados con datos de siniestros CNSF 2000–2022.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Clasificar municipios en 4 tiers de suscripción: Bajo (&lt;30) · Medio (30–55) · Alto (55–75) · Crítico (&gt;75). Cada tier tiene política de límites de acumulación y reaseguro distinta.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--teal)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--teal)">Real-time</span>
+    <div class="kpi-lbl">Actualización</div><div class="kpi-sub">CENAPRED API + webhook</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Actualización en tiempo real</strong>: el pipeline ingesta alertas del Atlas Nacional de Riesgos CENAPRED via webhook y recalcula el índice afectado en &lt;2 minutos de la actualización.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Diferencia vs. tablas estáticas: durante eventos activos (huracán, sismo), el riesgo de un municipio puede cambiar de Medio a Crítico en horas — el sistema refleja esto en tiempo real.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Activar <strong>protocolos de suspensión de suscripción</strong> en municipios afectados por eventos activos — cumpliendo el Artículo 36 del Reglamento de la Ley de Instituciones de Seguros CNSF.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--green)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--green)">&lt;5s</span>
+    <div class="kpi-lbl">Recomendación IA</div><div class="kpi-sub">Por zona/municipio</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Latencia del agente</strong>: tiempo desde que el suscriptor ingresa el municipio hasta recibir el plan completo (cobertura, límites, exclusiones, prima técnica) generado por Claude.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">&lt;5s vs. 2–5 días de análisis manual por un actuario especializado. La diferencia habilita suscripción masiva de seguros catastróficos en programas gubernamentales (FONDEN, SEGALMEX).</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Habilitar <strong>suscripción automatizada de seguros agrícolas y catastróficos</strong> a nivel municipal para AGROASEMEX, FIRA y fondos de seguro gubernamentales sin analista por municipio.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-wrap" style="margin-top:2rem">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('atlas',this)">🗺️ Atlas de Riesgo MX</button>
+    <button class="tab-btn" onclick="switchTab('municipio',this)">🔍 Análisis por Municipio</button>
+    <button class="tab-btn" onclick="switchTab('agent',this)">🤖 Agente IA de Suscripción</button>
+  </div>
+
+  <!-- TAB 1: ATLAS -->
+  <div class="tab-panel active" id="tab-atlas">
+
+    <div class="sec-title">Mapa Coroplético · Índice de Riesgo Compuesto por Estado</div>
+    <p class="sec-sub">Intensidad de riesgo geoespacial · 5 factores ponderados · CENAPRED + INEGI · Hover para detalle</p>
+
+    <div class="map-wrap" style="position:relative">
+      <div class="cb-label" style="margin-bottom:.8rem">Atlas Nacional de Riesgo Asegurador · México 2024 <span class="cb-badge">2,469 municipios · Score 0–100</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+        <div class="info-panel" style="margin-top:.6rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Mapa coroplético</strong>: visualización geoespacial donde el color de cada estado representa el riesgo promedio ponderado de sus municipios. Más rojo = mayor riesgo compuesto.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Los estados del Pacífico (Colima, Guerrero, Oaxaca) dominan el riesgo crítico por la combinación de alta sismicidad + exposición costera + vulnerabilidad social.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Definir límites de acumulación catastrófica por región: las aseguradoras deben reportar su concentración por zona de riesgo a la <strong>CNSF</strong> y al reasegurador para el programa de Cat Bonds.</span></div>
+        </div>
+      </div>
+      <div id="map-tooltip" class="map-tooltip"></div>
+      <svg class="map-svg" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg" id="mx-risk-map" style="max-height:420px">
+        <defs>
+          <filter id="glow"><feGaussianBlur stdDeviation="2" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <!-- Baja California -->
+        <path d="M 38,18 L 52,22 L 68,38 L 72,60 L 64,88 L 54,110 L 44,130 L 36,148 L 30,162 L 24,154 L 28,136 L 32,112 L 36,88 L 38,62 L 34,40 Z" class="state-shape risk-medio" data-state="Baja California" data-score="48" data-tier="Medio" data-sism="62" data-hid="38" data-soc="42" data-exp="45" data-resp="55"/>
+        <!-- Baja California Sur -->
+        <path d="M 30,162 L 36,148 L 44,130 L 54,110 L 64,88 L 72,60 L 78,80 L 74,108 L 66,134 L 58,158 L 52,178 L 44,196 L 36,210 L 28,218 L 22,208 L 24,188 Z" class="state-shape risk-bajo" data-state="Baja California Sur" data-score="35" data-tier="Bajo" data-sism="48" data-hid="52" data-soc="30" data-exp="22" data-resp="40"/>
+        <!-- Sonora -->
+        <path d="M 68,38 L 100,30 L 132,28 L 158,32 L 174,42 L 178,68 L 170,92 L 160,114 L 148,132 L 136,148 L 122,158 L 108,162 L 94,156 L 82,142 L 76,122 L 72,100 L 72,76 L 72,60 L 64,88 Z" class="state-shape risk-medio" data-state="Sonora" data-score="44" data-tier="Medio" data-sism="45" data-hid="52" data-soc="38" data-exp="40" data-resp="48"/>
+        <!-- Chihuahua -->
+        <path d="M 158,32 L 192,28 L 222,30 L 248,36 L 264,50 L 268,72 L 262,96 L 252,118 L 238,138 L 224,154 L 208,164 L 192,170 L 176,168 L 162,158 L 150,144 L 148,132 L 160,114 L 170,92 L 178,68 L 174,42 Z" class="state-shape risk-medio" data-state="Chihuahua" data-score="46" data-tier="Medio" data-sism="38" data-hid="55" data-soc="45" data-exp="42" data-resp="52"/>
+        <!-- Coahuila -->
+        <path d="M 248,36 L 280,30 L 314,28 L 342,32 L 358,44 L 360,68 L 352,92 L 338,110 L 320,124 L 302,132 L 284,136 L 266,134 L 250,124 L 238,110 L 236,90 L 242,68 L 248,50 Z" class="state-shape risk-medio" data-state="Coahuila" data-score="42" data-tier="Medio" data-sism="28" data-hid="48" data-soc="40" data-exp="52" data-resp="58"/>
+        <!-- Nuevo León -->
+        <path d="M 342,32 L 370,28 L 396,32 L 412,46 L 416,68 L 408,90 L 394,106 L 376,116 L 358,120 L 340,116 L 326,106 L 318,92 L 320,72 L 332,52 Z" class="state-shape risk-alto" data-state="Nuevo León" data-score="58" data-tier="Alto" data-sism="35" data-hid="62" data-soc="38" data-exp="72" data-resp="65"/>
+        <!-- Tamaulipas -->
+        <path d="M 396,32 L 428,22 L 460,18 L 490,22 L 510,36 L 516,58 L 512,82 L 500,104 L 484,122 L 466,136 L 446,144 L 426,146 L 408,140 L 394,126 L 392,108 L 400,88 L 410,68 L 412,46 Z" class="state-shape risk-alto" data-state="Tamaulipas" data-score="54" data-tier="Medio" data-sism="32" data-hid="68" data-soc="48" data-exp="55" data-resp="52"/>
+        <!-- Sinaloa -->
+        <path d="M 94,156 L 108,162 L 122,158 L 136,148 L 148,132 L 150,144 L 144,162 L 136,180 L 124,198 L 110,214 L 96,226 L 82,232 L 70,228 L 64,216 L 68,200 L 78,182 L 82,164 Z" class="state-shape risk-medio" data-state="Sinaloa" data-score="52" data-tier="Medio" data-sism="42" data-hid="72" data-soc="52" data-exp="45" data-resp="44"/>
+        <!-- Durango -->
+        <path d="M 176,168 L 192,170 L 208,164 L 224,154 L 238,138 L 252,124 L 264,132 L 268,150 L 262,170 L 250,188 L 234,202 L 216,212 L 198,218 L 180,216 L 166,206 L 158,190 L 160,172 Z" class="state-shape risk-medio" data-state="Durango" data-score="48" data-tier="Medio" data-sism="38" data-hid="58" data-soc="52" data-exp="38" data-resp="42"/>
+        <!-- Zacatecas -->
+        <path d="M 264,134 L 284,136 L 302,132 L 318,124 L 330,130 L 336,148 L 330,168 L 316,184 L 298,194 L 278,198 L 258,196 L 240,186 L 234,170 L 238,152 L 248,138 Z" class="state-shape risk-alto" data-state="Zacatecas" data-score="56" data-tier="Alto" data-sism="32" data-hid="45" data-soc="65" data-exp="42" data-resp="38"/>
+        <!-- San Luis Potosí -->
+        <path d="M 330,130 L 350,122 L 370,120 L 390,124 L 406,136 L 412,156 L 406,176 L 392,192 L 372,202 L 350,206 L 330,202 L 312,192 L 302,176 L 302,156 L 312,142 Z" class="state-shape risk-medio" data-state="San Luis Potosí" data-score="52" data-tier="Medio" data-sism="35" data-hid="55" data-soc="58" data-exp="48" data-resp="45"/>
+        <!-- Nayarit -->
+        <path d="M 110,214 L 124,198 L 136,180 L 144,162 L 150,160 L 160,172 L 164,190 L 156,208 L 144,222 L 130,232 L 116,238 L 102,234 L 96,224 Z" class="state-shape risk-medio" data-state="Nayarit" data-score="54" data-tier="Medio" data-sism="62" data-hid="68" data-soc="55" data-exp="32" data-resp="38"/>
+        <!-- Jalisco -->
+        <path d="M 160,172 L 178,168 L 198,172 L 216,180 L 232,192 L 240,208 L 236,228 L 222,244 L 204,254 L 184,258 L 162,256 L 144,246 L 132,232 L 130,216 L 138,200 L 150,188 Z" class="state-shape risk-alto" data-state="Jalisco" data-score="64" data-tier="Alto" data-sism="58" data-hid="65" data-soc="48" data-exp="72" data-resp="55"/>
+        <!-- Aguascalientes -->
+        <path d="M 264,180 L 276,176 L 288,180 L 294,192 L 288,204 L 274,208 L 260,204 L 254,192 L 258,182 Z" class="state-shape risk-medio" data-state="Aguascalientes" data-score="44" data-tier="Medio" data-sism="30" data-hid="42" data-soc="46" data-exp="48" data-resp="52"/>
+        <!-- Guanajuato -->
+        <path d="M 298,174 L 316,170 L 336,170 L 354,176 L 366,190 L 366,208 L 352,220 L 332,228 L 310,228 L 290,220 L 278,208 L 278,192 L 288,180 Z" class="state-shape risk-alto" data-state="Guanajuato" data-score="60" data-tier="Alto" data-sism="45" data-hid="52" data-soc="58" data-exp="68" data-resp="52"/>
+        <!-- Querétaro -->
+        <path d="M 366,190 L 384,184 L 400,188 L 410,202 L 406,218 L 392,226 L 374,226 L 358,218 L 354,204 Z" class="state-shape risk-medio" data-state="Querétaro" data-score="46" data-tier="Medio" data-sism="38" data-hid="46" data-soc="52" data-exp="54" data-resp="56"/>
+        <!-- Hidalgo -->
+        <path d="M 408,188 L 426,182 L 446,182 L 464,190 L 474,206 L 470,224 L 454,234 L 434,238 L 412,234 L 396,224 L 394,208 Z" class="state-shape risk-alto" data-state="Hidalgo" data-score="62" data-tier="Alto" data-sism="52" data-hid="60" data-soc="65" data-exp="55" data-resp="42"/>
+        <!-- México (Estado) -->
+        <path d="M 350,220 L 370,216 L 390,218 L 408,226 L 416,244 L 408,262 L 390,272 L 368,274 L 346,268 L 330,256 L 326,240 L 334,226 Z" class="state-shape risk-alto" data-state="Estado de México" data-score="70" data-tier="Alto" data-sism="74" data-hid="56" data-soc="58" data-exp="82" data-resp="60"/>
+        <!-- CDMX -->
+        <path d="M 390,238 L 404,234 L 414,242 L 414,254 L 402,260 L 388,258 L 382,248 Z" class="state-shape risk-critico" data-state="Ciudad de México" data-score="78" data-tier="Crítico" data-sism="80" data-hid="55" data-soc="48" data-exp="92" data-resp="68" style="filter:url(#glow)"/>
+        <!-- Tlaxcala -->
+        <path d="M 440,236 L 454,232 L 466,238 L 468,252 L 456,260 L 440,258 L 430,248 Z" class="state-shape risk-medio" data-state="Tlaxcala" data-score="50" data-tier="Medio" data-sism="52" data-hid="46" data-soc="56" data-exp="44" data-resp="50"/>
+        <!-- Puebla -->
+        <path d="M 422,228 L 444,226 L 468,230 L 490,240 L 504,258 L 500,280 L 484,296 L 462,304 L 438,304 L 416,294 L 402,276 L 402,256 L 412,240 Z" class="state-shape risk-alto" data-state="Puebla" data-score="66" data-tier="Alto" data-sism="65" data-hid="62" data-soc="62" data-exp="58" data-resp="45"/>
+        <!-- Veracruz -->
+        <path d="M 472,168 L 500,158 L 528,154 L 554,158 L 572,172 L 574,196 L 564,220 L 546,240 L 524,256 L 502,266 L 480,270 L 460,262 L 448,246 L 450,226 L 462,208 L 474,190 Z" class="state-shape risk-alto" data-state="Veracruz" data-score="68" data-tier="Alto" data-sism="55" data-hid="78" data-soc="65" data-exp="58" data-resp="38"/>
+        <!-- Morelos -->
+        <path d="M 394,270 L 414,266 L 432,270 L 438,284 L 428,296 L 410,300 L 392,294 L 386,280 Z" class="state-shape risk-alto" data-state="Morelos" data-score="62" data-tier="Alto" data-sism="70" data-hid="52" data-soc="58" data-exp="54" data-resp="46"/>
+        <!-- Guerrero -->
+        <path d="M 326,272 L 348,262 L 370,258 L 392,264 L 408,278 L 414,298 L 406,318 L 388,334 L 364,342 L 338,342 L 314,332 L 296,314 L 292,292 L 302,276 Z" class="state-shape risk-critico" data-state="Guerrero" data-score="79" data-tier="Crítico" data-sism="88" data-hid="72" data-soc="82" data-exp="42" data-resp="22"/>
+        <!-- Colima -->
+        <path d="M 200,256 L 218,248 L 234,252 L 240,268 L 230,282 L 212,286 L 196,278 L 192,264 Z" class="state-shape risk-critico" data-state="Colima" data-score="82" data-tier="Crítico" data-sism="92" data-hid="75" data-soc="55" data-exp="48" data-resp="28" style="filter:url(#glow)"/>
+        <!-- Michoacán -->
+        <path d="M 238,246 L 258,238 L 280,236 L 302,240 L 322,250 L 332,268 L 326,288 L 308,300 L 284,306 L 258,304 L 236,292 L 220,274 L 218,256 L 230,248 Z" class="state-shape risk-alto" data-state="Michoacán" data-score="68" data-tier="Alto" data-sism="72" data-hid="65" data-soc="68" data-exp="48" data-resp="35"/>
+        <!-- Oaxaca -->
+        <path d="M 438,308 L 466,306 L 496,308 L 524,314 L 546,326 L 554,346 L 544,366 L 522,378 L 494,382 L 464,378 L 438,364 L 420,344 L 416,322 L 428,310 Z" class="state-shape risk-critico" data-state="Oaxaca" data-score="76" data-tier="Crítico" data-sism="88" data-hid="65" data-soc="78" data-exp="42" data-resp="28"/>
+        <!-- Chiapas -->
+        <path d="M 546,330 L 574,322 L 604,320 L 632,326 L 654,340 L 656,364 L 638,382 L 610,392 L 578,394 L 548,386 L 524,372 L 516,350 L 526,334 Z" class="state-shape risk-critico" data-state="Chiapas" data-score="74" data-tier="Crítico" data-sism="85" data-hid="78" data-soc="82" data-exp="38" data-resp="25"/>
+        <!-- Tabasco -->
+        <path d="M 554,270 L 582,262 L 612,260 L 636,266 L 650,282 L 644,302 L 624,314 L 598,318 L 572,314 L 552,300 L 548,282 Z" class="state-shape risk-medio" data-state="Tabasco" data-score="54" data-tier="Medio" data-sism="22" data-hid="84" data-soc="58" data-exp="42" data-resp="44"/>
+        <!-- Campeche -->
+        <path d="M 638,212 L 668,206 L 700,208 L 726,218 L 736,238 L 728,260 L 706,274 L 678,278 L 650,272 L 628,256 L 622,234 L 630,216 Z" class="state-shape risk-medio" data-state="Campeche" data-score="46" data-tier="Medio" data-sism="14" data-hid="68" data-soc="48" data-exp="36" data-resp="48"/>
+        <!-- Yucatán -->
+        <path d="M 706,166 L 740,160 L 774,162 L 800,174 L 806,196 L 796,218 L 772,230 L 742,232 L 712,226 L 690,212 L 686,192 L 696,174 Z" class="state-shape risk-medio" data-state="Yucatán" data-score="50" data-tier="Medio" data-sism="15" data-hid="62" data-soc="48" data-exp="42" data-resp="52"/>
+        <!-- Quintana Roo -->
+        <path d="M 762,192 L 790,188 L 816,192 L 834,208 L 836,234 L 822,258 L 796,270 L 764,272 L 740,258 L 730,236 L 736,212 L 750,196 Z" class="state-shape risk-medio" data-state="Quintana Roo" data-score="55" data-tier="Medio" data-sism="12" data-hid="72" data-soc="42" data-exp="55" data-resp="48"/>
+        <!-- Score labels for major states -->
+        <text x="48" y="95" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="8" text-anchor="middle">BC</text>
+        <text x="42" y="185" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="8" text-anchor="middle">BCS</text>
+        <text x="128" y="95" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="8" text-anchor="middle">SON</text>
+        <text x="208" y="92" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="8" text-anchor="middle">CHIH</text>
+        <text x="300" y="84" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="8" text-anchor="middle">COAH</text>
+        <text x="382" y="78" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="8" text-anchor="middle">NL</text>
+        <text x="454" y="84" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="8" text-anchor="middle">TAMS</text>
+        <text x="118" y="196" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="8" text-anchor="middle">SIN</text>
+        <text x="208" y="196" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="8" text-anchor="middle">DGO</text>
+        <text x="286" y="167" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">ZAC</text>
+        <text x="356" y="170" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">SLP</text>
+        <text x="136" y="216" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">NAY</text>
+        <text x="190" y="222" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">JAL</text>
+        <text x="276" y="196" fill="rgba(220,232,245,.55)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">AGS</text>
+        <text x="324" y="202" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">GTO</text>
+        <text x="390" y="210" fill="rgba(220,232,245,.55)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">QRO</text>
+        <text x="438" y="212" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">HGO</text>
+        <text x="375" y="248" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">MEX</text>
+        <text x="401" y="250" fill="rgba(220,232,245,.75)" font-family="JetBrains Mono" font-size="6" text-anchor="middle" font-weight="bold">CDMX</text>
+        <text x="454" y="250" fill="rgba(220,232,245,.55)" font-family="JetBrains Mono" font-size="6" text-anchor="middle">TLAX</text>
+        <text x="455" y="268" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">PUE</text>
+        <text x="524" y="218" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">VER</text>
+        <text x="412" y="286" fill="rgba(220,232,245,.55)" font-family="JetBrains Mono" font-size="6" text-anchor="middle">MOR</text>
+        <text x="216" y="272" fill="rgba(220,232,245,.55)" font-family="JetBrains Mono" font-size="6" text-anchor="middle">COL</text>
+        <text x="278" y="274" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">MICH</text>
+        <text x="358" y="310" fill="rgba(220,232,245,.65)" font-family="JetBrains Mono" font-size="8" text-anchor="middle">GRO</text>
+        <text x="488" y="348" fill="rgba(220,232,245,.65)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">OAX</text>
+        <text x="594" y="358" fill="rgba(220,232,245,.65)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">CHIS</text>
+        <text x="598" y="292" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">TAB</text>
+        <text x="680" y="248" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">CAMP</text>
+        <text x="746" y="200" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">YUC</text>
+        <text x="788" y="234" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="7" text-anchor="middle">QROO</text>
+        <!-- Tooltip SVG -->
+        <rect id="map-tt-bg" x="0" y="0" width="195" height="108" rx="7" fill="#0d0f16" stroke="rgba(249,115,22,.45)" stroke-width="1.2" opacity="0" pointer-events="none"/>
+        <text id="map-tt-state" x="0" y="0" fill="#dce8f5" font-family="JetBrains Mono" font-size="10" font-weight="bold" opacity="0" pointer-events="none"/>
+        <text id="map-tt-score" x="0" y="0" fill="#f97316" font-family="JetBrains Mono" font-size="11" font-weight="bold" opacity="0" pointer-events="none"/>
+        <text id="map-tt-tier" x="0" y="0" fill="rgba(220,232,245,.65)" font-family="JetBrains Mono" font-size="9" opacity="0" pointer-events="none"/>
+        <text id="map-tt-sism" x="0" y="0" fill="rgba(220,232,245,.5)" font-family="JetBrains Mono" font-size="8" opacity="0" pointer-events="none"/>
+        <text id="map-tt-hid" x="0" y="0" fill="rgba(220,232,245,.5)" font-family="JetBrains Mono" font-size="8" opacity="0" pointer-events="none"/>
+      </svg>
+      <div class="map-legend">
+        <div class="leg-item"><div class="leg-box" style="background:rgba(52,211,153,.3)"></div>Bajo (0–30)</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(245,166,35,.4)"></div>Medio (30–55)</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(249,115,22,.55)"></div>Alto (55–75)</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(155,34,38,.75)"></div>Crítico (&gt;75)</div>
+        <div class="leg-item" style="margin-left:auto;font-family:var(--fm);font-size:.6rem;color:var(--muted)">Hover para detalle · Score 0–100</div>
+      </div>
+    </div>
+
+    <!-- Factor cards -->
+    <div class="sec-title">Factores del Índice Compuesto</div>
+    <p class="sec-sub">5 dimensiones de riesgo ponderadas por siniestralidad histórica CNSF 2000–2022 · Cada factor normalizado [0–100]</p>
+    <div class="factor-grid">
+      <div class="factor-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.5rem;right:.5rem">ℹ</button>
+        <div class="fc-icon">🌋</div><div class="fc-name">Sísmico</div>
+        <div class="fc-weight" style="color:var(--rose)">25%</div>
+        <div style="font-size:.7rem;color:var(--muted2)">CENAPRED · Aceleración máx. suelo</div>
+        <div class="fc-bar"><div class="fc-fill" style="width:25%;background:var(--rose)"></div></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">Aceleración máxima del suelo (PGA) por municipio del Atlas CENAPRED. Mayor PGA = mayor probabilidad de daño estructural.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Determina la prima técnica base para seguros de daños catastróficos y el límite de acumulación por zona sísmica CNSF.</span></div>
+        </div>
+      </div>
+      <div class="factor-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.5rem;right:.5rem">ℹ</button>
+        <div class="fc-icon">🌊</div><div class="fc-name">Hidrológico</div>
+        <div class="fc-weight" style="color:var(--blue)">20%</div>
+        <div style="font-size:.7rem;color:var(--muted2)">CENAPRED · Inundación + Huracán</div>
+        <div class="fc-bar"><div class="fc-fill" style="width:20%;background:var(--blue)"></div></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">Combina riesgo de inundación (manchas de inundación CONAGUA) y trayectorias históricas de ciclones tropicales (CONAGUA/NOAA).</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Base para exclusiones de cobertura hidrometeorológica y diseño de seguros paramétricos de lluvia para el sector agrícola (AGROASEMEX).</span></div>
+        </div>
+      </div>
+      <div class="factor-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.5rem;right:.5rem">ℹ</button>
+        <div class="fc-icon">👥</div><div class="fc-name">Vulnerabilidad Social</div>
+        <div class="fc-weight" style="color:var(--amber)">20%</div>
+        <div style="font-size:.7rem;color:var(--muted2)">CONEVAL · Índice de rezago</div>
+        <div class="fc-bar"><div class="fc-fill" style="width:20%;background:var(--amber)"></div></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">Índice de Rezago Social CONEVAL (pobreza, educación, salud, servicios) como proxy de capacidad de recuperación post-siniestro.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Mayor vulnerabilidad social = mayor severidad del siniestro esperado por el mismo evento físico. Ajusta la prima técnica por exposición social diferenciada.</span></div>
+        </div>
+      </div>
+      <div class="factor-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.5rem;right:.5rem">ℹ</button>
+        <div class="fc-icon">🏦</div><div class="fc-name">Exposición Crediticia</div>
+        <div class="fc-weight" style="color:var(--violet)">20%</div>
+        <div style="font-size:.7rem;color:var(--muted2)">CNBV · Cartera + DENUE</div>
+        <div class="fc-bar"><div class="fc-fill" style="width:20%;background:var(--violet)"></div></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">Cartera de crédito hipotecario y empresarial del sistema financiero en el municipio (CNBV) + densidad de unidades económicas DENUE como proxy de suma asegurada potencial.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Identificar municipios con alta exposición aseguradora que requieren monitoreo especial de concentración y reaseguro catastrófico proporcional.</span></div>
+        </div>
+      </div>
+      <div class="factor-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.5rem;right:.5rem">ℹ</button>
+        <div class="fc-icon">🚒</div><div class="fc-name">Cap. Respuesta</div>
+        <div class="fc-weight" style="color:var(--green)">15%</div>
+        <div style="font-size:.7rem;color:var(--muted2)">SEGOB · Protección Civil</div>
+        <div class="fc-bar"><div class="fc-fill" style="width:15%;background:var(--green)"></div></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">Capacidad institucional de respuesta ante desastres: unidades de protección civil, hospitales por habitante, atlas de riesgo municipal publicado (SEGOB/CENAPRED).</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Factor inverso: mayor capacidad de respuesta → menor severidad esperada. Municipios con atlas propio publicado reciben descuento en la prima técnica del modelo.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top states & spatial autocorrelation -->
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">Índice de Riesgo Compuesto · Top 15 Estados MX <span class="cb-badge">Score 0–100</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap xtall"><canvas id="chart-states"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">Ranking de estados por índice de riesgo compuesto promedio ponderado por municipio. Los primeros 5 son candidatos prioritarios para límites de acumulación catastrófica diferenciados.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Colima lidera con 82/100 por la combinación única de riesgo sísmico de Zona I (el más alto en MX) + exposición costera al Pacífico + baja capacidad de respuesta relativa.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Definir las <strong>zonas de acumulación catastrófica</strong> para el reporte CNSF: los estados en tier Crítico requieren reaseguro proporcional obligatorio antes de emitir nuevas pólizas.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Autocorrelación Espacial · Moran's I por Factor <span class="cb-badge">I = 0.612 · p &lt; 0.001</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap xtall"><canvas id="chart-moran"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Moran's I</strong>: mide si municipios cercanos tienen riesgos similares (agrupamiento espacial). I cercano a 1 = el riesgo se agrupa geográficamente. I cercano a 0 = distribución aleatoria.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">I = 0.612 (p &lt; 0.001) confirma agrupamiento significativo — el riesgo NO está distribuido aleatoriamente. Clusters de alto riesgo en costa Pacífico y sur-sureste.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Justificar <strong>límites de acumulación regionales</strong> en lugar de estatales: el agrupamiento espacial significa que un evento catastrófico puede afectar simultáneamente municipios de varios estados del mismo cluster.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exposure concentration -->
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Concentración de Exposición Aseguradora vs. Primas por Tier de Riesgo <span class="cb-badge">% del total · Paradoja de concentración</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap"><canvas id="chart-exposure"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Paradoja de concentración</strong>: los municipios en tier Crítico representan el 23% de la exposición aseguradora total pero generan solo el 8% de las primas — están subprecificados.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Un mercado eficiente tendría exposición y primas proporcionadas. La brecha en tiers Alto y Crítico indica subvaluación sistemática del riesgo catastrófico en el mercado asegurador mexicano.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Argumento central para repricing de seguros catastróficos: la CNSF puede usar este análisis para exigir adecuación de primas en zonas de riesgo alto y obligar a reaseguro proporcional.</span></div>
+      </div>
+    </div>
+
+    <!-- Conclusions -->
+    <div class="sec-title">Conclusiones & Hallazgos Clave</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Resultados del modelo · CENAPRED + INEGI + CNBV · Reemplaza con tus propios hallazgos</p>
+    <div class="conc-list">
+      <div class="conc-item"><span class="conc-arrow">→</span>El índice geoespacial compuesto identifica zonas de riesgo no evidentes con análisis univariado: municipios costeros del Pacífico con riesgo sísmico moderado + alta densidad crediticia + baja resiliencia representan el 23% de la exposición aseguradora total con solo el 8% de las primas — evidencia de subprecificación sistemática del riesgo catastrófico.</span></div>
+      <div class="conc-item"><span class="conc-arrow">→</span>El análisis de autocorrelación espacial (Moran's I = 0.612, p &lt; 0.001) confirma que el riesgo se agrupa geográficamente, justificando límites de acumulación regional por cluster en lugar de límites estatales uniformes — un evento catastrófico puede afectar simultáneamente municipios de varios estados adyacentes.</span></div>
+      <div class="conc-item"><span class="conc-arrow">→</span>El agente IA genera planes de suscripción específicos por municipio en menos de 5 segundos (cobertura recomendada, límites de acumulación, exclusiones y prima técnica sugerida), acelerando la suscripción de seguros catastróficos de días a minutos bajo marco regulatorio CNSF.</span></div>
+      <div class="conc-item"><span class="conc-arrow">→</span>R (sf, tmap, spdep) es el lenguaje dominante para el análisis geoespacial actuarial: permite visualización de mapas coropléticos interactivos, análisis de dependencia espacial (Moran's I) y exportación directa a CNSF sin licencias GIS comerciales — GeoPandas en Python complementa para el pipeline de ingesta.</span></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: MUNICIPIO -->
+  <div class="tab-panel" id="tab-municipio">
+    <div class="sec-title">Análisis Detallado por Municipio</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Perfil multi-factor · Comparativa estatal y nacional · Predicción XGBoost de siniestralidad</p>
+
+    <div class="mun-layout">
+      <div class="mun-select-panel">
+        <div class="mun-title">Selecciona Municipio</div>
+        <select class="mun-select" id="mun-selector" onchange="updateMunicipio()">
+          <option value="manzanillo">Manzanillo, Colima</option>
+          <option value="acapulco">Acapulco, Guerrero</option>
+          <option value="cdmx">Ciudad de México</option>
+          <option value="monterrey">Monterrey, Nuevo León</option>
+          <option value="merida">Mérida, Yucatán</option>
+          <option value="oaxaca">Oaxaca, Oaxaca</option>
+          <option value="guadalajara">Guadalajara, Jalisco</option>
+          <option value="puebla">Puebla, Puebla</option>
+          <option value="veracruz">Veracruz, Veracruz</option>
+          <option value="tijuana">Tijuana, BC</option>
+        </select>
+        <div class="mun-stat"><span class="ms-key">Risk Score</span><span class="ms-val" id="ms-score">84 / 100</span></div>
+        <div class="mun-stat"><span class="ms-key">Tier</span><span class="ms-val" id="ms-tier">Crítico</span></div>
+        <div class="mun-stat"><span class="ms-key">Score sísmico</span><span class="ms-val" id="ms-sism">92 / 100</span></div>
+        <div class="mun-stat"><span class="ms-key">Score hidrológico</span><span class="ms-val" id="ms-hid">75 / 100</span></div>
+        <div class="mun-stat"><span class="ms-key">Vulnerabilidad social</span><span class="ms-val" id="ms-soc">55 / 100</span></div>
+        <div class="mun-stat"><span class="ms-key">Exposición crediticia</span><span class="ms-val" id="ms-exp">48 / 100</span></div>
+        <div class="mun-stat"><span class="ms-key">Cap. respuesta</span><span class="ms-val" id="ms-resp">28 / 100</span></div>
+        <div class="mun-stat"><span class="ms-key">Siniestralidad predicha</span><span class="ms-val" id="ms-siniest" style="color:var(--rose)">18.4%</span></div>
+        <div class="mun-stat"><span class="ms-key">Prima técnica sugerida</span><span class="ms-val" id="ms-prima">2.8‰ SA</span></div>
+      </div>
+
+      <div>
+        <div class="chart-box" style="margin-bottom:1rem">
+          <div class="cb-label">Perfil Multi-factor · <span id="mun-radar-title">Manzanillo vs. Promedio MX</span> <span class="cb-badge">Score 0–100 por factor</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+          <div class="chart-wrap tall"><canvas id="chart-mun-radar"></canvas></div>
+          <div class="info-panel">
+            <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Radar multi-factor</strong>: muestra el perfil de riesgo del municipio en las 5 dimensiones simultáneamente, comparado contra el promedio nacional y estatal.</span></div>
+            <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">La forma del radar revela el tipo de riesgo dominante: municipios con punta en sísmico requieren diferente estrategia de cobertura que los que puntan en hidrológico.</span></div>
+            <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Diseñar la cobertura específica: si el riesgo sísmico domina, priorizar Cat Bond sísmico. Si domina hidrológico, parametrizar por nivel de lluvia acumulada o surge de huracán.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exposure cards -->
+    <div class="sec-title" style="margin-top:.5rem">Concentración de Riesgo Asegurador</div>
+    <p class="sec-sub">Exposición vs. primas · Brecha de subprecificación · <span id="mun-exp-title">Manzanillo, Colima</span></p>
+    <div class="exposure-grid">
+      <div class="exp-card">
+        <div class="exp-val" id="exp-exposicion" style="color:var(--rose)">$2,840M MXN</div>
+        <div class="exp-lbl">Exposición aseguradora estimada</div>
+      </div>
+      <div class="exp-card">
+        <div class="exp-val" id="exp-primas" style="color:var(--amber)">$112M MXN</div>
+        <div class="exp-lbl">Primas emitidas anuales (est.)</div>
+      </div>
+      <div class="exp-card">
+        <div class="exp-val" id="exp-brecha" style="color:var(--orange)">3.9%</div>
+        <div class="exp-lbl">Prima / Exposición (vs. 8% óptimo)</div>
+      </div>
+    </div>
+
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Comparativa Score — Municipio vs. Promedio Estatal vs. Promedio Nacional <span class="cb-badge" id="mun-comp-badge">Manzanillo</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap"><canvas id="chart-mun-comp"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Comparativa de scores</strong>: posiciona el municipio seleccionado contra el promedio de su estado y contra el promedio nacional en cada factor de riesgo.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Un municipio que supera el promedio estatal en múltiples factores simultáneamente requiere política de suscripción específica — no puede aplicarse la tabla estatal genérica.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Justificar ante el área legal la diferenciación de prima por municipio frente a la tabla estatal vigente — el diferencial cuantificado es la base del argumento de proporcionalidad actuarial.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: AGENT -->
+  <div class="tab-panel" id="tab-agent">
+    <div class="sec-title">Agente IA de Suscripción · Claude claude-sonnet-4-20250514</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Selecciona municipio y tipo de seguro · El agente genera el plan completo en tiempo real con razonamiento visible</p>
+
+    <div class="agent-layout">
+      <div>
+        <div class="agent-controls">
+          <div>
+            <div class="ctrl-title">① Municipio objetivo</div>
+            <select class="ctrl-select" id="agent-mun">
+              <option value="manzanillo">Manzanillo, Colima · Score 84 · Crítico</option>
+              <option value="acapulco">Acapulco, Guerrero · Score 79 · Crítico</option>
+              <option value="cdmx">Ciudad de México · Score 72 · Alto</option>
+              <option value="monterrey">Monterrey, N.L. · Score 58 · Alto</option>
+              <option value="merida">Mérida, Yucatán · Score 50 · Medio</option>
+              <option value="oaxaca">Oaxaca, Oaxaca · Score 76 · Crítico</option>
+              <option value="guadalajara">Guadalajara, Jal. · Score 64 · Alto</option>
+              <option value="veracruz">Veracruz, Ver. · Score 68 · Alto</option>
+            </select>
+          </div>
+          <div>
+            <div class="ctrl-title">② Tipo de seguro</div>
+            <select class="ctrl-select" id="agent-tipo">
+              <option value="danos">🏠 Seguros de Daños (Multirriesgo)</option>
+              <option value="catastrofico">🌋 Seguro Catastrófico (Sismo/Huracán)</option>
+              <option value="agricola">🌾 Seguro Agrícola Paramétrico</option>
+              <option value="vida">❤️ Seguro de Vida (Colectivo)</option>
+            </select>
+          </div>
+          <div>
+            <div class="ctrl-title">③ Suma asegurada (MXN)</div>
+            <select class="ctrl-select" id="agent-sa">
+              <option value="10M">$10 millones MXN</option>
+              <option value="50M">$50 millones MXN</option>
+              <option value="100M">$100 millones MXN</option>
+              <option value="500M">$500 millones MXN</option>
+              <option value="1B">$1,000 millones MXN</option>
+            </select>
+          </div>
+          <button class="run-btn" id="agent-btn" onclick="runAgent()">
+            <span class="ri">⚡</span> Generar Plan de Suscripción
+          </button>
+        </div>
+
+        <!-- COT log -->
+        <div class="cot-wrap" style="margin-top:1rem">
+          <div class="cot-header"><span style="color:var(--orange)">●</span> Chain-of-Thought · Razonamiento del Agente</div>
+          <div class="cot-body" id="agent-cot">
+            <p style="font-size:.75rem;color:var(--muted);text-align:center;padding:1rem 0">Ejecuta el agente para ver el razonamiento paso a paso</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Output -->
+      <div class="agent-output">
+        <div class="report-wrap">
+          <div class="report-hdr">📋 Plan de Suscripción · Claude claude-sonnet-4-20250514</div>
+          <div class="report-body empty" id="agent-report">El plan de suscripción aparecerá aquí tras ejecutar el agente…</div>
+        </div>
+
+        <div class="history-wrap">
+          <div class="hw-title">Historial de Planes Generados</div>
+          <div id="agent-history">
+            <div class="hw-row"><span class="hw-time">Hoy 09:14</span><span class="hw-mun">Manzanillo</span><span class="hw-sum">Catastrófico $100M · prima 2.8‰ · exclusión lluvia normal</span></div>
+            <div class="hw-row"><span class="hw-time">Ayer 16:42</span><span class="hw-mun">Acapulco</span><span class="hw-sum">Daños $50M · prima 3.2‰ · acumulación max $200M zona</span></div>
+            <div class="hw-row"><span class="hw-time">Lun 11:08</span><span class="hw-mun">CDMX</span><span class="hw-sum">Multirriesgo $1,000M · prima 1.8‰ · Cat Bond requerido</span></div>
+          </div>
+        </div>
+
+        <div class="chart-box">
+          <div class="cb-label">Prima Técnica por Tier de Riesgo <span class="cb-badge">‰ de suma asegurada</span></div>
+          <div class="chart-wrap" style="height:150px"><canvas id="chart-prima-tier"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dash-footer">
+  <span style="color:var(--muted2)">// <span style="color:var(--orange)">P8 · Riesgo Geográfico</span> · CENAPRED · INEGI · Claude claude-sonnet-4-20250514 · Demostrativo</span>
+  <span>Python · R · SQL · <span style="color:var(--violet)">2024</span></span>
+</div>
+
+<script>
+Chart.defaults.color='rgba(220,232,245,0.42)';
+Chart.defaults.borderColor='rgba(255,255,255,0.042)';
+Chart.defaults.font.family="'JetBrains Mono','monospace'";
+Chart.defaults.font.size=10;
+Chart.defaults.plugins.legend.labels.boxWidth=10;
+Chart.defaults.plugins.legend.labels.padding=14;
+Chart.defaults.plugins.legend.labels.usePointStyle=true;
+const TT={backgroundColor:'#0d0f16',titleColor:'#dce8f5',bodyColor:'rgba(220,232,245,.7)',borderColor:'rgba(249,115,22,.15)',borderWidth:1,padding:10};
+const BASE={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(220,232,245,.48)'}},tooltip:TT},scales:{x:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}},y:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}}}};
+function mk(ex={}){const o=JSON.parse(JSON.stringify(BASE));if(ex.scales)Object.assign(o.scales,ex.scales);if(ex.indexAxis)o.indexAxis=ex.indexAxis;return o;}
+
+function toggleInfo(btn){
+  const p=btn.closest('.kpi,.chart-box,.factor-card,.map-wrap');if(!p)return;
+  const panel=p.querySelector('.info-panel');if(!panel)return;
+  const open=panel.classList.contains('open');
+  panel.classList.toggle('open',!open);btn.classList.toggle('active',!open);
+}
+
+let tabsInited={atlas:false,municipio:false,agent:false};
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');document.getElementById('tab-'+id).classList.add('active');
+  if(!tabsInited[id]){tabsInited[id]=true;
+    if(id==='atlas')initAtlasCharts();
+    if(id==='municipio'){initMunicipioCharts();updateMunicipio();}
+    if(id==='agent')initAgentCharts();
+  }
+}
+
+// ── MAP TOOLTIP — compatible con path elements
+document.querySelectorAll('.state-shape').forEach(el=>{
+  el.addEventListener('mouseenter',function(e){
+    const svg=document.getElementById('mx-risk-map');
+    const vb=svg.viewBox.baseVal;
+    const rect=svg.getBoundingClientRect();
+    const sx=vb.width/rect.width;
+    const sy=vb.height/rect.height;
+    const mx=(e.clientX-rect.left)*sx;
+    const my=(e.clientY-rect.top)*sy;
+    const tx=Math.min(mx+12,700);
+    const ty=Math.max(my-120,8);
+    const bg=document.getElementById('map-tt-bg');
+    const st=document.getElementById('map-tt-state');
+    const sc=document.getElementById('map-tt-score');
+    const ti=document.getElementById('map-tt-tier');
+    const si=document.getElementById('map-tt-sism');
+    const hi=document.getElementById('map-tt-hid');
+    [bg,st,sc,ti,si,hi].forEach(e=>e.setAttribute('opacity','1'));
+    bg.setAttribute('x',tx);bg.setAttribute('y',ty);
+    st.setAttribute('x',tx+10);st.setAttribute('y',ty+18);st.textContent=this.dataset.state;
+    sc.setAttribute('x',tx+10);sc.setAttribute('y',ty+36);sc.textContent='Risk Score: '+this.dataset.score+'/100';
+    ti.setAttribute('x',tx+10);ti.setAttribute('y',ty+52);ti.textContent='Tier: '+this.dataset.tier;
+    si.setAttribute('x',tx+10);si.setAttribute('y',ty+68);si.textContent='Sísmico: '+this.dataset.sism+'/100  ·  Hidrológico: '+this.dataset.hid+'/100';
+    hi.setAttribute('x',tx+10);hi.setAttribute('y',ty+84);hi.textContent='Vulnerabilidad: '+this.dataset.soc+'/100  ·  Exposición: '+this.dataset.exp+'/100';
+  });
+  el.addEventListener('mousemove',function(e){
+    const svg=document.getElementById('mx-risk-map');
+    const vb=svg.viewBox.baseVal;
+    const rect=svg.getBoundingClientRect();
+    const sx=vb.width/rect.width;
+    const sy=vb.height/rect.height;
+    const mx=(e.clientX-rect.left)*sx;
+    const my=(e.clientY-rect.top)*sy;
+    const tx=Math.min(mx+12,700);
+    const ty=Math.max(my-120,8);
+    document.getElementById('map-tt-bg').setAttribute('x',tx);document.getElementById('map-tt-bg').setAttribute('y',ty);
+    ['map-tt-state','map-tt-score','map-tt-tier','map-tt-sism','map-tt-hid'].forEach((id,i)=>{
+      document.getElementById(id).setAttribute('x',tx+10);
+      document.getElementById(id).setAttribute('y',ty+18+i*16);
+    });
+  });
+  el.addEventListener('mouseleave',()=>{
+    ['map-tt-bg','map-tt-state','map-tt-score','map-tt-tier','map-tt-sism','map-tt-hid'].forEach(id=>document.getElementById(id).setAttribute('opacity','0'));
+  });
+});
+
+// ── ATLAS CHARTS
+function initAtlasCharts(){
+  new Chart(document.getElementById('chart-states'),{type:'bar',data:{
+    labels:['Colima','Guerrero','Oaxaca','Michoacán','Chiapas','Jalisco','CDMX/EdoMex','Puebla','Veracruz','Hidalgo','Zacatecas','NL','Sinaloa','Tabasco','QRoo'],
+    datasets:[{label:'Risk Score (0–100)',data:[82,79,76,73,74,64,72,66,68,62,56,58,52,52,55],
+      backgroundColor:d=>d.raw>=75?'rgba(155,34,38,.75)':d.raw>=55?'rgba(249,115,22,.55)':d.raw>=30?'rgba(245,166,35,.45)':'rgba(52,211,153,.4)',
+      borderColor:d=>d.raw>=75?'#9b2226':d.raw>=55?'#f97316':d.raw>=30?'#f5a623':'#34d399',
+      borderWidth:1.5,borderRadius:4}]},
+    options:mk({indexAxis:'y',scales:{x:{max:100,title:{display:true,text:'Índice de Riesgo Compuesto (0–100)'}},y:{ticks:{font:{size:9}}}}})});
+
+  new Chart(document.getElementById('chart-moran'),{type:'bar',data:{
+    labels:['Índice Global','Factor Sísmico','Factor Hidrológico','Vulnerabilidad Social','Exposición Cred.','Cap. Respuesta'],
+    datasets:[{label:"Moran's I (agrupamiento espacial)",data:[.612,.724,.588,.542,.498,.384],
+      backgroundColor:['rgba(249,115,22,.65)','rgba(155,34,38,.65)','rgba(96,165,250,.55)','rgba(245,166,35,.5)','rgba(167,139,250,.5)','rgba(52,211,153,.45)'],
+      borderColor:['#f97316','#9b2226','#60a5fa','#f5a623','#a78bfa','#34d399'],borderWidth:1.5,borderRadius:5}]},
+    options:mk({scales:{y:{min:0,max:1,title:{display:true,text:"Moran's I (0=aleatorio · 1=máx. agrupamiento)"}},x:{ticks:{font:{size:8},maxRotation:25}}}})});
+
+  new Chart(document.getElementById('chart-exposure'),{type:'bar',data:{
+    labels:['Bajo','Medio','Alto','Crítico'],
+    datasets:[
+      {label:'% Exposición aseguradora',data:[12,42,23,23],backgroundColor:'rgba(249,115,22,.55)',borderColor:'#f97316',borderWidth:1.5,borderRadius:5},
+      {label:'% Primas emitidas',data:[28,48,16,8],backgroundColor:'rgba(52,211,153,.45)',borderColor:'#34d399',borderWidth:1.5,borderRadius:5},
+    ]},options:mk({scales:{y:{title:{display:true,text:'% del total nacional'}}}})});
+}
+
+// ── MUNICIPIO DATA
+const MUN_DATA={
+  manzanillo:{name:'Manzanillo, Colima',score:84,tier:'Crítico',sism:92,hid:75,soc:55,exp:48,resp:28,siniest:'18.4%',prima:'2.8‰',exposicion:'$2,840M',primas:'$112M',brecha:'3.9%',state_avg:[58,62,50,42,35],nat_avg:[42,48,52,38,45]},
+  acapulco:{name:'Acapulco, Guerrero',score:79,tier:'Crítico',sism:88,hid:72,soc:82,exp:42,resp:22,siniest:'16.2%',prima:'3.2‰',exposicion:'$1,920M',primas:'$78M',brecha:'4.1%',state_avg:[62,68,72,38,28],nat_avg:[42,48,52,38,45]},
+  cdmx:{name:'Ciudad de México',score:72,tier:'Alto',sism:78,hid:55,soc:52,exp:88,resp:65,siniest:'8.4%',prima:'1.8‰',exposicion:'$48,200M',primas:'$1,840M',brecha:'3.8%',state_avg:[72,55,52,88,65],nat_avg:[42,48,52,38,45]},
+  monterrey:{name:'Monterrey, Nuevo León',score:58,tier:'Alto',sism:35,hid:62,soc:38,exp:72,resp:65,siniest:'5.2%',prima:'1.2‰',exposicion:'$18,400M',primas:'$820M',brecha:'4.5%',state_avg:[35,62,38,72,65],nat_avg:[42,48,52,38,45]},
+  merida:{name:'Mérida, Yucatán',score:50,tier:'Medio',sism:15,hid:62,soc:48,exp:42,resp:52,siniest:'3.8%',prima:'0.9‰',exposicion:'$4,200M',primas:'$240M',brecha:'5.7%',state_avg:[15,62,48,42,52],nat_avg:[42,48,52,38,45]},
+  oaxaca:{name:'Oaxaca, Oaxaca',score:76,tier:'Crítico',sism:88,hid:65,soc:78,exp:42,resp:28,siniest:'14.8%',prima:'2.6‰',exposicion:'$1,240M',primas:'$48M',brecha:'3.9%',state_avg:[82,62,72,38,25],nat_avg:[42,48,52,38,45]},
+  guadalajara:{name:'Guadalajara, Jalisco',score:64,tier:'Alto',sism:58,hid:65,soc:48,exp:72,resp:55,siniest:'7.2%',prima:'1.5‰',exposicion:'$22,400M',primas:'$1,020M',brecha:'4.6%',state_avg:[58,65,48,72,55],nat_avg:[42,48,52,38,45]},
+  puebla:{name:'Puebla, Puebla',score:66,tier:'Alto',sism:65,hid:62,soc:62,exp:58,resp:45,siniest:'8.8%',prima:'1.9‰',exposicion:'$8,400M',primas:'$384M',brecha:'4.6%',state_avg:[65,62,62,55,42],nat_avg:[42,48,52,38,45]},
+  veracruz:{name:'Veracruz, Veracruz',score:68,tier:'Alto',sism:55,hid:78,soc:65,exp:58,resp:38,siniest:'9.6%',prima:'2.1‰',exposicion:'$6,800M',primas:'$280M',brecha:'4.1%',state_avg:[48,78,62,52,35],nat_avg:[42,48,52,38,45]},
+  tijuana:{name:'Tijuana, BC',score:48,tier:'Medio',sism:62,hid:38,soc:42,exp:45,resp:55,siniest:'4.2%',prima:'1.0‰',exposicion:'$12,400M',primas:'$680M',brecha:'5.5%',state_avg:[62,38,42,45,55],nat_avg:[42,48,52,38,45]},
+};
+
+let munRadarChart=null,munCompChart=null;
+function initMunicipioCharts(){
+  munRadarChart=new Chart(document.getElementById('chart-mun-radar'),{type:'radar',
+    data:{labels:['Sísmico','Hidrológico','Vulnerabilidad\nSocial','Exposición\nCrediticia','Cap. Respuesta'],
+    datasets:[
+      {label:'Municipio',data:[92,75,55,48,28],backgroundColor:'rgba(249,115,22,.15)',borderColor:'#f97316',borderWidth:2.5,pointBackgroundColor:'#f97316',pointRadius:4},
+      {label:'Promedio Estatal',data:[58,62,50,42,35],backgroundColor:'rgba(245,166,35,.08)',borderColor:'#f5a623',borderWidth:1.5,pointBackgroundColor:'#f5a623',pointRadius:3,borderDash:[4,3]},
+      {label:'Promedio Nacional',data:[42,48,52,38,45],backgroundColor:'rgba(52,211,153,.07)',borderColor:'#34d399',borderWidth:1.5,pointBackgroundColor:'#34d399',pointRadius:3,borderDash:[2,4]},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(220,232,245,.5)'}},tooltip:TT},scales:{r:{min:0,max:100,ticks:{color:'rgba(220,232,245,.3)',backdropColor:'transparent',font:{size:8}},grid:{color:'rgba(255,255,255,.06)'},angleLines:{color:'rgba(255,255,255,.06)'},pointLabels:{color:'rgba(220,232,245,.55)',font:{size:9}}}}}});
+
+  munCompChart=new Chart(document.getElementById('chart-mun-comp'),{type:'bar',
+    data:{labels:['Sísmico','Hidrológico','Vulnerabilidad Social','Exposición Crediticia','Cap. Respuesta'],
+    datasets:[
+      {label:'Municipio seleccionado',data:[92,75,55,48,28],backgroundColor:'rgba(249,115,22,.6)',borderColor:'#f97316',borderWidth:1.5,borderRadius:5},
+      {label:'Promedio estatal',data:[58,62,50,42,35],backgroundColor:'rgba(245,166,35,.45)',borderColor:'#f5a623',borderWidth:1.5,borderRadius:5},
+      {label:'Promedio nacional',data:[42,48,52,38,45],backgroundColor:'rgba(52,211,153,.4)',borderColor:'#34d399',borderWidth:1.5,borderRadius:5},
+    ]},options:mk({scales:{y:{max:100,title:{display:true,text:'Score (0–100)'}}}})});
+}
+
+function updateMunicipio(){
+  const key=document.getElementById('mun-selector').value;
+  const d=MUN_DATA[key];if(!d)return;
+  document.getElementById('ms-score').textContent=d.score+' / 100';
+  document.getElementById('ms-tier').textContent=d.tier;
+  document.getElementById('ms-tier').style.color=d.tier==='Crítico'?'#9b2226':d.tier==='Alto'?'var(--orange)':d.tier==='Medio'?'var(--amber)':'var(--green)';
+  document.getElementById('ms-sism').textContent=d.sism+' / 100';
+  document.getElementById('ms-hid').textContent=d.hid+' / 100';
+  document.getElementById('ms-soc').textContent=d.soc+' / 100';
+  document.getElementById('ms-exp').textContent=d.exp+' / 100';
+  document.getElementById('ms-resp').textContent=d.resp+' / 100';
+  document.getElementById('ms-siniest').textContent=d.siniest;
+  document.getElementById('ms-prima').textContent=d.prima;
+  document.getElementById('exp-exposicion').textContent=d.exposicion+' MXN';
+  document.getElementById('exp-primas').textContent=d.primas+' MXN';
+  document.getElementById('exp-brecha').textContent=d.brecha;
+  document.getElementById('mun-radar-title').textContent=d.name.split(',')[0]+' vs. Promedio MX';
+  document.getElementById('mun-exp-title').textContent=d.name;
+  document.getElementById('mun-comp-badge').textContent=d.name.split(',')[0];
+  if(munRadarChart){
+    munRadarChart.data.datasets[0].data=[d.sism,d.hid,d.soc,d.exp,d.resp];
+    munRadarChart.data.datasets[1].data=d.state_avg;
+    munRadarChart.data.datasets[0].label=d.name.split(',')[0];
+    munRadarChart.update();
+  }
+  if(munCompChart){
+    munCompChart.data.datasets[0].data=[d.sism,d.hid,d.soc,d.exp,d.resp];
+    munCompChart.data.datasets[1].data=d.state_avg;
+    munCompChart.update();
+  }
+}
+
+// ── AGENT CHARTS
+function initAgentCharts(){
+  new Chart(document.getElementById('chart-prima-tier'),{type:'bar',data:{
+    labels:['Bajo','Medio','Alto','Crítico'],
+    datasets:[{label:'Prima técnica (‰ SA)',data:[0.4,1.2,2.0,3.2],
+      backgroundColor:['rgba(52,211,153,.5)','rgba(245,166,35,.5)','rgba(249,115,22,.55)','rgba(155,34,38,.65)'],
+      borderColor:['#34d399','#f5a623','#f97316','#9b2226'],borderWidth:1.5,borderRadius:5}]},
+    options:mk({scales:{y:{title:{display:true,text:'‰ de suma asegurada'}}}})});
+}
+
+// ── AGENT EXECUTION
+let agentRunning=false;
+async function runAgent(){
+  if(agentRunning)return;
+  agentRunning=true;
+  const btn=document.getElementById('agent-btn');
+  btn.disabled=true;btn.classList.add('running');btn.querySelector('.ri').textContent='⚙️';
+  const mun=document.getElementById('agent-mun').options[document.getElementById('agent-mun').selectedIndex].text;
+  const tipo=document.getElementById('agent-tipo').options[document.getElementById('agent-tipo').selectedIndex].text;
+  const sa=document.getElementById('agent-sa').value;
+  const cotBody=document.getElementById('agent-cot');
+  const reportEl=document.getElementById('agent-report');
+  cotBody.innerHTML='';reportEl.className='report-body empty';reportEl.textContent='El agente está analizando…';
+
+  const steps=[
+    {tag:'st-tool',label:'HERRAMIENTA',text:`get_zone_risk("${mun.split('·')[0].trim()}")`,out:`✓ Score: ${mun.includes('84')?'84':mun.includes('79')?'79':'64'}/100 · Tier: Crítico · Sísmico: alta prioridad`},
+    {tag:'st-think',label:'RAZONANDO',text:`Analizando perfil de riesgo del municipio. Riesgo sísmico elevado + exposición costera justifica enfoque en cobertura catastrófica con exclusiones específicas y sublímites por evento.`},
+    {tag:'st-tool',label:'HERRAMIENTA',text:'get_cenapred_risk() · consulta Atlas Nacional',out:'✓ Zona sísmica: I (máxima) · Categoría ciclón histórico: 4 · Inundación: frecuente'},
+    {tag:'st-think',label:'ANALIZANDO',text:`Con estos datos calibro la prima técnica usando el modelo XGBoost de siniestralidad y los parámetros de acumulación CNSF. La combinación de factores coloca este municipio en el percentil 92 de riesgo.`},
+    {tag:'st-ok',label:'DECISIÓN',text:`Generando plan de suscripción completo con cobertura, límites, exclusiones y prima técnica para ${tipo} · SA ${sa}…`},
+  ];
+
+  for(const s of steps){
+    await sleep(500+Math.random()*400);
+    const div=document.createElement('div');div.className='step-row';
+    const out=s.out?`<span class="tool-out">${s.out}</span>`:'';
+    div.innerHTML=`<span class="step-tag ${s.tag}">${s.label}</span><div class="step-txt">${s.text}${out}</div>`;
+    cotBody.appendChild(div);cotBody.scrollTop=cotBody.scrollHeight;
+  }
+
+  await sleep(600);
+  const munKey=document.getElementById('agent-mun').value;
+  const d=MUN_DATA[munKey]||MUN_DATA.manzanillo;
+  const tipoVal=document.getElementById('agent-tipo').value;
+  const saVal=document.getElementById('agent-sa').value;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',max_tokens:1000,
+        system:`Eres un actuario especialista en suscripción de seguros catastróficos en México con expertise en el marco regulatorio CNSF. Generas planes de suscripción técnicos, concisos y accionables. Siempre en español. Usa terminología actuarial mexicana (CNSF, AGROASEMEX, Cat Bond, límite de acumulación, prima técnica, exclusiones, sublímite). Formato: secciones claras con ①②③④ para cobertura, prima, exclusiones y recomendaciones. Máximo 350 palabras.`,
+        messages:[{role:'user',content:`Genera un plan de suscripción para ${tipo} en ${mun}. Suma asegurada: ${saVal} MXN. Datos del municipio: Risk Score ${d.score}/100 (${d.tier}), Sísmico ${d.sism}/100, Hidrológico ${d.hid}/100, Vulnerabilidad social ${d.soc}/100, Capacidad respuesta ${d.resp}/100. Siniestralidad histórica proyectada: ${d.siniest}. Prima técnica referencia del modelo: ${d.prima} de SA. Incluye: tipo de cobertura recomendada, prima técnica justificada, exclusiones específicas, límite de acumulación por zona y recomendaciones de reaseguro.`}]
+      })
+    });
+    const data=await res.json();
+    const report=data.content?.[0]?.text||'No se pudo generar el plan.';
+    reportEl.className='report-body';reportEl.textContent=report;
+  }catch(e){
+    reportEl.className='report-body';
+    reportEl.textContent=`PLAN DE SUSCRIPCIÓN · ${mun.split('·')[0].trim()}\n${tipo}\n\n① COBERTURA RECOMENDADA\nSeguro catastrófico multirriesgo con cobertura principal por sismo (zona I CENAPRED) y ciclón tropical categoría 1–5. Cobertura secundaria por inundación con deducible paramétrico por nivel de lluvia acumulada 72h.\n\n② PRIMA TÉCNICA\nPrima pura: ${d.prima} de suma asegurada\nRecargo por gastos: +0.4‰\nPrima comercial total: ${parseFloat(d.prima)+(0.4)}‰ SA\nBase de cálculo: siniestralidad proyectada ${d.siniest} · Score compuesto ${d.score}/100\n\n③ EXCLUSIONES ESPECÍFICAS\n• Daños por lluvia ordinaria (precipitación &lt;50mm/24h)\n• Subsidencia gradual del suelo\n• Eventos menores a intensidad mínima (sismo &lt;5.5 Richter)\n• Pérdidas indirectas y lucro cesante (cobertura separada)\n\n④ LÍMITES DE ACUMULACIÓN Y REASEGURO\nLímite acumulación zona: máx. $${saVal} × 3 por evento catastrófico\nReaseguro obligatorio: proporcional 60% en exceso de $500M MXN\nRecomendación: Cat Bond sísmico parametrizado en PGA &gt;200 gal para esta zona\nReporte CNSF: concentración en zona de riesgo crítico requiere declaración trimestral`;
+  }
+
+  // Add to history
+  const hist=document.getElementById('agent-history');
+  const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  const row=document.createElement('div');row.className='hw-row';
+  row.innerHTML=`<span class="hw-time">${now} hoy</span><span class="hw-mun">${mun.split(',')[0]}</span><span class="hw-sum">${tipo.split(' ')[1]||'Daños'} ${saVal} · prima ${d.prima}</span>`;
+  hist.insertBefore(row,hist.firstChild);
+
+  btn.disabled=false;btn.classList.remove('running');btn.querySelector('.ri').textContent='⚡';
+  agentRunning=false;
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// Init Tab 1 (active on load)
+tabsInited.atlas=true;
+initAtlasCharts();
+</script>
+</body>
+</html>

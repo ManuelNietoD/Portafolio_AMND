@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>P4 · Tablas de Mortalidad Dinámicas & Calculadora de Primas · Actuaría</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#050608;--bg2:#090b0f;--bg3:#0d1015;--bg4:#13181f;
+  --emerald:#00c896;--emerald-dim:rgba(0,200,150,.10);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,.09);
+  --violet:#a78bfa;--violet-dim:rgba(167,139,250,.10);
+  --rose:#ff4d6d;--rose-dim:rgba(255,77,109,.09);
+  --green:#34d399;--blue:#60a5fa;--teal:#00ddb4;
+  --text:#dce8f5;--muted:#3d5068;--muted2:#6e8fad;
+  --border:rgba(0,200,150,.12);--border2:rgba(255,255,255,.052);
+  --r:14px;
+  --fh:'Syne',sans-serif;--fm:'JetBrains Mono',monospace;--fb:'DM Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.7;min-height:100vh;overflow-x:hidden}
+
+/* BACK */
+.back-bar{padding:.9rem 2rem;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:.7rem;background:var(--bg2)}
+.back-btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--fm);font-size:.72rem;color:var(--muted2);text-decoration:none;padding:.35rem .8rem;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);transition:all .2s;cursor:pointer}
+.back-btn:hover{color:var(--emerald);border-color:rgba(0,200,150,.3)}
+.back-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+.breadcrumb{font-family:var(--fm);font-size:.68rem;color:var(--muted)}
+.breadcrumb span{color:var(--emerald)}
+
+/* HEADER */
+.dash-header{padding:2.5rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.eyebrow{font-family:var(--fm);font-size:.62rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.eyebrow::before{content:'';display:inline-block;width:20px;height:1px;background:var(--emerald)}
+.dash-title{font-family:var(--fh);font-size:clamp(1.5rem,3vw,2.3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.8rem}
+.dash-title .at{color:var(--emerald)}
+.dash-meta{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-family:var(--fm);font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;padding:.2rem .65rem;border-radius:999px}
+.b-src{background:var(--emerald-dim);color:var(--emerald);border:1px solid rgba(0,200,150,.25)}
+.b-r{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.b-py{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.b-sql{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.b-type{background:var(--violet-dim);color:var(--violet);border:1px solid rgba(167,139,250,.25)}
+.dash-desc{font-size:.85rem;color:rgba(220,232,245,.5);max-width:740px;line-height:1.8;margin-bottom:2rem}
+
+/* KPI */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;padding:0 2.5rem;max-width:1280px;margin:0 auto}
+.kpi{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.1rem 1.2rem;position:relative;overflow:hidden;transition:border-color .25s;animation:fadeUp .5s ease both}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--emerald));opacity:.8}
+.kpi:nth-child(1){animation-delay:.05s}.kpi:nth-child(2){animation-delay:.1s}.kpi:nth-child(3){animation-delay:.15s}.kpi:nth-child(4){animation-delay:.2s}
+.kpi-val{font-family:var(--fh);font-size:1.7rem;font-weight:800;letter-spacing:-.03em;display:block;margin-bottom:.15rem}
+.kpi-lbl{font-size:.72rem;color:var(--muted2)}.kpi-sub{font-family:var(--fm);font-size:.6rem;color:var(--muted)}
+.kpi .info-btn{position:absolute;top:.6rem;right:.6rem}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* INFO */
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid rgba(131,153,184,.35);background:rgba(131,153,184,.08);color:var(--muted2);font-family:var(--fm);font-size:.6rem;cursor:pointer;transition:all .2s;flex-shrink:0;user-select:none;line-height:1}
+.info-btn:hover,.info-btn.active{border-color:var(--emerald);color:var(--emerald);background:var(--emerald-dim)}
+.cb-label .info-btn{margin-left:auto}
+.info-panel{display:none;margin-top:.65rem;padding:.65rem .8rem;background:rgba(0,200,150,.03);border:1px solid rgba(0,200,150,.12);border-radius:8px;flex-direction:column;gap:.45rem;animation:slideDown .2s ease}
+.info-panel.open{display:flex}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.te-row{display:flex;align-items:baseline;gap:.5rem;font-size:.75rem;line-height:1.65}
+.te-tag{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;padding:.1rem .42rem;border-radius:5px;border:1px solid;font-weight:500}
+.te-tag.def{color:var(--emerald);background:var(--emerald-dim);border-color:rgba(0,200,150,.28)}
+.te-tag.meta{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.28)}
+.te-tag.uso{color:var(--violet);background:var(--violet-dim);border-color:rgba(167,139,250,.28)}
+.te-txt{color:rgba(220,232,245,.58)}.te-txt strong{color:rgba(220,232,245,.88);font-weight:500}
+
+/* TABS */
+.tabs-wrap{padding:2rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--border2);margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{font-family:var(--fm);font-size:.73rem;padding:.65rem 1.2rem;cursor:pointer;color:var(--muted2);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;display:flex;align-items:center;gap:.4rem;border-radius:8px 8px 0 0}
+.tab-btn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.tab-btn.active{color:var(--emerald);border-bottom-color:var(--emerald);background:var(--emerald-dim)}
+.tab-panel{display:none;animation:fadeUp .3s ease}.tab-panel.active{display:block}
+
+/* SECTION */
+.sec-title{font-family:var(--fh);font-size:1rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem;display:flex;align-items:center;gap:.55rem}
+.sec-title::before{content:'';display:inline-block;width:16px;height:2px;background:var(--emerald);border-radius:1px}
+.sec-sub{font-size:.78rem;color:var(--muted2);margin-bottom:1.4rem}
+
+/* CHART BOXES */
+.chart-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem}
+.chart-box.full{grid-column:1/-1}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.cb-label{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.cb-badge{font-size:.58rem;padding:.12rem .45rem;border-radius:5px;background:var(--emerald-dim);color:var(--emerald);border:1px solid rgba(0,200,150,.2)}
+.chart-wrap{position:relative;height:200px}
+.chart-wrap.tall{height:280px}
+.chart-wrap.xtall{height:340px}
+
+/* ═══ CALCULATOR ═══ */
+.calc-layout{display:grid;grid-template-columns:1fr 380px;gap:1.4rem;align-items:start;margin-bottom:1.6rem}
+.calc-inputs{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.5rem}
+.calc-output{background:var(--bg2);border:1px solid rgba(0,200,150,.2);border-radius:var(--r);padding:1.5rem;position:sticky;top:1rem}
+
+/* Input groups */
+.inp-group{margin-bottom:1.2rem}
+.inp-group-title{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--emerald);margin-bottom:.8rem;padding-bottom:.4rem;border-bottom:1px solid var(--border2)}
+.inp-row{margin-bottom:.9rem}
+.inp-label{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:var(--muted2);margin-bottom:.35rem}
+.inp-val{font-family:var(--fm);font-size:.74rem;color:var(--emerald);background:var(--emerald-dim);padding:.1rem .4rem;border-radius:5px;border:1px solid rgba(0,200,150,.25)}
+input[type=range]{width:100%;height:4px;border-radius:2px;background:var(--bg4);outline:none;-webkit-appearance:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--emerald);border:2px solid var(--bg);cursor:pointer;transition:transform .15s}
+input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.2)}
+.inp-select{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--fm);font-size:.72rem;padding:.5rem .7rem;outline:none;cursor:pointer;transition:border-color .2s}
+.inp-select:focus{border-color:rgba(0,200,150,.4)}
+
+/* Product tabs */
+.prod-tabs{display:flex;gap:.35rem;margin-bottom:1rem;flex-wrap:wrap}
+.prod-btn{font-family:var(--fm);font-size:.62rem;padding:.3rem .7rem;border-radius:7px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .2s}
+.prod-btn.active{color:var(--emerald);background:var(--emerald-dim);border-color:rgba(0,200,150,.35)}
+
+/* Output panel */
+.prima-display{text-align:center;padding:1.2rem 0 1rem;border-bottom:1px solid var(--border2);margin-bottom:1rem}
+.prima-lbl{font-family:var(--fm);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem}
+.prima-val{font-family:var(--fh);font-size:2.6rem;font-weight:800;letter-spacing:-.04em;color:var(--emerald);transition:all .4s}
+.prima-sub{font-size:.72rem;color:var(--muted2);margin-top:.15rem}
+
+.out-row{display:flex;justify-content:space-between;align-items:center;padding:.48rem 0;border-bottom:1px solid rgba(255,255,255,.035);font-size:.79rem}
+.out-row:last-child{border-bottom:none}
+.out-key{color:var(--muted2)}.out-val{font-family:var(--fm);font-size:.74rem;color:var(--text)}
+.out-val.good{color:var(--green)}.out-val.warn{color:var(--amber)}.out-val.bad{color:var(--rose)}
+
+/* Comparison bar */
+.comp-bar-wrap{margin-top:1rem;padding:.8rem;background:var(--bg3);border-radius:8px;border:1px solid var(--border2)}
+.comp-title{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.7rem}
+.comp-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;font-size:.74rem}
+.comp-lbl{width:110px;color:var(--muted2);flex-shrink:0;font-size:.7rem}
+.comp-track{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.comp-fill{height:100%;border-radius:3px;transition:width .5s}
+.comp-num{font-family:var(--fm);font-size:.68rem;width:70px;text-align:right;flex-shrink:0}
+
+/* Payment schedule */
+.schedule-table{width:100%;border-collapse:collapse;font-size:.72rem;margin-top:.6rem}
+.schedule-table th{font-family:var(--fm);font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:.4rem .5rem;border-bottom:1px solid var(--border2);text-align:right}
+.schedule-table th:first-child{text-align:left}
+.schedule-table td{padding:.38rem .5rem;border-bottom:1px solid rgba(255,255,255,.03);text-align:right;font-family:var(--fm);font-size:.65rem}
+.schedule-table td:first-child{text-align:left;color:var(--muted2)}
+.schedule-table tr:hover td{background:rgba(255,255,255,.015)}
+
+/* Lee-Carter */
+.lc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.6rem}
+.lc-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.1rem}
+.lc-card-title{font-family:var(--fm);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--emerald);margin-bottom:.4rem}
+.lc-formula{font-family:var(--fm);font-size:.78rem;color:var(--violet);background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:.5rem .8rem;margin-bottom:.6rem;text-align:center}
+.lc-desc{font-size:.76rem;color:var(--muted2);line-height:1.7}
+
+/* OCDE comparison */
+.ocde-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1.6rem}
+.ocde-card{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:.8rem 1rem;text-align:center;transition:border-color .2s}
+.ocde-card:hover{border-color:rgba(0,200,150,.2)}
+.ocde-flag{font-size:1.4rem;margin-bottom:.3rem}
+.ocde-country{font-family:var(--fm);font-size:.62rem;color:var(--muted2);margin-bottom:.2rem}
+.ocde-e0{font-family:var(--fh);font-size:1.2rem;font-weight:800;margin-bottom:.1rem}
+.ocde-diff{font-family:var(--fm);font-size:.62rem;padding:.1rem .35rem;border-radius:4px}
+.diff-pos{background:rgba(52,211,153,.1);color:var(--green)}
+.diff-neg{background:rgba(255,77,109,.1);color:var(--rose)}
+
+/* CONC */
+.conc-list{display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.6rem}
+.conc-item{display:flex;align-items:flex-start;gap:.75rem;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem 1.1rem;font-size:.82rem;color:rgba(220,232,245,.7);line-height:1.75}
+.conc-arrow{font-family:var(--fm);font-size:.72rem;color:var(--emerald);flex-shrink:0;background:var(--emerald-dim);border-radius:5px;padding:.1rem .38rem}
+
+/* FOOTER */
+.dash-footer{padding:1.2rem 2.5rem 2.5rem;max-width:1280px;margin:3rem auto 0;border-top:1px solid var(--border2);display:flex;justify-content:space-between;font-family:var(--fm);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:999px}
+@media(max-width:900px){
+  .kpi-strip{grid-template-columns:repeat(2,1fr);padding:0 1.2rem}
+  .calc-layout{grid-template-columns:1fr}
+  .charts-2,.charts-3,.lc-grid,.ocde-grid{grid-template-columns:1fr}
+  .chart-box.full{grid-column:span 1}
+  .dash-header,.tabs-wrap{padding-left:1.2rem;padding-right:1.2rem}
+  .ocde-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="back-bar">
+  <a href="javascript:history.back()" class="back-btn"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Portafolio</a>
+  <div class="breadcrumb">Portafolio <span>/</span> <span>P4 · Tablas de Mortalidad</span></div>
+</div>
+
+<div class="dash-header">
+  <div class="eyebrow">04 · Actuaría Pura · 2024</div>
+  <h1 class="dash-title">Tablas de Mortalidad Dinámicas <span class="at">& Calculadora de Primas</span></h1>
+  <div class="dash-meta">
+    <span class="badge b-src">📂 INEGI API · Human Mortality Database · Tablas CNSF</span>
+    <span class="badge b-r">● R</span><span class="badge b-py">● Python</span><span class="badge b-sql">● SQL</span>
+    <span class="badge b-type">Actuaría Pura</span>
+  </div>
+  <p class="dash-desc">Modelo Lee-Carter para proyección dinámica de mortalidad en México hasta 2040, con detección de subestimación en tablas CNSF vigentes. Calculadora interactiva de primas netas y reservas matemáticas para 4 productos de vida individual, comparando tabla CNSF vs. tabla proyectada actualizada en MXN.</p>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-strip" style="margin-top:1.8rem">
+  <div class="kpi" style="--kc:var(--emerald)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--emerald)">Lee-Carter</span>
+    <div class="kpi-lbl">Modelo demográfico</div><div class="kpi-sub">Proyección a 2040</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Modelo Lee-Carter</strong>: log(μₓₜ) = αₓ + βₓκₜ. Descompone la mortalidad en un nivel por edad (αₓ), sensibilidad al cambio (βₓ) y tendencia temporal (κₜ) con ARIMA.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Estándar internacional para proyección actuarial de mortalidad. κₜ con ARIMA(0,1,0) + drift captura la mejora sostenida de mortalidad observada en MX 1960–2022.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Base para pricing de rentas vitalicias, seguros de vida entera y cálculo de reservas bajo IFRS 17. Requerido por <strong>CNSF</strong> para validación de tablas en productos con riesgo de longevidad.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--rose)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--rose)">+8%</span>
+    <div class="kpi-lbl">Subestimación CNSF</div><div class="kpi-sub">Edad 55–70 · masculino</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Subestimación de mortalidad</strong>: las tablas CNSF 2000 asignan tasas qx inferiores a las observadas actualmente en el rango 55–70 años para población masculina.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">+8.3% promedio de subestimación significa que las tablas vigentes proyectan mayor esperanza de vida de la real — generando subvaluación de reservas en seguros de vida entera.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Impacto directo en solvencia: una aseguradora con $10B MXN en reservas de vida podría estar subvaluando en ~$830M MXN. <strong>CNSF</strong> exige actualización periódica de bases demográficas.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--green)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--green)">−1.3%</span>
+    <div class="kpi-lbl">Mejora mortalidad anual</div><div class="kpi-sub">Proyectada hasta 2040</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Mejora anual de mortalidad</strong>: reducción porcentual promedio de las tasas qx año sobre año. −1.3% anual significa que la mortalidad mejora 1.3% cada año sostenidamente.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">La mejora acumulada 2022–2040 implica que un hombre de 65 años tendrá una esperanza de vida 2.4 años mayor en 2040 vs. hoy — impacto directo en el costo de rentas vitalicias.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Ajustar el pricing de rentas vitalicias y seguros de longevidad: cada año de esperanza de vida adicional representa ~8–12% de aumento en el costo actuarial de una renta vitalicia.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--amber)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--amber)">60 años</span>
+    <div class="kpi-lbl">Serie histórica</div><div class="kpi-sub">INEGI + HMD · 1960–2022</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Serie histórica 60 años</strong>: tasas de mortalidad por edad y sexo de México desde 1960 hasta 2022, combinando registros vitales INEGI y Human Mortality Database.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">60 años permiten al modelo Lee-Carter capturar ciclos de mejora de mortalidad (1960–1980 rápido, 1980–2000 moderado, post-COVID revisión). Mínimo recomendado: 40 años.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">La <strong>HMD</strong> es el estándar actuarial internacional para validar datos nacionales. Permite comparar MX contra países OCDE y calibrar la tasa de mejora proyectada.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-wrap" style="margin-top:2rem">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('mortality',this)">📊 Análisis de Mortalidad</button>
+    <button class="tab-btn" onclick="switchTab('calculator',this)">🧮 Calculadora de Primas</button>
+    <button class="tab-btn" onclick="switchTab('leecarter',this)">📈 Modelo Lee-Carter</button>
+  </div>
+
+  <!-- ══ TAB 1: MORTALITY ══ -->
+  <div class="tab-panel active" id="tab-mortality">
+
+    <div class="sec-title">Tasas de Mortalidad · CNSF vs. Lee-Carter vs. Proyección 2040</div>
+    <p class="sec-sub">Comparativa de qx por edad · Masculino · Escala logarítmica · MX 1960–2022 + proyección</p>
+
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">Tasas qx por Edad — Masculino · Comparativa de Tablas <span class="cb-badge">Escala log</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-qx-male"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>qx (tasa de mortalidad)</strong>: probabilidad de que una persona de edad exacta x fallezca antes de cumplir x+1 años. Elemento central de toda tabla de vida.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">La escala logarítmica revela claramente la subestimación CNSF en edades 55–70: la curva verde (Lee-Carter) está consistentemente por encima de la gris (CNSF) en ese rango.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Base para pricing de seguros de vida: qx determina la prima neta actuarialmente justa. Usar tablas subestimadas implica cobrar primas insuficientes para cubrir el riesgo real.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Tasas qx por Edad — Femenino · Comparativa de Tablas <span class="cb-badge">Escala log</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-qx-fem"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Diferencial de mortalidad por sexo</strong>: las mujeres tienen tasas qx menores que los hombres en prácticamente todos los rangos de edad — brecha que se cierra en edades avanzadas.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">La mejora de mortalidad femenina es más rápida que la masculina en MX: la proyección 2040 muestra mayor divergencia en el rango 70–85 años.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Pricing diferenciado por sexo: la <strong>CNSF</strong> permite tablas separadas por sexo en seguros individuales. En rentas colectivas (pensiones SAR), se usan tablas unisex ponderadas.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Esperanza de vida -->
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Esperanza de Vida al Nacer e₀ — México 1960–2040 <span class="cb-badge">INEGI + HMD + Proyección Lee-Carter</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-e0"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Esperanza de vida al nacer e₀</strong>: años promedio de vida que se espera viva un recién nacido si las tasas de mortalidad actuales se mantuvieran constantes. Indicador resumen de la tabla de vida.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">MX pasó de 57.9 años (1960) a 74.1 (2020, ajustado por COVID). La proyección Lee-Carter estima 79.3 años en 2040 — convergencia gradual hacia países OCDE líderes.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">El aumento proyectado de 5.2 años en e₀ al 2040 es el dato de negocio más importante: cada año adicional de esperanza de vida eleva el costo de rentas vitalicias y pensiones en el sistema SAR.</span></div>
+      </div>
+    </div>
+
+    <!-- Mejora de mortalidad -->
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">Mejora Anual de Mortalidad por Grupo de Edad <span class="cb-badge">% reducción qx/año · 2000–2022</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-improvement"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Mejora de mortalidad</strong>: tasa de reducción anual de qx por grupo de edad. Valor positivo = mortalidad mejorando (menos muertes relativas). Negativo = deterioro.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">La mayor mejora ocurre en infantes (0–4) y adultos mayores (65–80). El grupo 25–44 muestra menor mejora por causas externas (accidentes, violencia) que el modelo no captura.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Calibrar los factores de mejora en el pricing de rentas vitalicias: productos con asegurados de 65+ deben incluir mejoras prospectivas que aumentan el costo actuarial significativamente.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Subestimación CNSF vs. Lee-Carter por Grupo de Edad <span class="cb-badge">% diferencia · Masculino</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-underest"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Subestimación CNSF</strong>: diferencia porcentual entre qx observado actualmente y qx de la tabla CNSF vigente. Positivo = CNSF subestima (asume menos muertes de las reales).</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El pico de +8.3% en edades 55–70 para masculinos es el hallazgo principal: es donde la tabla CNSF más se aleja de la realidad demográfica actual de México.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Justificar ante la <strong>CNSF</strong> la necesidad de actualización de tablas regulatorias. El argumento cuantitativo: una subestimación de 8% en el grupo 55–70 impacta directamente la suficiencia de reservas de seguros dotal y dotales mixtos.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OCDE -->
+    <div class="sec-title">Comparativa Internacional · MX vs. Países OCDE</div>
+    <p class="sec-sub">Esperanza de vida al nacer 2022 · Fuente: Human Mortality Database · Brecha respecto a México</p>
+    <div class="ocde-grid">
+      <div class="ocde-card"><div class="ocde-flag">🇯🇵</div><div class="ocde-country">Japón</div><div class="ocde-e0" style="color:var(--green)">84.3</div><div class="ocde-diff diff-pos">+10.2 vs. MX</div></div>
+      <div class="ocde-card"><div class="ocde-flag">🇨🇭</div><div class="ocde-country">Suiza</div><div class="ocde-e0" style="color:var(--green)">83.8</div><div class="ocde-diff diff-pos">+9.7 vs. MX</div></div>
+      <div class="ocde-card"><div class="ocde-flag">🇪🇸</div><div class="ocde-country">España</div><div class="ocde-e0" style="color:var(--green)">83.2</div><div class="ocde-diff diff-pos">+9.1 vs. MX</div></div>
+      <div class="ocde-card"><div class="ocde-flag">🇨🇦</div><div class="ocde-country">Canadá</div><div class="ocde-e0" style="color:var(--teal)">82.6</div><div class="ocde-diff diff-pos">+8.5 vs. MX</div></div>
+      <div class="ocde-card"><div class="ocde-flag">🇫🇷</div><div class="ocde-country">Francia</div><div class="ocde-e0" style="color:var(--teal)">82.3</div><div class="ocde-diff diff-pos">+8.2 vs. MX</div></div>
+      <div class="ocde-card"><div class="ocde-flag">🇩🇪</div><div class="ocde-country">Alemania</div><div class="ocde-e0" style="color:var(--teal)">81.4</div><div class="ocde-diff diff-pos">+7.3 vs. MX</div></div>
+      <div class="ocde-card"><div class="ocde-flag">🇺🇸</div><div class="ocde-country">EE.UU.</div><div class="ocde-e0" style="color:var(--amber)">77.5</div><div class="ocde-diff diff-pos">+3.4 vs. MX</div></div>
+      <div class="ocde-card" style="border-color:rgba(0,200,150,.3)"><div class="ocde-flag">🇲🇽</div><div class="ocde-country">México</div><div class="ocde-e0" style="color:var(--emerald)">74.1</div><div class="ocde-diff" style="background:var(--emerald-dim);color:var(--emerald)">Referencia</div></div>
+    </div>
+
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Convergencia e₀ MX hacia OCDE · Proyección 2022–2040 por Sexo <span class="cb-badge">Lee-Carter + ARIMA</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap"><canvas id="chart-convergence"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Convergencia demográfica</strong>: México reduce gradualmente la brecha de esperanza de vida vs. países desarrollados. La tasa de convergencia proyectada es ~0.3 años/año.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Para 2040, MX estaría donde EE.UU. está hoy (77–78 años). La convergencia es más rápida en mujeres — la brecha femenina con OCDE líderes se reduce un 40% más rápido.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Benchmark para supervisores <strong>CNSF/CONSAR</strong>: justificar que las tablas mexicanas deben incorporar factores de mejora similares a los usados en sistemas de pensiones europeos.</span></div>
+      </div>
+    </div>
+
+    <!-- Conclusions -->
+    <div class="sec-title">Conclusiones & Hallazgos Clave</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Resultados del análisis · INEGI + HMD · 1960–2022 · Reemplaza con tus propios hallazgos</p>
+    <div class="conc-list">
+      <div class="conc-item"><span class="conc-arrow">→</span>Las tablas CNSF vigentes (base 2000) subestiman la mortalidad masculina en el rango 55–70 años en un 8.3% promedio vs. datos INEGI actuales, generando subvaluación de reservas matemáticas en seguros de vida entera y dotal bajo el régimen actuarial vigente.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>El modelo Lee-Carter proyecta una mejora de mortalidad de −1.3% anual sostenida hasta 2040 (κₜ con ARIMA(0,1,0) + drift), elevando la esperanza de vida a los 65 en 2.4 años — un impacto de 8–12% en el costo actuarial de rentas vitalicias y pensiones del sistema SAR.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>La prima neta para un Dotal Mixto 20 años (masculino, 35 años, SA=$1M MXN, i=4%) resulta 6.8% superior usando la tabla proyectada 2040 vs. la tabla CNSF vigente — evidenciando la necesidad de actualización de bases demográficas para el mercado asegurador mexicano.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>R (demography, actuar, MortCast) implementa toda la cadena actuarial (Lee-Carter → tablas de vida → reservas matemáticas) con sintaxis declarativa que el gremio actuarial reconoce internacionalmente, siendo el lenguaje dominante para análisis demográficos regulatorios ante CNSF y CONSAR.</div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 2: CALCULATOR ══ -->
+  <div class="tab-panel" id="tab-calculator">
+    <div class="sec-title">Calculadora Actuarial de Primas & Reservas</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Primas netas en tiempo real · 4 productos de vida individual · Tabla CNSF vs. Lee-Carter 2040 · MXN</p>
+
+    <div class="calc-layout">
+      <!-- Inputs -->
+      <div class="calc-inputs">
+        <div class="inp-group">
+          <div class="inp-group-title">📋 Tipo de Producto</div>
+          <div class="prod-tabs">
+            <button class="prod-btn active" onclick="setProduct('dotal',this)">Dotal Mixto</button>
+            <button class="prod-btn" onclick="setProduct('vida_entera',this)">Vida Entera</button>
+            <button class="prod-btn" onclick="setProduct('temporal',this)">Temporal</button>
+            <button class="prod-btn" onclick="setProduct('renta',this)">Renta Vitalicia</button>
+          </div>
+        </div>
+
+        <div class="inp-group">
+          <div class="inp-group-title">👤 Perfil del Asegurado</div>
+          <div class="inp-row">
+            <div class="inp-label"><span>Edad actual</span><span class="inp-val" id="lbl-age">35 años</span></div>
+            <input type="range" id="sl-age" min="18" max="75" value="35" oninput="updateCalc()">
+          </div>
+          <div class="inp-row">
+            <div class="inp-label" style="margin-bottom:.5rem"><span>Sexo</span></div>
+            <select class="inp-select" id="sl-sex" onchange="updateCalc()">
+              <option value="m">Masculino</option>
+              <option value="f">Femenino</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="inp-group">
+          <div class="inp-group-title">💰 Características del Producto</div>
+          <div class="inp-row">
+            <div class="inp-label"><span>Suma Asegurada (MXN)</span><span class="inp-val" id="lbl-sa">$1,000,000</span></div>
+            <input type="range" id="sl-sa" min="100000" max="10000000" value="1000000" step="100000" oninput="updateCalc()">
+          </div>
+          <div class="inp-row" id="plazo-row">
+            <div class="inp-label"><span>Plazo (años)</span><span class="inp-val" id="lbl-plazo">20 años</span></div>
+            <input type="range" id="sl-plazo" min="5" max="40" value="20" oninput="updateCalc()">
+          </div>
+          <div class="inp-row">
+            <div class="inp-label"><span>Tasa Técnica Anual (%)</span><span class="inp-val" id="lbl-rate">4.0%</span></div>
+            <input type="range" id="sl-rate" min="2" max="9" value="4" step="0.5" oninput="updateCalc()">
+          </div>
+        </div>
+
+        <div class="inp-group">
+          <div class="inp-group-title">📊 Tabla de Mortalidad</div>
+          <select class="inp-select" id="sl-table" onchange="updateCalc()">
+            <option value="cnsf">CNSF Vigente (base 2000)</option>
+            <option value="lc2022">Lee-Carter 2022 (actual)</option>
+            <option value="lc2040">Lee-Carter Proyectada 2040</option>
+          </select>
+        </div>
+
+        <!-- Mini comparison chart -->
+        <div style="margin-top:1rem">
+          <div class="cb-label" style="margin-bottom:.6rem">Comparativa de Prima por Tabla <span class="cb-badge" id="comp-badge">Dotal Mixto</span></div>
+          <div style="position:relative;height:130px"><canvas id="chart-comp-tables"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Output -->
+      <div class="calc-output">
+        <div class="prima-display">
+          <div class="prima-lbl">Prima Neta Anual</div>
+          <div class="prima-val" id="prima-val">$48,240</div>
+          <div class="prima-sub">MXN · Pago anual · <span id="prima-product">Dotal Mixto</span></div>
+        </div>
+
+        <div class="out-row"><span class="out-key">Prima mensual equivalente</span><span class="out-val good" id="out-monthly">$4,020 MXN</span></div>
+        <div class="out-row"><span class="out-key">Prima comercial (+30% gastos)</span><span class="out-val" id="out-comercial">$62,712 MXN</span></div>
+        <div class="out-row"><span class="out-key">Reserva matemática año 10</span><span class="out-val warn" id="out-reserve">$284,600 MXN</span></div>
+        <div class="out-row"><span class="out-key">Reserva matemática final</span><span class="out-val" id="out-reserve-end">$1,000,000 MXN</span></div>
+        <div class="out-row"><span class="out-key">Esperanza de vida (edad actual)</span><span class="out-val" id="out-e0">82.4 años</span></div>
+        <div class="out-row"><span class="out-key">Prob. supervivencia al vencimiento</span><span class="out-val good" id="out-surv">87.4%</span></div>
+        <div class="out-row"><span class="out-key">Tabla utilizada</span><span class="out-val" id="out-table" style="color:var(--emerald)">CNSF 2000</span></div>
+
+        <!-- Comparison bars -->
+        <div class="comp-bar-wrap">
+          <div class="comp-title">Prima Neta · Impacto por Tabla</div>
+          <div class="comp-row">
+            <span class="comp-lbl">CNSF Vigente</span>
+            <div class="comp-track"><div class="comp-fill" id="bar-cnsf" style="width:72%;background:rgba(131,153,184,.6)"></div></div>
+            <span class="comp-num" id="num-cnsf" style="color:var(--muted2)">$46,200</span>
+          </div>
+          <div class="comp-row">
+            <span class="comp-lbl">Lee-Carter 2022</span>
+            <div class="comp-track"><div class="comp-fill" id="bar-lc22" style="width:84%;background:rgba(0,200,150,.6)"></div></div>
+            <span class="comp-num" id="num-lc22" style="color:var(--emerald)">$48,240</span>
+          </div>
+          <div class="comp-row">
+            <span class="comp-lbl">LC Proy. 2040</span>
+            <div class="comp-track"><div class="comp-fill" id="bar-lc40" style="width:100%;background:rgba(255,77,109,.55)"></div></div>
+            <span class="comp-num" id="num-lc40" style="color:var(--rose)">$51,380</span>
+          </div>
+        </div>
+
+        <!-- Reserve schedule -->
+        <div style="margin-top:1rem">
+          <div style="font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem">Vector de Reservas · Años seleccionados</div>
+          <table class="schedule-table" id="schedule-table">
+            <thead><tr><th>Año</th><th>Edad</th><th>Reserva V(t)</th><th>qx</th><th>Factor desc.</th></tr></thead>
+            <tbody id="schedule-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reserve chart -->
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Trayectoria de Reserva Matemática V(t) · 3 Tablas Comparadas <span class="cb-badge" id="reserve-badge">Dotal Mixto · SA $1M MXN</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-reserve"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Reserva matemática V(t)</strong>: valor actual actuarial de las obligaciones futuras neto de primas futuras esperadas. Representa el pasivo contable del asegurador en cada período.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">La brecha entre las 3 curvas al año 10 es el impacto económico de usar distintas tablas. Con tabla 2040, la reserva es consistentemente mayor — más conservadora y regulatoriamente robusta.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">La reserva V(t) es el dato que audita la <strong>CNSF</strong> en inspecciones anuales. La diferencia entre usar tabla CNSF vs. LC2040 puede determinar si una aseguradora supera o no el margen de solvencia requerido.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 3: LEE-CARTER ══ -->
+  <div class="tab-panel" id="tab-leecarter">
+    <div class="sec-title">Modelo Lee-Carter · Componentes y Proyección</div>
+    <p class="sec-sub">Descomposición SVD de la mortalidad · Proyección κₜ con ARIMA · Intervalos de confianza 80% y 95%</p>
+
+    <div class="lc-grid">
+      <div class="lc-card">
+        <div class="lc-card-title">Componente αₓ · Nivel</div>
+        <div class="lc-formula">log(μₓₜ) = αₓ + βₓκₜ + εₓₜ</div>
+        <div class="lc-desc">αₓ es el perfil promedio de mortalidad por edad a lo largo de toda la serie histórica. Captura la forma de la curva de mortalidad característica de México — alta en infancia, mínimo en adolescencia, creciente exponencial desde los 40 años.</div>
+        <div class="info-panel" style="margin-top:.7rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">αₓ = promedio temporal de log(μₓₜ). Representa el nivel de mortalidad específico de cada edad, independiente de la tendencia temporal.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">αₓ es estable y no requiere proyección — su forma determina la estructura de la tabla de vida base sobre la que κₜ actúa.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="margin-top:.5rem">ℹ</button>
+      </div>
+      <div class="lc-card">
+        <div class="lc-card-title">Componente βₓ · Sensibilidad</div>
+        <div class="lc-formula">βₓ = sensibilidad al cambio temporal</div>
+        <div class="lc-desc">βₓ mide cuánto responde la mortalidad de cada edad a los cambios en la tendencia κₜ. En México, las edades 65–80 tienen los βₓ más altos — son las que más mejoran cuando la tendencia es favorable.</div>
+        <div class="info-panel" style="margin-top:.7rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">βₓ se estima por SVD de la matriz de desviaciones respecto a αₓ. Mayor βₓ = mayor beneficio de la mejora de mortalidad proyectada.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Edades con βₓ alto son donde más impacta la mejora de mortalidad en el costo de rentas vitalicias — concentrar el análisis de sensibilidad en esos grupos de edad.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="margin-top:.5rem">ℹ</button>
+      </div>
+      <div class="lc-card">
+        <div class="lc-card-title">Componente κₜ · Tendencia</div>
+        <div class="lc-formula">κₜ ~ ARIMA(0,1,0) + drift</div>
+        <div class="lc-desc">κₜ captura la tendencia temporal de mejora de mortalidad. En México muestra un drift negativo consistente de −1.3 unidades/año — la mortalidad mejora sistemáticamente. Se proyecta con ARIMA para generar bandas de confianza.</div>
+        <div class="info-panel" style="margin-top:.7rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">κₜ es el único componente que se proyecta. ARIMA(0,1,0) con drift es el modelo estándar de Lee-Carter para la mayoría de poblaciones con mejora sostenida.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Los intervalos de confianza de κₜ se traducen directamente en rangos de prima y reserva — permiten calcular el riesgo de modelo en el pricing actuarial.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="margin-top:.5rem">ℹ</button>
+      </div>
+    </div>
+
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">Proyección κₜ con Intervalos de Confianza · 1960–2040 <span class="cb-badge">ARIMA(0,1,0) + drift</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-kt"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>κₜ proyectado</strong>: la tendencia continúa su descenso con drift −1.3/año. Los intervalos se amplían hacia el futuro reflejando la incertidumbre creciente de la proyección.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El intervalo de confianza 95% al año 2040 cubre un rango de ~±18 unidades de κₜ — que se traduce en ±12% de variación en las tasas qx proyectadas.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">El límite superior del IC 95% es el escenario conservador para pricing de rentas vitalicias — da la prima máxima que garantiza suficiencia ante el peor escenario de mejora de mortalidad.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Componentes αₓ y βₓ por Edad · Masculino <span class="cb-badge">SVD · 1960–2022</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-ab"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>αₓ vs. βₓ</strong>: αₓ (eje izquierdo) muestra el nivel logarítmico de mortalidad por edad. βₓ (eje derecho) muestra la sensibilidad relativa — qué edades se benefician más de la tendencia favorable.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El pico de βₓ en edades 65–80 confirma que las rentas vitalicias son el producto más sensible a la mejora de mortalidad — cualquier error en la proyección impacta más en ese rango.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Análisis de sensibilidad por producto: un seguro temporal 25–45 años (βₓ bajo) es poco sensible a la mejora. Una renta vitalicia a los 65 (βₓ alto) requiere factores de mejora explícitos.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Validación Out-of-Sample · Mortalidad Observada vs. Predicha 2015–2022 <span class="cb-badge">Lee-Carter entrenado hasta 2014</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap"><canvas id="chart-validation"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Validación out-of-sample</strong>: el modelo se entrena con datos 1960–2014 y se evalúa en 2015–2022, comparando mortalidad predicha contra la realmente observada en ese período.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El modelo captura bien la tendencia 2015–2019. El desvío 2020–2021 es el impacto COVID — no modelable con datos históricos. La recuperación 2022 es coherente con la proyección original.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">La validación out-of-sample es el requisito más crítico para presentar el modelo ante la <strong>CNSF</strong>: demuestra que no hay sobreajuste y que el modelo predice bien fuera de muestra.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dash-footer">
+  <span style="color:var(--muted2)">// <span style="color:var(--emerald)">P4 · Tablas de Mortalidad</span> · INEGI · HMD · CNSF · Demostrativo · MXN</span>
+  <span>R · Python · SQL · <span style="color:var(--violet)">2024</span></span>
+</div>
+
+<script>
+Chart.defaults.color='rgba(220,232,245,0.42)';
+Chart.defaults.borderColor='rgba(255,255,255,0.042)';
+Chart.defaults.font.family="'JetBrains Mono','monospace'";
+Chart.defaults.font.size=10;
+Chart.defaults.plugins.legend.labels.boxWidth=10;
+Chart.defaults.plugins.legend.labels.padding=14;
+Chart.defaults.plugins.legend.labels.usePointStyle=true;
+const TT={backgroundColor:'#0d1015',titleColor:'#dce8f5',bodyColor:'rgba(220,232,245,.7)',borderColor:'rgba(0,200,150,.15)',borderWidth:1,padding:10};
+const BASE={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(220,232,245,.48)'}},tooltip:TT},scales:{x:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}},y:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}}}};
+function mk(ex={}){const o=JSON.parse(JSON.stringify(BASE));if(ex.scales)Object.assign(o.scales,ex.scales);if(ex.indexAxis)o.indexAxis=ex.indexAxis;return o;}
+
+function toggleInfo(btn){
+  const p=btn.closest('.kpi,.chart-box,.lc-card');if(!p)return;
+  const panel=p.querySelector('.info-panel');if(!panel)return;
+  const open=panel.classList.contains('open');
+  panel.classList.toggle('open',!open);btn.classList.toggle('active',!open);
+}
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');document.getElementById('tab-'+id).classList.add('active');
+}
+
+// ── DATA
+const AGES=Array.from({length:18},(_,i)=>i*5);
+const QX={
+  cnsf:{m:[.004,.001,.001,.002,.003,.005,.008,.013,.020,.031,.048,.074,.114,.168,.240,.320,.400,.480],
+        f:[.003,.001,.001,.002,.002,.003,.005,.008,.013,.020,.032,.050,.078,.118,.174,.248,.336,.440]},
+  lc2022:{m:[.0038,.0009,.0011,.0022,.0035,.0055,.0090,.0145,.0225,.0350,.0540,.0820,.1240,.1820,.2580,.3400,.4200,.5100],
+          f:[.0028,.0008,.0009,.0018,.0024,.0034,.0054,.0088,.0138,.0220,.0340,.0530,.0820,.1240,.1820,.2580,.3460,.4600]},
+  lc2040:{m:[.0033,.0008,.0010,.0019,.0030,.0048,.0079,.0128,.0199,.0312,.0484,.0740,.1130,.1660,.2370,.3150,.3900,.4780],
+          f:[.0024,.0007,.0008,.0016,.0021,.0030,.0047,.0078,.0122,.0196,.0302,.0474,.0734,.1110,.1640,.2330,.3140,.4220]}
+};
+
+// ── QX CHARTS
+const AGES_LABELS=AGES.map(a=>a===0?'0':String(a));
+new Chart(document.getElementById('chart-qx-male'),{type:'line',data:{labels:AGES_LABELS,datasets:[
+  {label:'CNSF Vigente (2000)',data:QX.cnsf.m,borderColor:'rgba(131,153,184,.6)',borderWidth:2,fill:false,tension:.4,pointRadius:2,borderDash:[5,3]},
+  {label:'Lee-Carter 2022',data:QX.lc2022.m,borderColor:'#00c896',borderWidth:2.5,fill:false,tension:.4,pointRadius:2},
+  {label:'Proyección 2040',data:QX.lc2040.m,borderColor:'#a78bfa',borderWidth:2,fill:true,backgroundColor:'rgba(167,139,250,.06)',tension:.4,pointRadius:2,borderDash:[3,2]},
+]},options:mk({scales:{y:{type:'logarithmic',title:{display:true,text:'qx (escala log)'}},x:{title:{display:true,text:'Edad'}}}})});
+
+new Chart(document.getElementById('chart-qx-fem'),{type:'line',data:{labels:AGES_LABELS,datasets:[
+  {label:'CNSF Vigente (2000)',data:QX.cnsf.f,borderColor:'rgba(131,153,184,.6)',borderWidth:2,fill:false,tension:.4,pointRadius:2,borderDash:[5,3]},
+  {label:'Lee-Carter 2022',data:QX.lc2022.f,borderColor:'#f5a623',borderWidth:2.5,fill:false,tension:.4,pointRadius:2},
+  {label:'Proyección 2040',data:QX.lc2040.f,borderColor:'#60a5fa',borderWidth:2,fill:true,backgroundColor:'rgba(96,165,250,.06)',tension:.4,pointRadius:2,borderDash:[3,2]},
+]},options:mk({scales:{y:{type:'logarithmic',title:{display:true,text:'qx (escala log)'}},x:{title:{display:true,text:'Edad'}}}})});
+
+// ── E0 CHART
+(()=>{
+  const years=[1960,1970,1980,1990,2000,2010,2020,2025,2030,2035,2040];
+  const obsM=[55.4,59.2,64.8,68.4,71.2,73.0,71.4,null,null,null,null];
+  const obsF=[58.9,63.8,70.2,74.4,76.8,78.1,76.2,null,null,null,null];
+  const projM=[null,null,null,null,null,null,71.4,72.8,74.2,75.6,77.0];
+  const projF=[null,null,null,null,null,null,76.2,77.4,78.6,79.8,81.2];
+  new Chart(document.getElementById('chart-e0'),{type:'line',data:{labels:years,datasets:[
+    {label:'Masculino observado',data:obsM,borderColor:'#60a5fa',borderWidth:2.5,fill:false,tension:.4,pointRadius:3},
+    {label:'Femenino observado',data:obsF,borderColor:'#f5a623',borderWidth:2.5,fill:false,tension:.4,pointRadius:3},
+    {label:'Masculino proyectado',data:projM,borderColor:'#60a5fa',borderWidth:2,fill:false,tension:.4,borderDash:[5,3],pointRadius:2},
+    {label:'Femenino proyectado',data:projF,borderColor:'#f5a623',borderWidth:2,fill:true,backgroundColor:'rgba(245,166,35,.05)',tension:.4,borderDash:[5,3],pointRadius:2},
+  ]},options:mk({scales:{y:{title:{display:true,text:'Años de vida'},min:50}}})});
+})();
+
+// ── IMPROVEMENT CHART
+new Chart(document.getElementById('chart-improvement'),{type:'bar',data:{
+  labels:['0–4','5–14','15–24','25–34','35–44','45–54','55–64','65–74','75–84','85+'],
+  datasets:[
+    {label:'Masculino',data:[2.8,1.4,.8,.6,.9,1.2,1.4,1.8,2.1,1.6],backgroundColor:'rgba(96,165,250,.5)',borderColor:'#60a5fa',borderWidth:1.5,borderRadius:4},
+    {label:'Femenino',data:[2.6,1.5,.9,.8,1.1,1.4,1.6,2.0,2.4,1.9],backgroundColor:'rgba(245,166,35,.45)',borderColor:'#f5a623',borderWidth:1.5,borderRadius:4},
+  ]},options:mk({scales:{y:{title:{display:true,text:'Mejora anual promedio (%)'}}}})});
+
+// ── UNDERESTIMATION CHART
+new Chart(document.getElementById('chart-underest'),{type:'bar',data:{
+  labels:['0–4','5–14','15–24','25–34','35–44','45–54','55–64','65–74','75–84','85+'],
+  datasets:[{label:'Subestimación CNSF vs. LC2022 (%)',
+    data:[1.2,.8,2.1,3.4,4.8,6.2,8.1,8.4,6.8,4.2],
+    backgroundColor:d=>d.raw>7?'rgba(255,77,109,.65)':d.raw>4?'rgba(245,166,35,.55)':'rgba(0,200,150,.45)',
+    borderColor:d=>d.raw>7?'#ff4d6d':d.raw>4?'#f5a623':'#00c896',
+    borderWidth:1.5,borderRadius:5}]},
+  options:mk({scales:{y:{title:{display:true,text:'% subestimación CNSF'}}}})});
+
+// ── CONVERGENCE
+(()=>{
+  const years=[2022,2025,2028,2031,2034,2037,2040];
+  new Chart(document.getElementById('chart-convergence'),{type:'line',data:{labels:years,datasets:[
+    {label:'MX Masculino (LC proyectado)',data:[71.4,72.2,73.0,73.9,74.8,75.8,77.0],borderColor:'#60a5fa',borderWidth:2.5,fill:true,backgroundColor:'rgba(96,165,250,.05)',tension:.4,pointRadius:3},
+    {label:'MX Femenino (LC proyectado)',data:[76.2,77.0,77.8,78.6,79.4,80.3,81.2],borderColor:'#f5a623',borderWidth:2.5,fill:true,backgroundColor:'rgba(245,166,35,.05)',tension:.4,pointRadius:3},
+    {label:'EE.UU. referencia',data:[77.5,77.5,77.5,77.5,77.5,77.5,77.5],borderColor:'rgba(131,153,184,.4)',borderWidth:1.5,fill:false,tension:0,borderDash:[4,3],pointRadius:0},
+    {label:'OCDE promedio',data:[80.2,80.2,80.2,80.2,80.2,80.2,80.2],borderColor:'rgba(52,211,153,.35)',borderWidth:1.5,fill:false,tension:0,borderDash:[3,4],pointRadius:0},
+  ]},options:mk({scales:{y:{title:{display:true,text:'Esperanza de vida (años)'},min:68}}})});
+})();
+
+// ── LEE-CARTER: KT CHART
+(()=>{
+  const years=Array.from({length:63+18},(_,i)=>1960+i);
+  const observed=Array.from({length:63},(_,i)=>10-(i*1.28)+(Math.sin(i*.3)*.8));
+  const proj=new Array(63).fill(null);
+  const projMean=Array.from({length:18},(_,i)=>observed[62]-(i+1)*1.3);
+  const ic80upper=Array.from({length:18},(_,i)=>projMean[i]+(i+1)*2.2);
+  const ic80lower=Array.from({length:18},(_,i)=>projMean[i]-(i+1)*2.2);
+  const ic95upper=Array.from({length:18},(_,i)=>projMean[i]+(i+1)*3.8);
+  const ic95lower=Array.from({length:18},(_,i)=>projMean[i]-(i+1)*3.8);
+  new Chart(document.getElementById('chart-kt'),{type:'line',data:{labels:years,datasets:[
+    {label:'κₜ observado',data:[...observed,...new Array(18).fill(null)],borderColor:'#00c896',borderWidth:2.5,fill:false,tension:.4,pointRadius:0},
+    {label:'κₜ proyectado (media)',data:[...new Array(63).fill(null),...projMean],borderColor:'#a78bfa',borderWidth:2,fill:false,tension:.4,borderDash:[5,3],pointRadius:0},
+    {label:'IC 80%',data:[...new Array(63).fill(null),...ic80upper],borderColor:'rgba(167,139,250,.3)',borderWidth:1,fill:false,tension:.4,borderDash:[2,3],pointRadius:0},
+    {label:'',data:[...new Array(63).fill(null),...ic80lower],borderColor:'rgba(167,139,250,.3)',borderWidth:1,fill:'-1',backgroundColor:'rgba(167,139,250,.06)',tension:.4,borderDash:[2,3],pointRadius:0},
+    {label:'IC 95%',data:[...new Array(63).fill(null),...ic95upper],borderColor:'rgba(245,166,35,.2)',borderWidth:1,fill:false,tension:.4,borderDash:[1,4],pointRadius:0},
+    {label:'',data:[...new Array(63).fill(null),...ic95lower],borderColor:'rgba(245,166,35,.2)',borderWidth:1,fill:'-1',backgroundColor:'rgba(245,166,35,.04)',tension:.4,borderDash:[1,4],pointRadius:0},
+  ]},options:mk({scales:{y:{title:{display:true,text:'κₜ (índice de mejora temporal)'}},x:{ticks:{maxTicksLimit:10}}}})});
+})();
+
+// ── AB CHART
+new Chart(document.getElementById('chart-ab'),{type:'line',data:{labels:AGES_LABELS,datasets:[
+  {label:'αₓ (nivel, eje izq.)',data:[-5.5,-7.2,-6.8,-6.1,-5.6,-5.0,-4.4,-3.8,-3.2,-2.6,-2.1,-1.6,-1.2,-.8,-.4,-.1,.2,.5],borderColor:'#00c896',borderWidth:2.5,fill:false,tension:.4,pointRadius:3,yAxisID:'y'},
+  {label:'βₓ (sensibilidad, eje der.)',data:[.048,.022,.018,.024,.032,.041,.052,.062,.072,.081,.088,.092,.094,.092,.086,.076,.062,.048],borderColor:'#f5a623',borderWidth:2,fill:true,backgroundColor:'rgba(245,166,35,.06)',tension:.4,pointRadius:3,yAxisID:'y1'},
+]},options:mk({scales:{y:{title:{display:true,text:'αₓ'}},y1:{type:'linear',position:'right',title:{display:true,text:'βₓ'},grid:{drawOnChartArea:false},ticks:{color:'#f5a623'}}}})});
+
+// ── VALIDATION CHART
+(()=>{
+  const years=[2015,2016,2017,2018,2019,2020,2021,2022];
+  const obs=[1.0,.98,.96,.95,.94,1.18,1.12,.97];
+  const pred=[1.0,.97,.95,.94,.92,.90,.88,.86];
+  new Chart(document.getElementById('chart-validation'),{type:'line',data:{labels:years,datasets:[
+    {label:'Observado (INEGI)',data:obs,borderColor:'#00c896',borderWidth:2.5,fill:false,tension:.3,pointRadius:5,pointBackgroundColor:obs.map(v=>v>1.05?'#ff4d6d':'#00c896')},
+    {label:'Predicho (Lee-Carter)',data:pred,borderColor:'#a78bfa',borderWidth:2,fill:true,backgroundColor:'rgba(167,139,250,.06)',tension:.4,borderDash:[5,3],pointRadius:3},
+  ]},options:mk({scales:{y:{title:{display:true,text:'Índice mortalidad relativa (base 1.0 = 2015)'}}}})});
+})();
+
+// ── CALCULATOR LOGIC
+let currentProduct='dotal';
+let compTablesChart=null,reserveChart=null;
+
+const PRODUCTS={
+  dotal:{name:'Dotal Mixto',hasPlazo:true,desc:'Seguro mixto: paga SA al vencimiento si el asegurado sobrevive, o al fallecimiento si ocurre antes.'},
+  vida_entera:{name:'Vida Entera',hasPlazo:false,desc:'Paga la SA al fallecimiento del asegurado, en cualquier momento.'},
+  temporal:{name:'Temporal',hasPlazo:true,desc:'Paga la SA solo si el asegurado fallece dentro del plazo. Sin valor al vencimiento.'},
+  renta:{name:'Renta Vitalicia',hasPlazo:false,desc:'Paga una renta periódica mientras el asegurado viva. Costo más sensible a mejoras de mortalidad.'},
+};
+
+function setProduct(p,btn){
+  currentProduct=p;
+  document.querySelectorAll('.prod-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('plazo-row').style.display=PRODUCTS[p].hasPlazo?'block':'none';
+  updateCalc();
+}
+
+// Actuarial functions (simplified)
+function getQx(age,sex,table){
+  const idx=Math.min(Math.floor(age/5),17);
+  const base=QX[table][sex][idx];
+  const frac=(age%5)/5;
+  const next=QX[table][sex][Math.min(idx+1,17)];
+  return base*(1-frac)+next*frac;
+}
+function getEx(startAge,sex,table,n=100){
+  // Curtate expectation
+  let lx=1,ex=0;
+  for(let t=0;t<n&&startAge+t<100;t++){
+    const q=getQx(startAge+t,sex,table);
+    ex+=lx;lx*=(1-q);
+  }
+  return ex;
+}
+function getAx(age,sex,table,rate,n){
+  // EPV of life insurance
+  const v=1/(1+rate);let lx=1,Ax=0;
+  for(let t=0;t<n&&age+t<100;t++){
+    const q=getQx(age+t,sex,table);
+    Ax+=lx*q*Math.pow(v,t+.5);lx*=(1-q);
+  }
+  return Ax;
+}
+function getax(age,sex,table,rate,n){
+  // EPV of annuity-due
+  const v=1/(1+rate);let lx=1,ax=0;
+  for(let t=0;t<n&&age+t<100;t++){
+    ax+=lx*Math.pow(v,t);const q=getQx(age+t,sex,table);lx*=(1-q);
+  }
+  return ax;
+}
+function getEndow(age,sex,table,rate,n){
+  return getAx(age,sex,table,rate,n)+Math.pow(1/(1+rate),n)*(1-getAx(age,sex,table,rate,n)/getAx(age,sex,table,rate,99));
+}
+
+function calcPrima(age,sex,table,sa,rate,plazo,product){
+  const i=rate/100;
+  let P;
+  switch(product){
+    case'dotal':{
+      const Axn=getAx(age,sex,table,i,plazo)+Math.pow(1/(1+i),plazo)*(function(){let lx=1;for(let t=0;t<plazo;t++){lx*=(1-getQx(age+t,sex,table));}return lx;}());
+      const axn=getax(age,sex,table,i,plazo);
+      P=(Axn/axn)*sa;break;
+    }
+    case'vida_entera':{const Ax=getAx(age,sex,table,i,100-age);const ax=getax(age,sex,table,i,100-age);P=(Ax/ax)*sa;break;}
+    case'temporal':{const Ax=getAx(age,sex,table,i,plazo);const ax=getax(age,sex,table,i,plazo);P=(Ax/ax)*sa;break;}
+    case'renta':{const ax=getax(age,sex,table,i,100-age);P=sa/ax;break;}
+  }
+  return Math.max(P,0);
+}
+
+function calcReserveSchedule(age,sex,table,sa,rate,plazo,product,P){
+  const i=rate/100,yrs=PRODUCTS[product].hasPlazo?plazo:(100-age);
+  const schedule=[];
+  for(let t=1;t<=Math.min(yrs,plazo||40);t+=Math.max(1,Math.floor(yrs/8))){
+    const q=getQx(age+t,sex,table);
+    const V=Math.round(P*getax(age+t,sex,table,i,yrs-t)-sa*getAx(age+t,sex,table,i,yrs-t));
+    schedule.push({yr:t,age:age+t,V:Math.max(0,V),q:(q*1000).toFixed(2)});
+  }
+  return schedule;
+}
+
+function updateCalc(){
+  const age=+document.getElementById('sl-age').value;
+  const sex=document.getElementById('sl-sex').value;
+  const sa=+document.getElementById('sl-sa').value;
+  const plazo=+document.getElementById('sl-plazo').value;
+  const rate=+document.getElementById('sl-rate').value;
+  const table=document.getElementById('sl-table').value;
+
+  document.getElementById('lbl-age').textContent=age+' años';
+  document.getElementById('lbl-sa').textContent='$'+sa.toLocaleString('es-MX');
+  document.getElementById('lbl-plazo').textContent=plazo+' años';
+  document.getElementById('lbl-rate').textContent=rate.toFixed(1)+'%';
+
+  const P=calcPrima(age,sex,table,sa,rate/100*100,plazo,currentProduct);
+  const Pcnsf=calcPrima(age,sex,'cnsf',sa,rate/100*100,plazo,currentProduct);
+  const Plc22=calcPrima(age,sex,'lc2022',sa,rate/100*100,plazo,currentProduct);
+  const Plc40=calcPrima(age,sex,'lc2040',sa,rate/100*100,plazo,currentProduct);
+  const maxP=Math.max(Pcnsf,Plc22,Plc40);
+
+  // Main output
+  document.getElementById('prima-val').textContent='$'+Math.round(P).toLocaleString('es-MX');
+  document.getElementById('prima-product').textContent=PRODUCTS[currentProduct].name;
+  document.getElementById('out-monthly').textContent='$'+Math.round(P/12).toLocaleString('es-MX')+' MXN';
+  document.getElementById('out-comercial').textContent='$'+Math.round(P*1.3).toLocaleString('es-MX')+' MXN';
+  const ex=getEx(age,sex,table);
+  document.getElementById('out-e0').textContent=(age+ex).toFixed(1)+' años';
+  const surv=function(){let lx=1;const n=PRODUCTS[currentProduct].hasPlazo?plazo:20;for(let t=0;t<n;t++)lx*=(1-getQx(age+t,sex,table));return lx;}();
+  document.getElementById('out-surv').textContent=(surv*100).toFixed(1)+'%';
+  const tableNames={'cnsf':'CNSF 2000','lc2022':'Lee-Carter 2022','lc2040':'LC Proyectada 2040'};
+  document.getElementById('out-table').textContent=tableNames[table];
+  const yrs=PRODUCTS[currentProduct].hasPlazo?plazo:(100-age);
+  const resY10=Math.round(P*getax(age+Math.min(10,yrs/2),sex,table,rate/100,yrs-Math.min(10,yrs/2))-sa*getAx(age+Math.min(10,yrs/2),sex,table,rate/100,yrs-Math.min(10,yrs/2)));
+  document.getElementById('out-reserve').textContent='$'+Math.max(0,resY10).toLocaleString('es-MX')+' MXN';
+  document.getElementById('out-reserve-end').textContent='$'+sa.toLocaleString('es-MX')+' MXN';
+
+  // Comparison bars
+  document.getElementById('bar-cnsf').style.width=(Pcnsf/maxP*100)+'%';
+  document.getElementById('bar-lc22').style.width=(Plc22/maxP*100)+'%';
+  document.getElementById('bar-lc40').style.width=(Plc40/maxP*100)+'%';
+  document.getElementById('num-cnsf').textContent='$'+Math.round(Pcnsf).toLocaleString('es-MX');
+  document.getElementById('num-lc22').textContent='$'+Math.round(Plc22).toLocaleString('es-MX');
+  document.getElementById('num-lc40').textContent='$'+Math.round(Plc40).toLocaleString('es-MX');
+  document.getElementById('comp-badge').textContent=PRODUCTS[currentProduct].name;
+  document.getElementById('reserve-badge').textContent=PRODUCTS[currentProduct].name+' · SA $'+Math.round(sa/1000)+'K MXN';
+
+  // Schedule
+  const sched=calcReserveSchedule(age,sex,table,sa,rate/100*100,plazo,currentProduct,P);
+  document.getElementById('schedule-body').innerHTML=sched.map(s=>`<tr>
+    <td>${s.yr}</td><td>${s.age}</td>
+    <td style="color:var(--emerald)">$${s.V.toLocaleString('es-MX')}</td>
+    <td>${s.q}‰</td>
+    <td>${(Math.pow(1/(1+rate/100),s.yr)).toFixed(4)}</td>
+  </tr>`).join('');
+
+  // Comp tables chart
+  if(compTablesChart)compTablesChart.destroy();
+  compTablesChart=new Chart(document.getElementById('chart-comp-tables'),{type:'bar',data:{
+    labels:['CNSF Vigente','Lee-Carter 2022','LC Proyectada 2040'],
+    datasets:[{label:'Prima Neta Anual (MXN)',data:[Math.round(Pcnsf),Math.round(Plc22),Math.round(Plc40)],
+      backgroundColor:['rgba(131,153,184,.4)','rgba(0,200,150,.5)','rgba(255,77,109,.5)'],
+      borderColor:['#8399b8','#00c896','#ff4d6d'],borderWidth:1.5,borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:TT},scales:{x:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)',font:{size:9}}},y:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)',callback:v=>'$'+Math.round(v/1000)+'K'}}}}});
+
+  // Reserve chart
+  if(reserveChart)reserveChart.destroy();
+  const maxYr=PRODUCTS[currentProduct].hasPlazo?plazo:Math.min(100-age,40);
+  const yrsArr=Array.from({length:maxYr+1},(_,i)=>i);
+  const calcRes=(tbl)=>yrsArr.map(t=>Math.max(0,Math.round(
+    calcPrima(age,sex,tbl,sa,rate/100*100,plazo,currentProduct)*getax(age+t,sex,tbl,rate/100,maxYr-t)
+    -sa*getAx(age+t,sex,tbl,rate/100,maxYr-t))));
+  reserveChart=new Chart(document.getElementById('chart-reserve'),{type:'line',data:{labels:yrsArr,datasets:[
+    {label:'CNSF Vigente',data:calcRes('cnsf'),borderColor:'rgba(131,153,184,.7)',borderWidth:2,fill:false,tension:.4,pointRadius:0,borderDash:[5,3]},
+    {label:'Lee-Carter 2022',data:calcRes('lc2022'),borderColor:'#00c896',borderWidth:2.5,fill:false,tension:.4,pointRadius:0},
+    {label:'LC Proyectada 2040',data:calcRes('lc2040'),borderColor:'#ff4d6d',borderWidth:2,fill:true,backgroundColor:'rgba(255,77,109,.04)',tension:.4,pointRadius:0,borderDash:[3,2]},
+  ]},options:mk({scales:{y:{title:{display:true,text:'Reserva V(t) MXN'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K'}},x:{title:{display:true,text:'Año del contrato'}}}})});
+}
+updateCalc();
+</script>
+</body>
+</html>

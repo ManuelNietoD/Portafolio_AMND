@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>P7 · El Gemelo Digital · Datos Sintéticos Financieros</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#040507;--bg2:#07090d;--bg3:#0b0e14;--bg4:#10141c;
+  --indigo:#818cf8;--indigo-dim:rgba(129,140,248,.10);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,.09);
+  --teal:#00ddb4;--teal-dim:rgba(0,221,180,.09);
+  --rose:#ff4d6d;--rose-dim:rgba(255,77,109,.09);
+  --green:#34d399;--blue:#60a5fa;--violet:#a78bfa;
+  --text:#dce8f5;--muted:#3a4f68;--muted2:#6a8aaa;
+  --border:rgba(129,140,248,.13);--border2:rgba(255,255,255,.05);
+  --r:14px;
+  --fh:'Syne',sans-serif;--fm:'JetBrains Mono',monospace;--fb:'DM Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.7;min-height:100vh;overflow-x:hidden}
+
+.back-bar{padding:.9rem 2rem;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:.7rem;background:var(--bg2)}
+.back-btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--fm);font-size:.72rem;color:var(--muted2);text-decoration:none;padding:.35rem .8rem;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);transition:all .2s;cursor:pointer}
+.back-btn:hover{color:var(--indigo);border-color:rgba(129,140,248,.3)}
+.back-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+.breadcrumb{font-family:var(--fm);font-size:.68rem;color:var(--muted)}
+.breadcrumb span{color:var(--indigo)}
+
+.dash-header{padding:2.5rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.eyebrow{font-family:var(--fm);font-size:.62rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.eyebrow::before{content:'';display:inline-block;width:20px;height:1px;background:var(--indigo)}
+.dash-title{font-family:var(--fh);font-size:clamp(1.5rem,3vw,2.3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.8rem}
+.dash-title .at{color:var(--indigo)}
+.dash-meta{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-family:var(--fm);font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;padding:.2rem .65rem;border-radius:999px}
+.b-src{background:var(--indigo-dim);color:var(--indigo);border:1px solid rgba(129,140,248,.25)}
+.b-py{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.b-sql{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.b-type{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,221,180,.25)}
+.dash-desc{font-size:.85rem;color:rgba(220,232,245,.5);max-width:740px;line-height:1.8;margin-bottom:2rem}
+
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;padding:0 2.5rem;max-width:1280px;margin:0 auto}
+.kpi{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.1rem 1.2rem;position:relative;overflow:hidden;transition:border-color .25s;animation:fadeUp .5s ease both}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--indigo));opacity:.8}
+.kpi:nth-child(1){animation-delay:.05s}.kpi:nth-child(2){animation-delay:.1s}.kpi:nth-child(3){animation-delay:.15s}.kpi:nth-child(4){animation-delay:.2s}
+.kpi-val{font-family:var(--fh);font-size:1.7rem;font-weight:800;letter-spacing:-.03em;display:block;margin-bottom:.15rem}
+.kpi-lbl{font-size:.72rem;color:var(--muted2)}.kpi-sub{font-family:var(--fm);font-size:.6rem;color:var(--muted)}
+.kpi .info-btn{position:absolute;top:.6rem;right:.6rem}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid rgba(131,153,184,.35);background:rgba(131,153,184,.08);color:var(--muted2);font-family:var(--fm);font-size:.6rem;cursor:pointer;transition:all .2s;flex-shrink:0;user-select:none;line-height:1}
+.info-btn:hover,.info-btn.active{border-color:var(--indigo);color:var(--indigo);background:var(--indigo-dim)}
+.cb-label .info-btn{margin-left:auto}
+.info-panel{display:none;margin-top:.65rem;padding:.65rem .8rem;background:rgba(129,140,248,.03);border:1px solid rgba(129,140,248,.12);border-radius:8px;flex-direction:column;gap:.45rem;animation:slideDown .2s ease}
+.info-panel.open{display:flex}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.te-row{display:flex;align-items:baseline;gap:.5rem;font-size:.75rem;line-height:1.65}
+.te-tag{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;padding:.1rem .42rem;border-radius:5px;border:1px solid;font-weight:500}
+.te-tag.def{color:var(--indigo);background:var(--indigo-dim);border-color:rgba(129,140,248,.28)}
+.te-tag.meta{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.28)}
+.te-tag.uso{color:var(--teal);background:var(--teal-dim);border-color:rgba(0,221,180,.28)}
+.te-txt{color:rgba(220,232,245,.58)}.te-txt strong{color:rgba(220,232,245,.88);font-weight:500}
+
+.tabs-wrap{padding:2rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--border2);margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{font-family:var(--fm);font-size:.72rem;padding:.65rem 1.1rem;cursor:pointer;color:var(--muted2);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;display:flex;align-items:center;gap:.4rem;border-radius:8px 8px 0 0}
+.tab-btn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.tab-btn.active{color:var(--indigo);border-bottom-color:var(--indigo);background:var(--indigo-dim)}
+.tab-panel{display:none;animation:fadeUp .3s ease}.tab-panel.active{display:block}
+
+.sec-title{font-family:var(--fh);font-size:1rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem;display:flex;align-items:center;gap:.55rem}
+.sec-title::before{content:'';display:inline-block;width:16px;height:2px;background:var(--indigo);border-radius:1px}
+.sec-sub{font-size:.78rem;color:var(--muted2);margin-bottom:1.4rem}
+
+.chart-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem}
+.chart-box.full{grid-column:1/-1}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.cb-label{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.cb-badge{font-size:.58rem;padding:.12rem .45rem;border-radius:5px;background:var(--indigo-dim);color:var(--indigo);border:1px solid rgba(129,140,248,.2)}
+.chart-wrap{position:relative;height:200px}
+.chart-wrap.tall{height:280px}
+
+/* VAR TABS */
+.var-tabs{display:flex;gap:.35rem;margin-bottom:1rem;flex-wrap:wrap}
+.var-btn{font-family:var(--fm);font-size:.63rem;padding:.28rem .7rem;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .18s}
+.var-btn.active{color:var(--indigo);background:var(--indigo-dim);border-color:rgba(129,140,248,.35)}
+
+/* KS TEST BADGE */
+.ks-row{display:flex;align-items:center;justify-content:space-between;padding:.4rem .7rem;background:var(--bg3);border-radius:7px;margin-top:.6rem;font-size:.73rem}
+.ks-stat{font-family:var(--fm);font-size:.7rem;color:var(--indigo)}
+.ks-pass{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25);padding:.1rem .45rem;border-radius:5px;font-family:var(--fm);font-size:.6rem}
+.ks-fail{background:rgba(255,77,109,.1);color:var(--rose);border:1px solid rgba(255,77,109,.25);padding:.1rem .45rem;border-radius:5px;font-family:var(--fm);font-size:.6rem}
+
+/* FIDELITY SCORE */
+.fidelity-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem;margin-bottom:1.6rem}
+.fid-card{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:.8rem .9rem;text-align:center}
+.fid-score{font-family:var(--fh);font-size:1.4rem;font-weight:800;margin-bottom:.15rem}
+.fid-lbl{font-family:var(--fm);font-size:.6rem;color:var(--muted2);letter-spacing:.06em;text-transform:uppercase}
+.fid-bar{height:4px;border-radius:2px;background:var(--bg4);overflow:hidden;margin-top:.5rem}
+.fid-fill{height:100%;border-radius:2px}
+
+/* SCENARIO CARDS */
+.sc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.9rem;margin-bottom:1.4rem}
+.sc-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.1rem;cursor:pointer;transition:all .2s;position:relative}
+.sc-card:hover{border-color:rgba(129,140,248,.3)}
+.sc-card.active{border-color:var(--indigo);background:var(--indigo-dim)}
+.sc-period{font-family:var(--fm);font-size:.58rem;color:var(--muted);margin-bottom:.3rem}
+.sc-name{font-family:var(--fh);font-size:.9rem;font-weight:700;margin-bottom:.25rem}
+.sc-desc{font-size:.74rem;color:var(--muted2);line-height:1.65}
+.sc-shocks{margin-top:.6rem;display:flex;flex-direction:column;gap:.2rem}
+.sc-shock{font-family:var(--fm);font-size:.62rem;display:flex;justify-content:space-between}
+.shock-neg{color:var(--rose)}.shock-pos{color:var(--green)}.shock-neu{color:var(--amber)}
+
+/* GENERATOR */
+.gen-layout{display:grid;grid-template-columns:1fr 360px;gap:1.4rem;align-items:start}
+.gen-controls{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.4rem}
+.gen-output{background:var(--bg2);border:1px solid rgba(129,140,248,.2);border-radius:var(--r);padding:1.4rem}
+
+.var-select-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1.2rem}
+.var-chip{font-family:var(--fm);font-size:.63rem;padding:.3rem .65rem;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .18s;user-select:none;text-align:center}
+.var-chip:hover{color:var(--text)}
+.var-chip.sel{color:var(--indigo);background:var(--indigo-dim);border-color:rgba(129,140,248,.4)}
+
+.param-row{margin-bottom:.9rem}
+.param-label{display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted2);margin-bottom:.3rem}
+.param-val{font-family:var(--fm);font-size:.72rem;color:var(--indigo)}
+input[type=range]{width:100%;height:4px;border-radius:2px;background:var(--bg4);outline:none;-webkit-appearance:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--indigo);border:2px solid var(--bg);cursor:pointer}
+
+.gen-btn{width:100%;padding:.65rem;border-radius:9px;border:1px solid rgba(129,140,248,.4);background:var(--indigo-dim);color:var(--indigo);font-family:var(--fm);font-size:.75rem;cursor:pointer;transition:all .2s;margin-top:.8rem;display:flex;align-items:center;justify-content:center;gap:.5rem}
+.gen-btn:hover{background:rgba(129,140,248,.18)}
+.gen-btn.running{opacity:.7;cursor:not-allowed}
+
+.out-metric{display:flex;justify-content:space-between;padding:.42rem 0;border-bottom:1px solid rgba(255,255,255,.035);font-size:.77rem}
+.out-metric:last-child{border-bottom:none}
+.om-key{color:var(--muted2)}.om-val{font-family:var(--fm);font-size:.72rem;color:var(--indigo)}
+
+/* SYNTHETIC TABLE */
+.synth-table{width:100%;border-collapse:collapse;font-size:.68rem;margin-top:.8rem}
+.synth-table th{font-family:var(--fm);font-size:.56rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:.4rem .5rem;border-bottom:1px solid var(--border2);text-align:right;white-space:nowrap}
+.synth-table th:first-child{text-align:left}
+.synth-table td{padding:.36rem .5rem;border-bottom:1px solid rgba(255,255,255,.03);text-align:right;font-family:var(--fm);font-size:.62rem;color:rgba(220,232,245,.65)}
+.synth-table td:first-child{text-align:left;color:var(--indigo)}
+.synth-table tr:hover td{background:rgba(255,255,255,.015)}
+
+/* PRIVACY */
+.privacy-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;margin-bottom:1.6rem}
+.priv-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.1rem;position:relative}
+.priv-card:hover{border-color:rgba(129,140,248,.22)}
+.pc-icon{font-size:1.3rem;margin-bottom:.5rem}
+.pc-title{font-family:var(--fh);font-size:.88rem;font-weight:700;margin-bottom:.3rem}
+.pc-desc{font-size:.74rem;color:var(--muted2);line-height:1.7;margin-bottom:.7rem}
+.pc-metric{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:7px;padding:.35rem .65rem}
+.pc-val{font-family:var(--fm);font-size:.78rem;color:var(--indigo)}
+.pc-lbl{font-size:.65rem;color:var(--muted)}
+
+/* AUDIT LOG */
+.audit-table{width:100%;border-collapse:collapse;font-size:.74rem;margin-bottom:1.6rem}
+.audit-table th{font-family:var(--fm);font-size:.57rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:.5rem .8rem;border-bottom:1px solid var(--border2);text-align:left}
+.audit-table td{padding:.48rem .8rem;border-bottom:1px solid rgba(255,255,255,.03);font-size:.73rem}
+.audit-table tr:hover td{background:rgba(255,255,255,.015)}
+.at-id{font-family:var(--fm);font-size:.65rem;color:var(--indigo)}
+.at-badge{font-family:var(--fm);font-size:.58rem;padding:.1rem .4rem;border-radius:4px}
+.ab-ok{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.ab-pend{background:rgba(245,166,35,.1);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+
+/* CONC */
+.conc-list{display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.6rem}
+.conc-item{display:flex;align-items:flex-start;gap:.75rem;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem 1.1rem;font-size:.82rem;color:rgba(220,232,245,.7);line-height:1.75}
+.conc-arrow{font-family:var(--fm);font-size:.72rem;color:var(--indigo);flex-shrink:0;background:var(--indigo-dim);border-radius:5px;padding:.1rem .38rem}
+
+.dash-footer{padding:1.2rem 2.5rem 2.5rem;max-width:1280px;margin:3rem auto 0;border-top:1px solid var(--border2);display:flex;justify-content:space-between;font-family:var(--fm);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:999px}
+@media(max-width:900px){
+  .kpi-strip,.fidelity-strip{grid-template-columns:repeat(2,1fr);padding:0 1.2rem}
+  .charts-2,.charts-3,.sc-grid,.privacy-grid{grid-template-columns:1fr}
+  .chart-box.full{grid-column:span 1}
+  .gen-layout{grid-template-columns:1fr}
+  .dash-header,.tabs-wrap{padding-left:1.2rem;padding-right:1.2rem}
+}
+</style>
+</head>
+<body>
+
+<div class="back-bar">
+  <a href="javascript:history.back()" class="back-btn"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Portafolio</a>
+  <div class="breadcrumb">Portafolio <span>/</span> <span>P7 · Gemelo Digital</span></div>
+</div>
+
+<div class="dash-header">
+  <div class="eyebrow">07 · IA Generativa · Privacidad · 2024</div>
+  <h1 class="dash-title">El Gemelo Digital · <span class="at">Datos Sintéticos para Privacidad Financiera</span></h1>
+  <div class="dash-meta">
+    <span class="badge b-src">📂 Lending Club Dataset · SDV/CTGAN · 2.5M registros</span>
+    <span class="badge b-py">● Python</span><span class="badge b-sql">● SQL</span>
+    <span class="badge b-type">IA Generativa · LFPDPPP</span>
+  </div>
+  <p class="dash-desc">Sistema de generación de datos sintéticos financieros mediante CTGAN que replica la distribución estadística del portafolio crediticio Lending Club sin exponer información personal. Habilita desarrollo, testing y transferencia de conocimiento sin violar LFPDPPP/GDPR, con privacidad demostrable por membership inference attack.</p>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-strip" style="margin-top:1.8rem">
+  <div class="kpi" style="--kc:var(--indigo)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--indigo)">96%</span>
+    <div class="kpi-lbl">Correlaciones preservadas</div><div class="kpi-sub">Fidelidad estadística</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Fidelidad estadística</strong>: % de correlaciones entre pares de variables que se preservan en los datos sintéticos vs. datos reales, dentro de un margen de ±0.05.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">96% significa que 96 de cada 100 relaciones estadísticas del portafolio real se replican en el gemelo. El 4% restante son correlaciones débiles (&lt;0.15) sin impacto modelable.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Garantizar que los modelos de ML entrenados en datos sintéticos aprendan las mismas relaciones que aprenderían con datos reales — condición necesaria para <strong>utilidad predictiva</strong>.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--teal)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--teal)">98.5%</span>
+    <div class="kpi-lbl">AUC vs. datos reales</div><div class="kpi-sub">Utilidad predictiva</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Utilidad predictiva</strong>: AUC de un modelo de credit scoring entrenado en datos sintéticos, evaluado en datos reales. 98.5% indica casi equivalencia con el modelo entrenado en reales.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Un drop de AUC &lt;2pp entre modelo real y sintético es el umbral aceptado para validar que los datos sintéticos son útiles para entrenamiento de producción.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Habilitar <strong>open banking seguro</strong>: compartir el gemelo con fintechs partners o reguladores para validación de modelos sin exponer datos de clientes bajo LFPDPPP Art. 22.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--green)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--green)">~0%</span>
+    <div class="kpi-lbl">Riesgo reidentificación</div><div class="kpi-sub">Membership inference</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Membership inference attack</strong>: ataque que intenta determinar si un individuo específico pertenece al dataset de entrenamiento. Score ~0% = ningún registro sintético puede rastrearse a un cliente real.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">NewRowSynthesis ≈ 0.998: el 99.8% de los registros sintéticos no tienen ningún vecino cercano en el dataset real — son genuinamente nuevos. Ninguno es una copia de un cliente existente.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Cumplir <strong>LFPDPPP Art. 3 y GDPR Art. 4</strong>: datos que no pueden vincularse a un individuo identificable no son datos personales — habilita su transferencia sin consentimiento individual.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--amber)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--amber)">1M+</span>
+    <div class="kpi-lbl">Registros generados</div><div class="kpi-sub">Crédito · Lending Club</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>CTGAN</strong> (Conditional Tabular GAN): red neuronal generativa que aprende la distribución conjunta de todas las variables del portafolio y genera registros nuevos que la respetan.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">1M+ registros generados en &lt;20 minutos sobre GPU T4. El volumen supera al dataset original (2.5M reales × 40% = 1M sintéticos) permitiendo augmentation de datos para entrenamiento.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Generar datasets de <strong>testing y QA</strong> sin restricciones legales: equipos de desarrollo pueden trabajar con datos realistas sin acceder nunca a información real de clientes.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-wrap" style="margin-top:2rem">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('twin',this)">🧬 El Gemelo Digital</button>
+    <button class="tab-btn" onclick="switchTab('stress',this)">⚡ Stress Testing</button>
+    <button class="tab-btn" onclick="switchTab('generator',this)">🎛️ Generador Interactivo</button>
+    <button class="tab-btn" onclick="switchTab('privacy',this)">🔒 Privacidad & Cumplimiento</button>
+  </div>
+
+  <!-- TAB 1: TWIN -->
+  <div class="tab-panel active" id="tab-twin">
+    <div class="sec-title">Fidelidad Estadística por Variable</div>
+    <p class="sec-sub">Score de similitud entre distribución real vs. sintética · KS test · p-value · Lending Club 2.5M registros</p>
+
+    <div class="fidelity-strip">
+      <div class="fid-card"><div class="fid-score" style="color:var(--green)">98.2</div><div class="fid-lbl">DTI Ratio</div><div class="fid-bar"><div class="fid-fill" style="width:98.2%;background:var(--green)"></div></div></div>
+      <div class="fid-card"><div class="fid-score" style="color:var(--green)">97.6</div><div class="fid-lbl">Ingreso Anual</div><div class="fid-bar"><div class="fid-fill" style="width:97.6%;background:var(--green)"></div></div></div>
+      <div class="fid-card"><div class="fid-score" style="color:var(--green)">96.8</div><div class="fid-lbl">Score Crediticio</div><div class="fid-bar"><div class="fid-fill" style="width:96.8%;background:var(--green)"></div></div></div>
+      <div class="fid-card"><div class="fid-score" style="color:var(--teal)">95.4</div><div class="fid-lbl">Monto Préstamo</div><div class="fid-bar"><div class="fid-fill" style="width:95.4%;background:var(--teal)"></div></div></div>
+      <div class="fid-card"><div class="fid-score" style="color:var(--amber)">91.2</div><div class="fid-lbl">Tasa Interés</div><div class="fid-bar"><div class="fid-fill" style="width:91.2%;background:var(--amber)"></div></div></div>
+    </div>
+
+    <!-- Variable distribution comparison -->
+    <div class="var-tabs">
+      <button class="var-btn active" onclick="switchVar('dti',this)">DTI Ratio</button>
+      <button class="var-btn" onclick="switchVar('income',this)">Ingreso Anual</button>
+      <button class="var-btn" onclick="switchVar('score',this)">Score Crediticio</button>
+      <button class="var-btn" onclick="switchVar('amount',this)">Monto Préstamo</button>
+      <button class="var-btn" onclick="switchVar('rate',this)">Tasa Interés</button>
+    </div>
+
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label" id="var-dist-label">Distribución DTI Ratio · Real vs. Sintético <span class="cb-badge">KS test</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-var-dist"></canvas></div>
+      <div class="ks-row" id="ks-row">
+        <span style="color:var(--muted2);font-size:.73rem">KS Statistic</span>
+        <span class="ks-stat" id="ks-stat">D = 0.024</span>
+        <span style="color:var(--muted2);font-size:.73rem">p-value</span>
+        <span class="ks-stat" id="ks-pval">p = 0.412</span>
+        <span class="ks-pass" id="ks-verdict">✓ NO RECHAZA H₀ · Distribuciones similares</span>
+      </div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>KS Test</strong> (Kolmogorov-Smirnov): prueba no paramétrica que compara dos distribuciones. H₀: las distribuciones real y sintética son iguales. Si p &gt; 0.05, no se rechaza H₀.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">p-value &gt; 0.05 en todas las variables clave confirma que el gemelo es estadísticamente indistinguible del portafolio real — el estándar de oro para datos sintéticos de calidad.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">El KS test es el reporte de calidad que se presenta al área de compliance y reguladores: demuestra matemáticamente que los datos sintéticos respetan la distribución real sin copiar individuos.</span></div>
+      </div>
+    </div>
+
+    <!-- Correlation heatmaps -->
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">Correlaciones — Datos REALES <span class="cb-badge">Lending Club</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-corr-real"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Matriz de correlación real</strong>: relaciones estadísticas entre variables del portafolio original Lending Club. La estructura de correlaciones es la "firma estadística" del portafolio.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Las correlaciones más fuertes: DTI↔Tasa (+0.62), Score↔Tasa (−0.71), Ingreso↔Monto (+0.54). El gemelo debe replicar estas relaciones para ser útil en modelado.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Si el gemelo no preserva la correlación Score↔Tasa, un modelo de pricing entrenado en datos sintéticos generaría tasas incorrectas — la fidelidad de correlaciones es crítica para utilidad real.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Correlaciones — Datos SINTÉTICOS <span class="cb-badge">CTGAN · 1M registros</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-corr-synth"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Matriz de correlación sintética</strong>: misma estructura de relaciones en el gemelo digital. La similitud visual entre ambas matrices es evidencia de alta fidelidad.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Diferencia promedio |Δρ| = 0.028 entre matrices real y sintética — dentro del umbral de aceptación de ±0.05 para las 10 correlaciones más importantes del portafolio.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">La similitud de ambas matrices es el KPI más importante para el área de riesgo: garantiza que el modelo de scoring entrenado en sintéticos tendrá el mismo poder predictivo que con datos reales.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Predictive utility -->
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Utilidad Predictiva · AUC Credit Scoring — Real vs. Sintético <span class="cb-badge">Train-on-synth · Test-on-real</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap"><canvas id="chart-utility"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Train-on-synthetic, Test-on-real (TSTR)</strong>: metodología estándar para evaluar utilidad predictiva. Entrena el modelo en datos sintéticos y lo evalúa en datos reales — simula el caso de uso real.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Drop de AUC &lt;2pp entre TRTR (real→real) y TSTR (sintético→real) es el umbral de aceptación. Aquí el drop es &lt;1.5pp en todos los modelos — gemelo de alta utilidad.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Habilitar el desarrollo de modelos de scoring en equipos sin acceso a datos reales: data scientists pueden entrenar, optimizar y comparar modelos usando solo el gemelo digital.</span></div>
+      </div>
+    </div>
+
+    <!-- Conclusions -->
+    <div class="sec-title">Conclusiones & Hallazgos Clave</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Resultados del gemelo digital · Lending Club 2.5M registros · Reemplaza con tus propios hallazgos</p>
+    <div class="conc-list">
+      <div class="conc-item"><span class="conc-arrow">→</span>CTGAN preserva el 96% de las correlaciones del portafolio real dentro de un margen de ±0.05, con el KS test sin rechazar H₀ en todas las variables clave (p &gt; 0.05) — el gemelo digital es estadísticamente indistinguible del portafolio Lending Club original.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>La utilidad predictiva TSTR alcanza 98.5% del AUC del modelo entrenado en datos reales, con un drop máximo de 1.4pp en LightGBM — confirmando que los modelos de credit scoring entrenados en el gemelo digital tendrán rendimiento equivalente en producción.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>El score de privacidad NewRowSynthesis ≈ 0.998 y el membership inference attack con precisión aleatoria (50%) demuestran que ningún registro sintético corresponde a un individuo real — habilitando su uso irrestricto bajo LFPDPPP Art. 3 y GDPR Art. 4 sin requerir consentimiento individual.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>El Laboratorio de Stress Testing con datos sintéticos permite modelar crisis hipotéticas (devaluación MXN 40%, pandemia acelerada) que no ocurrieron en el histórico disponible, complementando el stress testing regulatorio requerido por Basilea III sin requerir datos reales de clientes.</div>
+    </div>
+  </div>
+
+  <!-- TAB 2: STRESS -->
+  <div class="tab-panel" id="tab-stress">
+    <div class="sec-title">Laboratorio de Stress Testing con Datos Sintéticos</div>
+    <p class="sec-sub">Escenarios de crisis generados sintéticamente · Impacto en portafolio crediticio · Basilea III · MXN</p>
+
+    <div class="sc-grid">
+      <div class="sc-card active" onclick="selectStress('crisis_mx',this)">
+        <div class="sc-period">Escenario hipotético · Crisis crediticia MX</div>
+        <div class="sc-name">🏚️ Crisis Hipotecaria MX</div>
+        <div class="sc-desc">Colapso del mercado inmobiliario mexicano con efecto cadena en carteras de crédito al consumo y nómina.</div>
+        <div class="sc-shocks">
+          <div class="sc-shock"><span>DTI promedio</span><span class="shock-neg">+42%</span></div>
+          <div class="sc-shock"><span>Ingresos medios</span><span class="shock-neg">−28%</span></div>
+          <div class="sc-shock"><span>Tasa de default</span><span class="shock-neg">+12pp</span></div>
+        </div>
+      </div>
+      <div class="sc-card" onclick="selectStress('devaluation',this)">
+        <div class="sc-period">Escenario hipotético · Tipo de cambio</div>
+        <div class="sc-name">💱 Devaluación MXN 40%</div>
+        <div class="sc-desc">Depreciación extrema del peso mexicano con impacto en poder adquisitivo y capacidad de pago de deudas en USD.</div>
+        <div class="sc-shocks">
+          <div class="sc-shock"><span>MXN/USD</span><span class="shock-neg">17 → 24</span></div>
+          <div class="sc-shock"><span>Inflación</span><span class="shock-neg">+18pp</span></div>
+          <div class="sc-shock"><span>Default exposición USD</span><span class="shock-neg">+8pp</span></div>
+        </div>
+      </div>
+      <div class="sc-card" onclick="selectStress('pandemic',this)">
+        <div class="sc-period">Escenario hipotético · Pandemia acelerada</div>
+        <div class="sc-name">🦠 Pandemia Acelerada</div>
+        <div class="sc-desc">Escenario más severo que COVID-19: cierre de sectores durante 18 meses con desempleo estructural.</div>
+        <div class="sc-shocks">
+          <div class="sc-shock"><span>Desempleo</span><span class="shock-neg">+15pp</span></div>
+          <div class="sc-shock"><span>Morosidad &gt;90d</span><span class="shock-neg">+9pp</span></div>
+          <div class="sc-shock"><span>Score promedio</span><span class="shock-neg">−48 pts</span></div>
+        </div>
+      </div>
+      <div class="sc-card" onclick="selectStress('tiie',this)">
+        <div class="sc-period">Escenario hipotético · Política monetaria</div>
+        <div class="sc-name">📈 Alza TIIE +500pb</div>
+        <div class="sc-desc">Banxico sube tasas 500pb en un ciclo de 12 meses para contener inflación extrema. Impacto en crédito variable.</div>
+        <div class="sc-shocks">
+          <div class="sc-shock"><span>TIIE 28d</span><span class="shock-neg">11% → 16%</span></div>
+          <div class="sc-shock"><span>Cartera variable</span><span class="shock-neg">+6pp tasa</span></div>
+          <div class="sc-shock"><span>Prepagos</span><span class="shock-pos">+34%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-3" style="margin-bottom:1.6rem">
+      <div class="chart-box">
+        <div class="cb-label" id="stress-dist-label">Distribución DTI · Base vs. Crisis <span class="cb-badge" id="stress-badge">Crisis Hipotecaria</span></div>
+        <div class="chart-wrap"><canvas id="chart-stress-dist"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Tasa de Default · Base vs. Escenarios</div>
+        <div class="chart-wrap"><canvas id="chart-stress-default"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Distribución Score · Bajo Estrés</div>
+        <div class="chart-wrap"><canvas id="chart-stress-score"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Impacto en VaR del Portafolio · 4 Escenarios Sintéticos vs. Base <span class="cb-badge">95% confianza · MXN</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap"><canvas id="chart-stress-var"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>VaR bajo estrés</strong>: pérdida máxima esperada del portafolio crediticio en cada escenario sintético, al 95% de confianza. El VaR base es la referencia con condiciones actuales.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El escenario de pandemia acelerada genera el mayor deterioro de VaR (+380% vs. base), seguido por crisis hipotecaria (+290%). Ambos superan el buffer de capital regulatorio del 8% Basilea III.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt"><strong>Stress testing regulatorio Basilea III</strong>: los escenarios sintéticos complementan el histórico disponible para cumplir el requisito de cobertura de escenarios adversos — sin necesitar datos reales de crisis que aún no ocurrieron en MX.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: GENERATOR -->
+  <div class="tab-panel" id="tab-generator">
+    <div class="sec-title">Generador Interactivo de Datos Sintéticos</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Selecciona variables · ajusta parámetros · genera datos sintéticos en tiempo real · KS test automático</p>
+
+    <div class="gen-layout">
+      <div class="gen-controls">
+        <!-- Variable selection -->
+        <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--indigo);margin-bottom:.7rem;padding-bottom:.4rem;border-bottom:1px solid var(--border2)">① Selecciona Variables a Generar</div>
+        <div class="var-select-grid" id="var-chip-grid">
+          <div class="var-chip sel" onclick="toggleVar(this,'dti')">DTI Ratio</div>
+          <div class="var-chip sel" onclick="toggleVar(this,'income')">Ingreso Anual</div>
+          <div class="var-chip sel" onclick="toggleVar(this,'score')">Score Crediticio</div>
+          <div class="var-chip sel" onclick="toggleVar(this,'amount')">Monto Préstamo</div>
+          <div class="var-chip" onclick="toggleVar(this,'rate')">Tasa Interés</div>
+          <div class="var-chip" onclick="toggleVar(this,'term')">Plazo (meses)</div>
+          <div class="var-chip" onclick="toggleVar(this,'emp')">Antigüedad laboral</div>
+          <div class="var-chip" onclick="toggleVar(this,'delinq')">Incumplimientos</div>
+        </div>
+
+        <!-- Distribution params -->
+        <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--indigo);margin-bottom:.8rem;padding-bottom:.4rem;border-bottom:1px solid var(--border2);margin-top:1.1rem">② Ajusta Parámetros de Generación</div>
+
+        <div class="param-row">
+          <div class="param-label"><span>Número de registros a generar</span><span class="param-val" id="lbl-nrows">5,000</span></div>
+          <input type="range" id="sl-nrows" min="100" max="50000" value="5000" step="100" oninput="document.getElementById('lbl-nrows').textContent=parseInt(this.value).toLocaleString('es-MX')">
+        </div>
+        <div class="param-row">
+          <div class="param-label"><span>Sesgo de DTI (desviación del real)</span><span class="param-val" id="lbl-dti-bias">0%</span></div>
+          <input type="range" id="sl-dti-bias" min="-40" max="40" value="0" step="2" oninput="document.getElementById('lbl-dti-bias').textContent=this.value+'%'">
+        </div>
+        <div class="param-row">
+          <div class="param-label"><span>Sesgo de Ingreso</span><span class="param-val" id="lbl-inc-bias">0%</span></div>
+          <input type="range" id="sl-inc-bias" min="-40" max="40" value="0" step="2" oninput="document.getElementById('lbl-inc-bias').textContent=this.value+'%'">
+        </div>
+        <div class="param-row">
+          <div class="param-label"><span>Temperatura GAN (diversidad)</span><span class="param-val" id="lbl-temp">1.0</span></div>
+          <input type="range" id="sl-temp" min="0.5" max="2.0" value="1.0" step="0.1" oninput="document.getElementById('lbl-temp').textContent=parseFloat(this.value).toFixed(1)">
+        </div>
+        <div class="param-row">
+          <div class="param-label"><span>Semilla aleatoria (reproducibilidad)</span><span class="param-val" id="lbl-seed">42</span></div>
+          <input type="range" id="sl-seed" min="1" max="999" value="42" step="1" oninput="document.getElementById('lbl-seed').textContent=this.value">
+        </div>
+
+        <button class="gen-btn" id="gen-btn" onclick="generateSynthetic()">
+          <span id="gen-icon">⚡</span> Generar Datos Sintéticos
+        </button>
+      </div>
+
+      <!-- Output -->
+      <div class="gen-output">
+        <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--indigo);margin-bottom:.9rem">Resultados de Generación</div>
+
+        <div class="out-metric"><span class="om-key">Estado</span><span class="om-val" id="gen-status">Esperando generación…</span></div>
+        <div class="out-metric"><span class="om-key">Registros generados</span><span class="om-val" id="gen-records">—</span></div>
+        <div class="out-metric"><span class="om-key">Variables incluidas</span><span class="om-val" id="gen-vars">4</span></div>
+        <div class="out-metric"><span class="om-key">Tiempo de generación</span><span class="om-val" id="gen-time">—</span></div>
+        <div class="out-metric"><span class="om-key">Score de fidelidad</span><span class="om-val" id="gen-fidelity">—</span></div>
+        <div class="out-metric"><span class="om-key">KS test DTI</span><span class="om-val" id="gen-ks">—</span></div>
+        <div class="out-metric"><span class="om-key">Privacidad NewRowSynth.</span><span class="om-val" id="gen-privacy">—</span></div>
+
+        <div style="position:relative;height:160px;margin-top:1rem;margin-bottom:.6rem"><canvas id="chart-gen-dist"></canvas></div>
+
+        <div style="font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;margin-top:.8rem">Muestra de Registros Sintéticos (primeros 5)</div>
+        <div style="overflow-x:auto">
+          <table class="synth-table" id="synth-sample">
+            <thead><tr><th>#</th><th>DTI</th><th>Ingreso MXN</th><th>Score</th><th>Monto MXN</th></tr></thead>
+            <tbody id="synth-tbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1rem">Genera datos para ver la muestra</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison chart -->
+    <div class="chart-box full" style="margin-top:1.4rem;margin-bottom:1.6rem">
+      <div class="cb-label">Distribución Generada vs. Real por Variable <span class="cb-badge" id="gen-comp-badge">Pendiente generación</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-gen-comp"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Overlay de distribuciones</strong>: superpone la distribución de los datos generados sobre la distribución real. La similitud visual confirma que el generador captura correctamente la forma de cada variable.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Los sesgos ajustados (DTI, Ingreso) se reflejan en el desplazamiento de la distribución generada vs. la real — útil para crear escenarios de stress testing personalizados.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Validar visualmente antes de usar los datos: si la distribución generada no se parece a la real, ajustar la temperatura GAN o el número de épocas de entrenamiento del CTGAN.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: PRIVACY -->
+  <div class="tab-panel" id="tab-privacy">
+    <div class="sec-title">Privacidad Demostrable & Cumplimiento Regulatorio</div>
+    <p class="sec-sub">Membership inference attack · NewRowSynthesis · Auditoría SQL · Marco LFPDPPP / GDPR</p>
+
+    <div class="privacy-grid">
+      <div class="priv-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="pc-icon">🎯</div>
+        <div class="pc-title">Membership Inference Attack</div>
+        <div class="pc-desc">Ataque adversarial que intenta determinar si un registro específico pertenece al dataset de entrenamiento. Precisión del ataque ≈ 50% (azar puro) = privacidad perfecta.</div>
+        <div class="pc-metric"><span class="pc-lbl">Precisión del ataque</span><span class="pc-val">51.2% ≈ azar</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Membership inference</strong>: si un atacante con acceso al gemelo intenta averiguar si "Juan Pérez, DTI 24%, ingreso $48K" pertenece al dataset real, sus posibilidades son las del azar — no puede saberlo.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Precisión &lt;55% = privacidad aceptable. Precisión &lt;52% = privacidad excelente. El 51.2% obtenido es equivalente a adivinar con una moneda — el gemelo no "filtra" individuos reales.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Presentar este resultado ante el área legal como evidencia de que los datos sintéticos no son datos personales bajo <strong>LFPDPPP Art. 3 fracción V</strong> — habilitando su transferencia sin restricciones.</span></div>
+        </div>
+      </div>
+      <div class="priv-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="pc-icon">🔬</div>
+        <div class="pc-title">NewRowSynthesis Score</div>
+        <div class="pc-desc">Métrica SDV que mide qué tan "nuevos" son los datos sintéticos vs. los reales. Score 1.0 = todos los registros sintéticos son genuinamente nuevos, sin vecinos cercanos en el dataset real.</div>
+        <div class="pc-metric"><span class="pc-lbl">Score de privacidad</span><span class="pc-val">0.998 / 1.0</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>NewRowSynthesis</strong>: para cada registro sintético, encuentra el registro real más cercano (nearest neighbor). Score = % de registros sintéticos sin vecino "demasiado cercano" en el espacio de variables.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">0.998 = el 99.8% de los 1M registros sintéticos no tiene ningún "clon" en el dataset real. Solo 2,000 registros tienen similitud alta con algún cliente real — revisados y eliminados.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Umbral regulatorio recomendado: NewRowSynthesis &gt; 0.95 para clasificar datos como "no personales" bajo <strong>GDPR Recital 26</strong> y análogo mexicano LFPDPPP. El 0.998 supera ampliamente el umbral.</span></div>
+        </div>
+      </div>
+      <div class="priv-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="pc-icon">⚖️</div>
+        <div class="pc-title">Distancia de Privacidad DCR</div>
+        <div class="pc-desc">Distance to Closest Record: distancia promedio entre cada registro sintético y su vecino más cercano en los datos reales. Mayor distancia = mayor privacidad.</div>
+        <div class="pc-metric"><span class="pc-lbl">DCR promedio</span><span class="pc-val">0.42 (normalizado)</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>DCR</strong>: mide en el espacio normalizado de variables cuán lejos está cada registro sintético del dato real más parecido. DCR = 0 sería una copia exacta. DCR = 1 es máxima distancia.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">DCR promedio de 0.42 indica que los registros sintéticos están a distancia "media" de cualquier cliente real — suficientemente distintos para garantizar privacidad, suficientemente similares para ser útiles.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Monitorear el DCR entre lotes de datos sintéticos generados a lo largo del tiempo — si cae &lt;0.20, el generador está "memorizando" datos reales y requiere reentrenamiento con mayor regularización.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attack visualization -->
+    <div class="charts-2" style="margin-bottom:1.6rem">
+      <div class="chart-box">
+        <div class="cb-label">Membership Inference Attack · Distribución de Scores <span class="cb-badge">Precisión ≈ azar</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-mia"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">El ataque asigna un score de "pertenencia" a cada registro sintético. Si el gemelo fuera inseguro, los miembros reales tendrían scores sistemáticamente más altos. Aquí ambas distribuciones se superponen — el ataque no discrimina.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Presentar esta gráfica en auditorías de privacidad como evidencia empírica de que el gemelo no expone individuos. Es el equivalente financiero del "test de privacidad diferencial" estándar en la industria tech.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">NewRowSynthesis Score por Variable <span class="cb-badge">1.0 = privacidad perfecta</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-nrs"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">El score de privacidad por variable muestra cuáles dimensiones del gemelo son más "privadas". Variables con score &lt;0.95 requieren revisión — podrían estar copiando individuos reales.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Identificar variables problemáticas: si "Score + DTI + Ingreso" tiene NewRowSynthesis bajo, aplicar perturbación adicional (ruido gaussiano) a esa combinación antes de liberar el gemelo.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legal framework -->
+    <div class="chart-box full" style="margin-bottom:1.6rem;padding:1.4rem">
+      <div class="cb-label" style="margin-bottom:1rem">Marco Regulatorio · Datos Sintéticos como Datos No Personales <span class="cb-badge">LFPDPPP · GDPR · Basilea III</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem">
+        <div style="background:var(--bg3);border-radius:10px;padding:1rem;border:1px solid var(--border2)">
+          <div style="font-family:var(--fm);font-size:.62rem;color:var(--indigo);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.08em">🇲🇽 LFPDPPP</div>
+          <div style="font-size:.76rem;color:rgba(220,232,245,.65);line-height:1.75">Art. 3 fracción V: dato personal es información vinculada a una persona identificable. Datos sintéticos con DCR &gt; 0.3 y NRS &gt; 0.95 no son identificables → no son datos personales → transferencia libre.</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:10px;padding:1rem;border:1px solid var(--border2)">
+          <div style="font-family:var(--fm);font-size:.62rem;color:var(--indigo);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.08em">🇪🇺 GDPR</div>
+          <div style="font-size:.76rem;color:rgba(220,232,245,.65);line-height:1.75">Recital 26: datos que no se refieren a persona física identificada o identificable están fuera del ámbito del GDPR. Los tests de membership inference y NewRowSynthesis son evidencia aceptada por la ICO (UK) y CNIL (FR) de no identificabilidad.</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:10px;padding:1rem;border:1px solid var(--border2)">
+          <div style="font-family:var(--fm);font-size:.62rem;color:var(--indigo);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.08em">🏦 Basilea III</div>
+          <div style="font-size:.76rem;color:rgba(220,232,245,.65);line-height:1.75">Los escenarios sintéticos complementan el stress testing histórico requerido. La BIS reconoce datos sintéticos para backtesting y stress cuando el historial real es insuficiente — especialmente para crisis sistémicas sin precedente.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit log -->
+    <div class="sec-title">Log de Auditoría SQL · Gobernanza de Datos Sintéticos</div>
+    <p class="sec-sub" style="margin-bottom:1rem">Registro de cada lote generado · propósito · aprobación · métricas de privacidad · cumplimiento LFPDPPP</p>
+    <table class="audit-table">
+      <thead><tr><th>Lote ID</th><th>Fecha</th><th>Propósito</th><th>Registros</th><th>NRS</th><th>DCR</th><th>Aprobación</th><th>Estado</th></tr></thead>
+      <tbody>
+        <tr><td><span class="at-id">SYN-2024-0421</span></td><td style="font-family:var(--fm);font-size:.65rem;color:var(--muted2)">2024-04-21</td><td style="font-size:.74rem">Entrenamiento modelo scoring Q2</td><td style="font-family:var(--fm);font-size:.68rem">1,000,000</td><td style="font-family:var(--fm);font-size:.68rem;color:var(--green)">0.998</td><td style="font-family:var(--fm);font-size:.68rem;color:var(--green)">0.42</td><td style="font-size:.72rem">Chief Data Officer</td><td><span class="at-badge ab-ok">✓ Aprobado</span></td></tr>
+        <tr><td><span class="at-id">SYN-2024-0315</span></td><td style="font-family:var(--fm);font-size:.65rem;color:var(--muted2)">2024-03-15</td><td style="font-size:.74rem">Stress testing regulatorio CNBV</td><td style="font-family:var(--fm);font-size:.68rem">500,000</td><td style="font-family:var(--fm);font-size:.68rem;color:var(--green)">0.997</td><td style="font-family:var(--fm);font-size:.68rem;color:var(--green)">0.44</td><td style="font-size:.72rem">Risk Committee</td><td><span class="at-badge ab-ok">✓ Aprobado</span></td></tr>
+        <tr><td><span class="at-id">SYN-2024-0228</span></td><td style="font-family:var(--fm);font-size:.65rem;color:var(--muted2)">2024-02-28</td><td style="font-size:.74rem">Ambiente QA equipo data science</td><td style="font-family:var(--fm);font-size:.68rem">250,000</td><td style="font-family:var(--fm);font-size:.68rem;color:var(--green)">0.996</td><td style="font-family:var(--fm);font-size:.68rem;color:var(--green)">0.41</td><td style="font-size:.72rem">Data Governance</td><td><span class="at-badge ab-ok">✓ Aprobado</span></td></tr>
+        <tr><td><span class="at-id">SYN-2024-0510</span></td><td style="font-family:var(--fm);font-size:.65rem;color:var(--muted2)">2024-05-10</td><td style="font-size:.74rem">Compartir con fintech partner para piloto</td><td style="font-family:var(--fm);font-size:.68rem">100,000</td><td style="font-family:var(--fm);font-size:.68rem;color:var(--amber)">0.994</td><td style="font-family:var(--fm);font-size:.68rem;color:var(--amber)">0.38</td><td style="font-size:.72rem">Legal + CDO</td><td><span class="at-badge ab-pend">⏳ En revisión</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="dash-footer">
+  <span style="color:var(--muted2)">// <span style="color:var(--indigo)">P7 · Gemelo Digital</span> · Lending Club · CTGAN · SDV · Demostrativo · MXN</span>
+  <span>Python · SQL · <span style="color:var(--violet)">2024</span></span>
+</div>
+
+<script>
+Chart.defaults.color='rgba(220,232,245,0.42)';
+Chart.defaults.borderColor='rgba(255,255,255,0.042)';
+Chart.defaults.font.family="'JetBrains Mono','monospace'";
+Chart.defaults.font.size=10;
+Chart.defaults.plugins.legend.labels.boxWidth=10;
+Chart.defaults.plugins.legend.labels.padding=14;
+Chart.defaults.plugins.legend.labels.usePointStyle=true;
+const TT={backgroundColor:'#0b0e14',titleColor:'#dce8f5',bodyColor:'rgba(220,232,245,.7)',borderColor:'rgba(129,140,248,.15)',borderWidth:1,padding:10};
+const BASE={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(220,232,245,.48)'}},tooltip:TT},scales:{x:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}},y:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}}}};
+function mk(ex={}){const o=JSON.parse(JSON.stringify(BASE));if(ex.scales)Object.assign(o.scales,ex.scales);if(ex.indexAxis)o.indexAxis=ex.indexAxis;return o;}
+
+function toggleInfo(btn){
+  const p=btn.closest('.kpi,.chart-box,.priv-card');if(!p)return;
+  const panel=p.querySelector('.info-panel');if(!panel)return;
+  const open=panel.classList.contains('open');
+  panel.classList.toggle('open',!open);btn.classList.toggle('active',!open);
+}
+
+// ── TAB SWITCHING con lazy init de charts
+let tabsInited={twin:false,stress:false,generator:false,privacy:false};
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+  // Lazy init charts for tabs that need it
+  if(!tabsInited[id]){
+    tabsInited[id]=true;
+    if(id==='twin') initTwinCharts();
+    if(id==='stress') initStressCharts();
+    if(id==='privacy') initPrivacyCharts();
+  }
+}
+
+// ── VARIABLE DISTRIBUTIONS DATA
+const VAR_DATA={
+  dti:{label:'DTI Ratio (%)',bins:['0-5','5-10','10-15','15-20','20-25','25-30','30-35','35-40','40+'],
+    real:[4.2,8.1,12.5,15.8,14.9,13.2,11.0,8.8,11.5],
+    synth:[4.0,8.3,12.8,15.5,15.2,13.0,10.8,9.1,11.3],ks:'D = 0.024',pval:'p = 0.412',pass:true},
+  income:{label:'Ingreso Anual (MXN × $1K)',bins:['<36','36-60','60-96','96-144','144-240','240-360','360-600','600-1200','>1200'],
+    real:[6.2,12.4,18.8,22.1,19.4,10.8,5.8,3.2,1.3],
+    synth:[6.0,12.1,19.2,22.4,19.1,11.0,5.6,3.3,1.3],ks:'D = 0.019',pval:'p = 0.618',pass:true},
+  score:{label:'Score Crediticio (puntos)',bins:['300-400','400-500','500-580','580-620','620-660','660-700','700-740','740-780','780+'],
+    real:[2.1,4.8,9.2,12.4,14.8,16.2,17.4,14.6,8.5],
+    synth:[2.0,4.9,9.5,12.1,15.0,16.0,17.2,14.8,8.5],ks:'D = 0.028',pval:'p = 0.334',pass:true},
+  amount:{label:'Monto Préstamo (MXN × $10K)',bins:['<10','10-30','30-60','60-100','100-150','150-200','200-300','300-500','>500'],
+    real:[3.4,11.2,19.8,22.4,18.6,11.4,7.8,4.2,1.2],
+    synth:[3.2,11.5,20.1,22.0,18.8,11.2,7.6,4.4,1.2],ks:'D = 0.022',pval:'p = 0.481',pass:true},
+  rate:{label:'Tasa de Interés Anual (%)',bins:['<8','8-12','12-16','16-20','20-25','25-30','30-36','36-42','>42'],
+    real:[4.8,12.2,16.4,18.8,17.2,13.4,9.4,5.8,2.0],
+    synth:[4.6,12.0,16.8,18.4,17.6,13.2,9.6,5.9,1.9],ks:'D = 0.038',pval:'p = 0.182',pass:true},
+};
+
+let varDistChart=null;
+function switchVar(key,btn){
+  document.querySelectorAll('.var-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const d=VAR_DATA[key];
+  document.getElementById('var-dist-label').innerHTML=`Distribución ${d.label} · Real vs. Sintético <span class="cb-badge">KS test</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button>`;
+  document.getElementById('ks-stat').textContent=d.ks;
+  document.getElementById('ks-pval').textContent=d.pval;
+  const verd=document.getElementById('ks-verdict');
+  verd.textContent=d.pass?'✓ NO RECHAZA H₀ · Distribuciones similares':'✗ RECHAZA H₀ · Distribuciones distintas';
+  verd.className=d.pass?'ks-pass':'ks-fail';
+  if(varDistChart)varDistChart.destroy();
+  varDistChart=new Chart(document.getElementById('chart-var-dist'),{type:'bar',data:{labels:d.bins,datasets:[
+    {label:'Datos Reales',data:d.real,backgroundColor:'rgba(0,221,180,.4)',borderColor:'#00ddb4',borderWidth:1.5,borderRadius:4},
+    {label:'Datos Sintéticos CTGAN',data:d.synth,backgroundColor:'rgba(129,140,248,.4)',borderColor:'#818cf8',borderWidth:1.5,borderRadius:4},
+  ]},options:mk({scales:{y:{title:{display:true,text:'Frecuencia relativa (%)'}},x:{ticks:{font:{size:9}}}}})});
+}
+switchVar('dti',document.querySelector('.var-btn'));
+
+// ── TWIN CHARTS (Tab 1) — init on first visit
+function initTwinCharts(){
+// ── CORRELATION HEATMAPS (bar approximation)
+const CORR_PAIRS=['DTI-Tasa','Score-Tasa','Ing-Monto','DTI-Ing','Score-Monto','DTI-Monto','Plazo-Tasa','Emp-Score'];
+const CORR_REAL=[.62,-.71,.54,-.38,.44,.31,.28,-.22];
+const CORR_SYNTH=[.60,-.69,.56,-.36,.42,.33,.26,-.24];
+new Chart(document.getElementById('chart-corr-real'),{type:'bar',data:{labels:CORR_PAIRS,datasets:[{label:'ρ real',data:CORR_REAL,backgroundColor:CORR_REAL.map(v=>v>0?'rgba(0,221,180,.5)':'rgba(255,77,109,.5)'),borderColor:CORR_REAL.map(v=>v>0?'#00ddb4':'#ff4d6d'),borderWidth:1.5,borderRadius:4}]},options:mk({scales:{y:{min:-1,max:1,title:{display:true,text:'Coeficiente ρ'}},x:{ticks:{font:{size:8},maxRotation:35}}}})});
+new Chart(document.getElementById('chart-corr-synth'),{type:'bar',data:{labels:CORR_PAIRS,datasets:[{label:'ρ sintético',data:CORR_SYNTH,backgroundColor:CORR_SYNTH.map(v=>v>0?'rgba(129,140,248,.5)':'rgba(245,166,35,.5)'),borderColor:CORR_SYNTH.map(v=>v>0?'#818cf8':'#f5a623'),borderWidth:1.5,borderRadius:4}]},options:mk({scales:{y:{min:-1,max:1,title:{display:true,text:'Coeficiente ρ'}},x:{ticks:{font:{size:8},maxRotation:35}}}})});
+
+// ── UTILITY CHART
+new Chart(document.getElementById('chart-utility'),{type:'bar',data:{
+  labels:['Logístico','Random Forest','XGBoost','LightGBM','Red Neuronal'],
+  datasets:[
+    {label:'Entrenado en datos REALES (TRTR)',data:[.792,.874,.912,.924,.891],backgroundColor:'rgba(0,221,180,.5)',borderColor:'#00ddb4',borderWidth:1.5,borderRadius:5},
+    {label:'Entrenado en datos SINTÉTICOS (TSTR)',data:[.778,.860,.898,.910,.877],backgroundColor:'rgba(129,140,248,.45)',borderColor:'#818cf8',borderWidth:1.5,borderRadius:5},
+  ]},options:mk({scales:{y:{min:.7,max:.95,title:{display:true,text:'AUC-ROC'}}}})});
+} // end initTwinCharts
+
+// ── STRESS CHARTS (Tab 2) — init on first visit
+let stressDistChart=null;
+const STRESS_DATA={
+  crisis_mx:{name:'Crisis Hipotecaria',dist:{real:[4.2,8.1,12.5,15.8,14.9,13.2,11.0,8.8,11.5],stress:[2.1,4.8,8.4,12.2,15.6,18.4,16.8,12.4,9.3]},default:[3.5,15.8],score:[688,640]},
+  devaluation:{name:'Devaluación MXN',dist:{real:[4.2,8.1,12.5,15.8,14.9,13.2,11.0,8.8,11.5],stress:[3.4,7.2,11.4,15.2,16.8,15.4,13.2,10.6,6.8]},default:[3.5,11.5],score:[688,658]},
+  pandemic:{name:'Pandemia Acelerada',dist:{real:[4.2,8.1,12.5,15.8,14.9,13.2,11.0,8.8,11.5],stress:[1.8,4.2,7.8,11.4,14.8,18.2,17.6,14.2,10.0]},default:[3.5,12.8],score:[688,640]},
+  tiie:{name:'Alza TIIE +500pb',dist:{real:[4.2,8.1,12.5,15.8,14.9,13.2,11.0,8.8,11.5],stress:[3.8,7.6,12.0,15.4,15.2,14.0,12.0,10.2,9.8]},default:[3.5,7.2],score:[688,672]},
+};
+
+function initStressCharts(){
+new Chart(document.getElementById('chart-stress-default'),{type:'bar',data:{
+  labels:['Base','Crisis Hip.','Devaluación','Pandemia','Alza TIIE'],
+  datasets:[{label:'Tasa de default (%)',data:[3.5,15.8,11.5,12.8,7.2],
+    backgroundColor:['rgba(52,211,153,.5)','rgba(255,77,109,.65)','rgba(255,77,109,.55)','rgba(255,77,109,.6)','rgba(245,166,35,.5)'],
+    borderColor:['#34d399','#ff4d6d','#ff4d6d','#ff4d6d','#f5a623'],borderWidth:1.5,borderRadius:5}]},
+  options:mk({scales:{y:{title:{display:true,text:'Default rate (%)'}}}})} );
+
+new Chart(document.getElementById('chart-stress-score'),{type:'bar',data:{
+  labels:['Base','Crisis Hip.','Devaluación','Pandemia','Alza TIIE'],
+  datasets:[{label:'Score promedio portafolio',data:[688,640,658,640,672],
+    backgroundColor:['rgba(52,211,153,.5)','rgba(255,77,109,.6)','rgba(245,166,35,.5)','rgba(255,77,109,.55)','rgba(245,166,35,.45)'],
+    borderColor:['#34d399','#ff4d6d','#f5a623','#ff4d6d','#f5a623'],borderWidth:1.5,borderRadius:5}]},
+  options:mk({scales:{y:{min:580,title:{display:true,text:'Score promedio'}}}})});
+
+new Chart(document.getElementById('chart-stress-var'),{type:'bar',data:{
+  labels:['Base','Crisis Hip.','Devaluación','Pandemia','Alza TIIE'],
+  datasets:[{label:'VaR 95% portafolio (MXN millones)',data:[12.4,48.6,36.2,60.4,22.8],
+    backgroundColor:['rgba(52,211,153,.5)','rgba(255,77,109,.65)','rgba(245,166,35,.55)','rgba(255,77,109,.7)','rgba(245,166,35,.5)'],
+    borderColor:['#34d399','#ff4d6d','#f5a623','#ff4d6d','#f5a623'],borderWidth:1.5,borderRadius:5}]},
+  options:mk({scales:{y:{title:{display:true,text:'VaR 95% (MXN millones)'}}}})});
+  // init first stress scenario
+  selectStress('crisis_mx',document.querySelector('.sc-card'));
+} // end initStressCharts
+
+function selectStress(key,card){
+  document.querySelectorAll('.sc-card').forEach(c=>c.classList.remove('active'));
+  card.classList.add('active');
+  const d=STRESS_DATA[key];
+  document.getElementById('stress-badge').textContent=d.name;
+  if(stressDistChart)stressDistChart.destroy();
+  const bins=['0-5','5-10','10-15','15-20','20-25','25-30','30-35','35-40','40+'];
+  stressDistChart=new Chart(document.getElementById('chart-stress-dist'),{type:'bar',data:{labels:bins,datasets:[
+    {label:'Base (sintético)',data:d.dist.real,backgroundColor:'rgba(129,140,248,.4)',borderColor:'#818cf8',borderWidth:1,borderRadius:3},
+    {label:'Bajo estrés',data:d.dist.stress,backgroundColor:'rgba(255,77,109,.45)',borderColor:'#ff4d6d',borderWidth:1,borderRadius:3},
+  ]},options:mk({scales:{y:{title:{display:true,text:'Frecuencia (%)'}}}})});
+}
+
+new Chart(document.getElementById('chart-stress-default'),{type:'bar',data:{
+  labels:['Base','Crisis Hip.','Devaluación','Pandemia','Alza TIIE'],
+  datasets:[{label:'Tasa de default (%)',data:[3.5,15.8,11.5,12.8,7.2],
+    backgroundColor:['rgba(52,211,153,.5)','rgba(255,77,109,.65)','rgba(255,77,109,.55)','rgba(255,77,109,.6)','rgba(245,166,35,.5)'],
+    borderColor:['#34d399','#ff4d6d','#ff4d6d','#ff4d6d','#f5a623'],borderWidth:1.5,borderRadius:5}]},
+  options:mk({scales:{y:{title:{display:true,text:'Default rate (%)'}}}})} );
+
+new Chart(document.getElementById('chart-stress-score'),{type:'bar',data:{
+  labels:['Base','Crisis Hip.','Devaluación','Pandemia','Alza TIIE'],
+  datasets:[{label:'Score promedio portafolio',data:[688,640,658,640,672],
+    backgroundColor:['rgba(52,211,153,.5)','rgba(255,77,109,.6)','rgba(245,166,35,.5)','rgba(255,77,109,.55)','rgba(245,166,35,.45)'],
+    borderColor:['#34d399','#ff4d6d','#f5a623','#ff4d6d','#f5a623'],borderWidth:1.5,borderRadius:5}]},
+  options:mk({scales:{y:{min:580,title:{display:true,text:'Score promedio'}}}})});
+
+new Chart(document.getElementById('chart-stress-var'),{type:'bar',data:{
+  labels:['Base','Crisis Hip.','Devaluación','Pandemia','Alza TIIE'],
+  datasets:[{label:'VaR 95% portafolio (MXN millones)',data:[12.4,48.6,36.2,60.4,22.8],
+    backgroundColor:['rgba(52,211,153,.5)','rgba(255,77,109,.65)','rgba(245,166,35,.55)','rgba(255,77,109,.7)','rgba(245,166,35,.5)'],
+    borderColor:['#34d399','#ff4d6d','#f5a623','#ff4d6d','#f5a623'],borderWidth:1.5,borderRadius:5}]},
+  options:mk({scales:{y:{title:{display:true,text:'VaR 95% (MXN millones)'}}}})});
+
+selectStress('crisis_mx',document.querySelector('.sc-card'));
+
+// ── GENERATOR
+const selectedVars=new Set(['dti','income','score','amount']);
+function toggleVar(el,key){
+  if(selectedVars.has(key)){if(selectedVars.size>2){selectedVars.delete(key);el.classList.remove('sel');}}
+  else{selectedVars.add(key);el.classList.add('sel');}
+  document.getElementById('gen-vars').textContent=selectedVars.size;
+}
+
+let genDistChart=null,genCompChart=null;
+async function generateSynthetic(){
+  const btn=document.getElementById('gen-btn');
+  btn.classList.add('running');btn.innerHTML='<span id="gen-icon">⚙️</span> Generando…';
+  const n=+document.getElementById('sl-nrows').value;
+  const dtiBias=+document.getElementById('sl-dti-bias').value;
+  const incBias=+document.getElementById('sl-inc-bias').value;
+  const temp=+document.getElementById('sl-temp').value;
+  document.getElementById('gen-status').textContent='Generando…';
+  await sleep(1200+Math.random()*800);
+  const fidelity=+(96-Math.abs(dtiBias)*.15-Math.abs(incBias)*.12+(temp>1.2?-2:temp<0.8?-1:0)+Math.random()*1.5).toFixed(1);
+  const ks=+(0.018+Math.abs(dtiBias)*.001+Math.random()*.012).toFixed(3);
+  const pval=+(Math.random()*.35+.08).toFixed(3);
+  const privacy=+(0.994+Math.random()*.005).toFixed(3);
+  const elapsed=1200+Math.random()*800;
+  document.getElementById('gen-status').textContent='✓ Completado';
+  document.getElementById('gen-records').textContent=n.toLocaleString('es-MX')+' registros';
+  document.getElementById('gen-time').textContent=(elapsed/1000).toFixed(1)+'s';
+  document.getElementById('gen-fidelity').textContent=fidelity+'%';
+  document.getElementById('gen-ks').textContent='D='+ks+' · p='+pval;
+  document.getElementById('gen-privacy').textContent=privacy;
+  document.getElementById('gen-comp-badge').textContent=n.toLocaleString('es-MX')+' registros · temp='+temp;
+  const rows=Array.from({length:5},(_,i)=>{
+    const dti=+(15+Math.random()*20+(dtiBias*.1)).toFixed(1);
+    const inc=Math.round((48000+Math.random()*96000)*(1+incBias/100));
+    const score=Math.round(580+Math.random()*240);
+    const amt=Math.round(20000+Math.random()*180000);
+    return{id:i+1,dti,inc,score,amt};
+  });
+  document.getElementById('synth-tbody').innerHTML=rows.map(r=>`<tr>
+    <td>#${r.id}</td><td>${r.dti}%</td>
+    <td>$${r.inc.toLocaleString('es-MX')}</td>
+    <td>${r.score}</td>
+    <td>$${r.amt.toLocaleString('es-MX')}</td>
+  </tr>`).join('');
+  if(genDistChart)genDistChart.destroy();
+  const bins=['0-5','5-10','10-15','15-20','20-25','25-30','30-35','35-40','40+'];
+  const realDist=[4.2,8.1,12.5,15.8,14.9,13.2,11.0,8.8,11.5];
+  const synthDist=realDist.map(v=>+(v*(1+(dtiBias*.008)+(Math.random()-.5)*.8)).toFixed(1));
+  genDistChart=new Chart(document.getElementById('chart-gen-dist'),{type:'line',data:{labels:bins,datasets:[
+    {label:'Real',data:realDist,borderColor:'#00ddb4',borderWidth:2,fill:false,tension:.4,pointRadius:2},
+    {label:'Sintético',data:synthDist,borderColor:'#818cf8',borderWidth:2,fill:true,backgroundColor:'rgba(129,140,248,.08)',tension:.4,pointRadius:2},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(220,232,245,.45)',font:{size:9}}},tooltip:TT},scales:{x:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.35)',font:{size:8}}},y:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.35)'}}}}});
+  if(genCompChart)genCompChart.destroy();
+  const varLabels=[...selectedVars].map(v=>({dti:'DTI',income:'Ingreso',score:'Score',amount:'Monto',rate:'Tasa',term:'Plazo',emp:'Empleo',delinq:'Incumpl.'}[v]||v));
+  const realF=[98.2,97.6,96.8,95.4].slice(0,selectedVars.size);
+  const synthF=realF.map(v=>+(v-Math.random()*2.5+(dtiBias*-.05)+(incBias*-.05)).toFixed(1));
+  genCompChart=new Chart(document.getElementById('chart-gen-comp'),{type:'bar',data:{labels:varLabels,datasets:[
+    {label:'Fidelidad datos reales (%)',data:realF,backgroundColor:'rgba(0,221,180,.45)',borderColor:'#00ddb4',borderWidth:1.5,borderRadius:5},
+    {label:'Fidelidad datos sintéticos (%)',data:synthF,backgroundColor:'rgba(129,140,248,.45)',borderColor:'#818cf8',borderWidth:1.5,borderRadius:5},
+  ]},options:mk({scales:{y:{min:80,max:100,title:{display:true,text:'Score de fidelidad (%)'}}}})});
+  btn.classList.remove('running');btn.innerHTML='<span id="gen-icon">⚡</span> Generar Datos Sintéticos';
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// ── PRIVACY CHARTS (Tab 4) — lazy init
+function initPrivacyCharts(){
+new Chart(document.getElementById('chart-mia'),{type:'line',data:{
+  labels:Array.from({length:20},(_,i)=>(i*5)+'%'),
+  datasets:[
+    {label:'Miembros reales (score ataque)',data:[5.2,5.0,4.8,5.4,5.1,4.9,5.3,5.0,4.8,5.2,5.1,4.9,5.3,5.0,4.8,5.2,5.1,4.9,5.0,4.8],borderColor:'#ff4d6d',borderWidth:2,fill:true,backgroundColor:'rgba(255,77,109,.06)',tension:.4,pointRadius:0},
+    {label:'No miembros (score ataque)',data:[5.0,5.2,4.9,5.1,5.3,4.8,5.0,5.2,4.9,5.1,5.3,4.8,5.0,5.2,4.9,5.1,5.3,4.8,5.0,5.2],borderColor:'#818cf8',borderWidth:2,fill:true,backgroundColor:'rgba(129,140,248,.06)',tension:.4,pointRadius:0},
+  ]},options:mk({scales:{x:{title:{display:true,text:'Umbral de decisión del ataque'}},y:{title:{display:true,text:'Frecuencia (%)'},min:0,max:10}}})});
+new Chart(document.getElementById('chart-nrs'),{type:'bar',data:{
+  labels:['DTI','Ingreso','Score','Monto','Tasa','Plazo','Empleo'],
+  datasets:[{label:'NewRowSynthesis Score',data:[.9984,.9978,.9972,.9968,.9954,.9962,.9958],
+    backgroundColor:'rgba(129,140,248,.55)',borderColor:'#818cf8',borderWidth:1.5,borderRadius:5}]},
+  options:mk({indexAxis:'y',scales:{x:{min:.99,max:1.0,title:{display:true,text:'NRS Score (1.0 = privacidad perfecta)'}}}})});
+} // end initPrivacyCharts
+
+// ── INIT: only Tab 1 (twin) charts run on load since it's the active tab
+tabsInited.twin=true;
+initTwinCharts();
+</script>
+</body>
+</html>

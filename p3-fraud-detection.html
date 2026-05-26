@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>P3 · Detección de Fraude en Tiempo Real · Riesgo Operacional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#060809;--bg2:#0a0e12;--bg3:#0f1418;--bg4:#161d24;
+  --rose:#ff4d6d;--rose-dim:rgba(255,77,109,.10);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,.09);
+  --teal:#00ddb4;--teal-dim:rgba(0,221,180,.09);
+  --violet:#a78bfa;--violet-dim:rgba(167,139,250,.10);
+  --green:#34d399;--blue:#60a5fa;--orange:#f97316;
+  --text:#dce8f5;--muted:#445566;--muted2:#7a94b0;
+  --border:rgba(255,77,109,.13);--border2:rgba(255,255,255,.052);
+  --r:14px;
+  --fh:'Syne',sans-serif;--fm:'JetBrains Mono',monospace;--fb:'DM Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.7;min-height:100vh;overflow-x:hidden}
+
+/* BACK */
+.back-bar{padding:.9rem 2rem;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:.7rem;background:var(--bg2)}
+.back-btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--fm);font-size:.72rem;color:var(--muted2);text-decoration:none;padding:.35rem .8rem;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);transition:all .2s;cursor:pointer}
+.back-btn:hover{color:var(--rose);border-color:rgba(255,77,109,.3)}
+.back-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+.breadcrumb{font-family:var(--fm);font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:.4rem}
+.breadcrumb span{color:var(--rose)}
+
+/* HEADER */
+.dash-header{padding:2.5rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.eyebrow{font-family:var(--fm);font-size:.62rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.eyebrow::before{content:'';display:inline-block;width:20px;height:1px;background:var(--rose)}
+.dash-title{font-family:var(--fh);font-size:clamp(1.5rem,3vw,2.3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.8rem}
+.dash-title .at{color:var(--rose)}
+.dash-meta{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-family:var(--fm);font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;padding:.2rem .65rem;border-radius:999px}
+.b-src{background:var(--rose-dim);color:var(--rose);border:1px solid rgba(255,77,109,.25)}
+.b-py{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.b-sql{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.b-r{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.b-type{background:var(--violet-dim);color:var(--violet);border:1px solid rgba(167,139,250,.25)}
+.dash-desc{font-size:.85rem;color:rgba(220,232,245,.5);max-width:740px;line-height:1.8;margin-bottom:2rem}
+
+/* KPI */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;padding:0 2.5rem;max-width:1280px;margin:0 auto}
+.kpi{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.1rem 1.2rem;position:relative;overflow:hidden;transition:border-color .25s;animation:countUp .5s ease both}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--rose));opacity:.8}
+.kpi:nth-child(1){animation-delay:.05s}.kpi:nth-child(2){animation-delay:.1s}.kpi:nth-child(3){animation-delay:.15s}.kpi:nth-child(4){animation-delay:.2s}
+.kpi-val{font-family:var(--fh);font-size:1.7rem;font-weight:800;letter-spacing:-.03em;display:block;margin-bottom:.15rem}
+.kpi-lbl{font-size:.72rem;color:var(--muted2)}.kpi-sub{font-family:var(--fm);font-size:.6rem;color:var(--muted)}
+
+/* INFO */
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid rgba(131,153,184,.35);background:rgba(131,153,184,.08);color:var(--muted2);font-family:var(--fm);font-size:.6rem;cursor:pointer;transition:all .2s;flex-shrink:0;user-select:none;line-height:1}
+.info-btn:hover,.info-btn.active{border-color:var(--rose);color:var(--rose);background:var(--rose-dim)}
+.kpi .info-btn{position:absolute;top:.6rem;right:.6rem}
+.cb-label{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.cb-label .info-btn,.ml-card .info-btn,.risk-card .info-btn,.fraud-card .info-btn{margin-left:auto}
+.ml-card,.risk-card,.fraud-card{position:relative}
+.info-panel{display:none;margin-top:.65rem;padding:.65rem .8rem;background:rgba(255,77,109,.03);border:1px solid rgba(255,77,109,.12);border-radius:8px;flex-direction:column;gap:.45rem;animation:slideDown .2s ease}
+.info-panel.open{display:flex}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.te-row{display:flex;align-items:baseline;gap:.5rem;font-size:.75rem;line-height:1.65}
+.te-tag{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;padding:.1rem .42rem;border-radius:5px;border:1px solid;font-weight:500}
+.te-tag.def{color:var(--rose);background:var(--rose-dim);border-color:rgba(255,77,109,.28)}
+.te-tag.meta{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.28)}
+.te-tag.uso{color:var(--teal);background:var(--teal-dim);border-color:rgba(0,221,180,.28)}
+.te-txt{color:rgba(220,232,245,.58)}.te-txt strong{color:rgba(220,232,245,.88);font-weight:500}
+
+/* TABS */
+.tabs-wrap{padding:2rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--border2);margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{font-family:var(--fm);font-size:.73rem;padding:.65rem 1.2rem;cursor:pointer;color:var(--muted2);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;display:flex;align-items:center;gap:.4rem;border-radius:8px 8px 0 0}
+.tab-btn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.tab-btn.active{color:var(--rose);border-bottom-color:var(--rose);background:var(--rose-dim)}
+.tab-panel{display:none;animation:fadeIn .3s ease}.tab-panel.active{display:block}
+.sub-tabs{display:flex;gap:.4rem;margin-bottom:1.4rem;flex-wrap:wrap}
+.sub-btn{font-family:var(--fm);font-size:.68rem;padding:.4rem 1rem;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .2s}
+.sub-btn.active{color:var(--rose);background:var(--rose-dim);border-color:rgba(255,77,109,.3)}
+.sub-panel{display:none;animation:fadeIn .25s ease}.sub-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* SECTIONS */
+.sec-title{font-family:var(--fh);font-size:1rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem;display:flex;align-items:center;gap:.55rem}
+.sec-title::before{content:'';display:inline-block;width:16px;height:2px;background:var(--rose);border-radius:1px}
+.sec-sub{font-size:.78rem;color:var(--muted2);margin-bottom:1.4rem}
+
+/* CHART BOXES */
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.chart-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem;transition:border-color .2s}
+.chart-box.full{grid-column:1/-1}
+.cb-label{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.9rem}
+.cb-badge{font-size:.58rem;padding:.12rem .45rem;border-radius:5px;background:var(--rose-dim);color:var(--rose);border:1px solid rgba(255,77,109,.2)}
+.chart-wrap{position:relative;height:200px}
+.chart-wrap.tall{height:280px}.chart-wrap.xtall{height:340px}
+
+/* ALERT LEVELS */
+.alert-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:.4rem}
+.dot-g{background:var(--green)}.dot-a{background:var(--amber)}.dot-r{background:var(--rose)}.dot-c{background:#ff0040;box-shadow:0 0 6px #ff0040}
+
+/* LIVE FEED */
+.feed-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.2rem;max-height:420px;overflow-y:auto}
+.feed-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.feed-title{font-family:var(--fm);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:.5rem}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--rose);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.feed-controls{display:flex;gap:.5rem}
+.feed-btn{font-family:var(--fm);font-size:.62rem;padding:.25rem .65rem;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .2s}
+.feed-btn:hover{color:var(--text)}.feed-btn.active{color:var(--rose);border-color:rgba(255,77,109,.35);background:var(--rose-dim)}
+.txn-row{display:grid;grid-template-columns:80px 1fr 100px 90px 100px 80px;gap:.6rem;align-items:center;padding:.55rem .6rem;border-radius:8px;margin-bottom:.35rem;border:1px solid transparent;font-size:.76rem;transition:border-color .2s;cursor:default}
+.txn-row:hover{border-color:var(--border2)}
+.txn-row.risk-low{background:rgba(52,211,153,.04)}
+.txn-row.risk-med{background:rgba(245,166,35,.04)}
+.txn-row.risk-high{background:rgba(255,77,109,.06)}
+.txn-row.risk-crit{background:rgba(255,0,64,.08);animation:critFlash .8s ease infinite alternate}
+@keyframes critFlash{from{border-color:transparent}to{border-color:rgba(255,0,64,.3)}}
+.txn-id{font-family:var(--fm);font-size:.65rem;color:var(--muted2)}
+.txn-desc{font-size:.78rem;color:var(--text)}
+.txn-amt{font-family:var(--fm);font-size:.75rem;color:var(--amber);text-align:right}
+.txn-score{font-family:var(--fm);font-size:.72rem;text-align:center}
+.txn-badge{font-family:var(--fm);font-size:.58rem;padding:.15rem .5rem;border-radius:999px;text-align:center;white-space:nowrap}
+.b-low{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.b-med{background:rgba(245,166,35,.12);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+.b-high{background:rgba(255,77,109,.12);color:var(--rose);border:1px solid rgba(255,77,109,.3)}
+.b-crit{background:rgba(255,0,64,.18);color:#ff0040;border:1px solid rgba(255,0,64,.5)}
+.txn-type{font-family:var(--fm);font-size:.58rem;color:var(--muted2);text-align:right}
+.feed-cols{display:grid;grid-template-columns:80px 1fr 100px 90px 100px 80px;gap:.6rem;padding:.3rem .6rem;font-family:var(--fm);font-size:.57rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border2);margin-bottom:.5rem}
+
+/* MAP */
+.map-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem;margin-bottom:1.6rem}
+.map-svg{width:100%;max-height:320px}
+.state-shape{fill:var(--bg3);stroke:rgba(255,255,255,.06);stroke-width:.5;transition:fill .3s;cursor:pointer}
+.state-shape:hover{stroke:var(--rose);stroke-width:1}
+.state-low{fill:rgba(52,211,153,.25)}
+.state-med{fill:rgba(245,166,35,.35)}
+.state-high{fill:rgba(255,77,109,.45)}
+.state-crit{fill:rgba(255,0,64,.65)}
+.map-legend{display:flex;gap:1.2rem;margin-top:.8rem;flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:.4rem;font-family:var(--fm);font-size:.62rem;color:var(--muted2)}
+.leg-box{width:12px;height:12px;border-radius:3px}
+
+/* NETWORK */
+.network-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem;margin-bottom:1.6rem}
+.network-svg{width:100%;height:280px}
+.node-legit{fill:rgba(0,221,180,.7);stroke:#00ddb4;stroke-width:1.5}
+.node-mule{fill:rgba(255,77,109,.7);stroke:#ff4d6d;stroke-width:1.5}
+.node-suspect{fill:rgba(245,166,35,.7);stroke:#f5a623;stroke-width:1.5}
+.node-dest{fill:rgba(167,139,250,.7);stroke:#a78bfa;stroke-width:1.5}
+.link-normal{stroke:rgba(255,255,255,.1);stroke-width:1.5}
+.link-suspect{stroke:rgba(245,166,35,.6);stroke-width:2;stroke-dasharray:5,3}
+.link-fraud{stroke:rgba(255,77,109,.7);stroke-width:2.5;animation:flowAnim 1.8s linear infinite}
+@keyframes flowAnim{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}
+.node-label{fill:rgba(220,232,245,.7);font-family:'JetBrains Mono',monospace;font-size:9px}
+
+/* FRAUD CARDS */
+.fraud-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.9rem;margin-bottom:1.6rem}
+.fraud-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.1rem;position:relative;transition:border-color .2s}
+.fraud-card:hover{border-color:rgba(255,77,109,.25)}
+.fc-icon{font-size:1.3rem;margin-bottom:.5rem}
+.fc-title{font-family:var(--fh);font-size:.9rem;font-weight:700;margin-bottom:.3rem}
+.fc-desc{font-size:.75rem;color:var(--muted2);line-height:1.7;margin-bottom:.8rem}
+.fc-indicators{display:flex;flex-direction:column;gap:.4rem}
+.fc-ind{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:7px;padding:.35rem .7rem;font-size:.74rem}
+.fc-ind-lbl{color:var(--muted2)}.fc-ind-val{font-family:var(--fm);font-size:.7rem}
+.ind-red{color:var(--rose)}.ind-amber{color:var(--amber)}.ind-green{color:var(--green)}
+
+/* INDICATOR SEMAPHORE */
+.semaphore{display:flex;gap:.3rem;align-items:center}
+.sem-dot{width:10px;height:10px;border-radius:50%;opacity:.25;transition:opacity .3s}
+.sem-dot.on{opacity:1}
+.sem-g{background:var(--green)}.sem-a{background:var(--amber)}.sem-r{background:var(--rose)}
+
+/* COST MATRIX */
+.cost-matrix{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.6rem}
+.cost-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.2rem}
+.cost-title{font-family:var(--fh);font-size:.88rem;font-weight:700;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.cost-val{font-family:var(--fh);font-size:1.8rem;font-weight:800;margin-bottom:.2rem}
+.cost-desc{font-size:.76rem;color:var(--muted2);line-height:1.7}
+.cost-breakdown{margin-top:.8rem;display:flex;flex-direction:column;gap:.3rem}
+.cost-row{display:flex;justify-content:space-between;font-size:.74rem;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.cost-row:last-child{border-bottom:none;font-family:var(--fm)}
+
+/* CONC */
+.conc-list{display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.6rem}
+.conc-item{display:flex;align-items:flex-start;gap:.75rem;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem 1.1rem;font-size:.82rem;color:rgba(220,232,245,.7);line-height:1.75}
+.conc-arrow{font-family:var(--fm);font-size:.72rem;color:var(--rose);flex-shrink:0;background:var(--rose-dim);border-radius:5px;padding:.1rem .38rem}
+
+/* ML COMPARISON */
+.ml-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.6rem}
+.ml-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1rem;transition:border-color .2s}
+.ml-card:hover{border-color:rgba(255,77,109,.22)}
+.ml-icon{font-size:1.2rem;margin-bottom:.45rem}
+.ml-title{font-family:var(--fh);font-size:.82rem;font-weight:700;margin-bottom:.3rem}
+.ml-desc{font-size:.73rem;color:var(--muted2);line-height:1.65;margin-bottom:.6rem}
+.ml-metric{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:6px;padding:.32rem .6rem}
+.ml-val{font-family:var(--fm);font-size:.75rem;color:var(--rose)}
+.ml-lbl{font-size:.62rem;color:var(--muted)}
+
+/* FOOTER */
+.dash-footer{padding:1.2rem 2.5rem 2.5rem;max-width:1280px;margin:3rem auto 0;border-top:1px solid var(--border2);display:flex;justify-content:space-between;align-items:center;font-family:var(--fm);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:999px}
+@media(max-width:900px){
+  .kpi-strip{grid-template-columns:repeat(2,1fr);padding:0 1.2rem}
+  .charts-2,.charts-3,.ml-grid,.fraud-grid,.cost-matrix{grid-template-columns:1fr}
+  .chart-box.full{grid-column:span 1}
+  .dash-header,.tabs-wrap{padding-left:1.2rem;padding-right:1.2rem}
+  .txn-row,.feed-cols{grid-template-columns:60px 1fr 80px 70px}
+  .txn-type{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="back-bar">
+  <a href="javascript:history.back()" class="back-btn"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Portafolio</a>
+  <div class="breadcrumb">Portafolio <span>/</span> <span>P3 · Detección de Fraude</span></div>
+</div>
+
+<div class="dash-header">
+  <div class="eyebrow">03 · Riesgo Operacional · 2024</div>
+  <h1 class="dash-title">Detección de Fraude <span class="at">en Tiempo Real · Riesgo Operacional</span></h1>
+  <div class="dash-meta">
+    <span class="badge b-src">📂 IEEE-CIS Fraud · 590K transacciones · Kaggle</span>
+    <span class="badge b-py">● Python</span><span class="badge b-r">● R</span><span class="badge b-sql">● SQL</span>
+    <span class="badge b-type">Riesgo Operacional · AML</span>
+  </div>
+  <p class="dash-desc">Sistema de detección de fraude transaccional en tiempo real con cobertura de fraude en tarjetas, transferencias SPEI, identidad sintética y lavado de dinero (AML). Incluye mapeo geoespacial de patrones, detección de redes de cuentas mula y análisis de costo regulatorio bajo marco CNBV/FATF.</p>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-strip" style="margin-top:1.8rem">
+  <div class="kpi" style="--kc:var(--rose)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--rose)">F1 .89</span>
+    <div class="kpi-lbl">F1-Score · LightGBM</div><div class="kpi-sub">Balance Precisión-Recall</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>F1-Score</strong>: media armónica entre Precisión (% de alertas correctas) y Recall (% de fraudes detectados). F1 = 2·P·R / (P+R).</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">F1 &gt;0.85 en fraude es excelente por el alto desbalance de clases (97% legítimas vs 3% fraudulentas). Usar siempre sobre AUC para clases desbalanceadas.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Métrica principal para calibrar el <strong>threshold de alerta</strong>: más Recall = más fraudes capturados pero más falsos positivos que bloquean clientes legítimos.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--violet)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--violet)">AUC .96</span>
+    <div class="kpi-lbl">Curva ROC</div><div class="kpi-sub">Poder discriminante</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>AUC-ROC .96</strong>: el modelo distingue transacciones fraudulentas de legítimas con 96% de efectividad a cualquier threshold.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">AUC &gt;0.95 en fraude indica modelo de producción viable. El desbalance de clases hace al <strong>AUC-PR</strong> (Precision-Recall) más informativo aún.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Comparar modelos candidatos. En producción, el AUC se monitora mensualmente — caída &gt;.02 activa reentrenamiento bajo política <strong>CNBV</strong>.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--amber)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--amber)">3.5%</span>
+    <div class="kpi-lbl">Tasa de fraude</div><div class="kpi-sub">IEEE-CIS Dataset</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Tasa de fraude</strong>: proporción de transacciones fraudulentas en el dataset. 3.5% = desbalance severo que requiere técnicas especiales (SMOTE, class weights).</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">En México, la tasa promedio de fraude en tarjetas es ~0.08% por transacción — más baja pero con montos mayores. El dataset IEEE-CIS sobrerepresenta fraude para entrenamiento.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Calibrar el <strong>costo relativo</strong> de Tipo I vs. Tipo II: con 3.5% de fraude y tickets de $2,400 MXN, el costo de no detectar supera al de bloquear falsamente.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--green)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--green)">590K</span>
+    <div class="kpi-lbl">Transacciones</div><div class="kpi-sub">IEEE-CIS · Kaggle</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>IEEE-CIS Fraud Detection Dataset</strong>: transacciones de e-commerce con 433 variables (demográficas, comportamentales, dispositivo, red). Kaggle 2019.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">590K registros con 3.5% de fraude = ~20,663 transacciones fraudulentas para entrenamiento. Suficiente para modelos robustos con validación temporal.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Benchmark global de fraude transaccional — arquitectura adaptable a sistemas <strong>SPEI, CoDi y tarjetas MX</strong> bajo marco regulatorio CNBV Circular 14.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-wrap" style="margin-top:2rem">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('analysis',this)">🔍 Análisis de Fraude</button>
+    <button class="tab-btn" onclick="switchTab('monitor',this)">📡 Monitor en Tiempo Real</button>
+    <button class="tab-btn" onclick="switchTab('types',this)">🗂️ Tipos de Fraude</button>
+  </div>
+
+  <!-- TAB 1: ANALYSIS -->
+  <div class="tab-panel active" id="tab-analysis">
+
+    <div class="sec-title">Rendimiento del Modelo</div>
+    <p class="sec-sub">LightGBM calibrado · IEEE-CIS 590K transacciones · Validación temporal out-of-time</p>
+
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">Curva Precisión-Recall · Comparativa de Modelos <span class="cb-badge">AUC-PR .88</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-pr"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Curva Precisión-Recall</strong>: más informativa que ROC en clases desbalanceadas. Muestra el trade-off entre detectar más fraudes (Recall) y generar menos falsas alarmas (Precisión).</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Área bajo la curva PR (<strong>AUC-PR .88</strong>) vs. baseline aleatorio de .035 (= tasa de fraude). LightGBM supera a XGBoost en zona de alto Recall.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Elegir el <strong>threshold operativo</strong>: bancos típicamente operan en Precisión 70–80% para no bloquear demasiados clientes legítimos — el punto óptimo depende del costo relativo de cada error.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Distribución del Score de Fraude por Clase <span class="cb-badge">Threshold: 0.52</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-score-dist"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Score de fraude</strong>: probabilidad predicha por el modelo (0–1) de que una transacción sea fraudulenta. Threshold 0.52 = punto de decisión actual.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Buena separación cuando la distribución de legítimas se concentra cerca de 0 y la de fraudulentas cerca de 1. La zona de traslape define los casos difíciles.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Diseñar <strong>reglas de negocio por banda</strong>: score &lt;0.3 = aprobar automático · 0.3–0.7 = revisión manual · &gt;0.7 = bloqueo inmediato.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHAP -->
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">SHAP · Top 12 Variables Predictivas de Fraude <span class="cb-badge">LightGBM · IEEE-CIS</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-shap"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>SHAP</strong> en fraude: cuantifica qué variables elevan o reducen la probabilidad de fraude para cada transacción individual — explicabilidad regulatoria.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Variables de comportamiento (velocidad de transacciones, dispositivo nuevo) típicamente dominan sobre variables demográficas en fraude transaccional.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Cumplir <strong>CNBV Circular 14 y PCI-DSS</strong>: el modelo debe poder explicar cada rechazo al cliente afectado. SHAP provee la justificación individualizada requerida.</span></div>
+      </div>
+    </div>
+
+    <!-- PATTERNS -->
+    <div class="sec-title">Patrones de Fraude</div>
+    <p class="sec-sub">Análisis de distribución por hora · monto · dispositivo · geografía · 590K transacciones</p>
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">Tasa de Fraude por Hora del Día <span class="cb-badge">% sobre total por hora</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-hour"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Patrón temporal</strong>: distribución de fraude a lo largo del día. Los picos nocturnos (2–4am) corresponden a uso fraudulento cuando el titular duerme y no recibe alertas.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Horas de alto riesgo: 1–4am (fraude con tarjetas robadas), 12–2pm (fraude de identidad en solicitudes online) y viernes tarde (menor monitoreo bancario).</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Ajustar <strong>threshold dinámico por hora</strong>: umbral más bajo de noche (mayor sensibilidad) y más alto de día (menor fricción) — práctica común en sistemas antifraude bancarios MX.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Tasa de Fraude por Rango de Monto MXN <span class="cb-badge">Transacciones agrupadas</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-amount"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Patrón por monto</strong>: la tasa de fraude no es uniforme — ciertos rangos de monto concentran más actividad fraudulenta por estrategia de los defraudadores.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Picos en $500–$2K MXN (bajo el radar de alertas automáticas) y en $50K+ (fraude de alto valor organizado). Montos justo debajo de $7,500 USD señalan structuring AML.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Implementar <strong>reglas de velocidad por monto</strong> en el motor de reglas (Drools/Blaze): límites de transacción acumulada en ventanas de 1h, 24h y 7 días.</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="charts-2" style="margin-bottom:1.6rem">
+      <div class="chart-box">
+        <div class="cb-label">Tasa de Fraude por Canal / Dispositivo <span class="cb-badge">% sobre total por canal</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-device"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Patrón por canal</strong>: el riesgo de fraude varía significativamente según el canal de origen. Web sin autenticación 2FA concentra la mayor tasa de fraude.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Canal de mayor riesgo: web (dispositivo no reconocido). Menor riesgo: app móvil con biometría. POS chip+NIP es más seguro que banda magnética.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Implementar <strong>autenticación escalonada por canal</strong>: transacciones web de dispositivo nuevo requieren OTP adicional — reduce fraude 42% sin friccionar app móvil.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Fraude Acumulado por Canal vs. Tiempo <span class="cb-badge">Índice base 100</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-channel-time"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Evolución temporal por canal</strong>: tendencia de fraude por canal en el período analizado. Permite detectar cambios en el comportamiento fraudulento a lo largo del tiempo.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Un canal con crecimiento acelerado de fraude puede indicar una vulnerabilidad recién explotada o un nuevo vector de ataque organizado.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Disparar <strong>alertas de cambio de régimen</strong> cuando la pendiente de fraude en un canal supera 2 desviaciones estándar del histórico — entrada al proceso de investigación UNODC/FATF.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODEL COMPARISON -->
+    <div class="sec-title">Comparativa de Modelos</div>
+    <p class="sec-sub">LightGBM · XGBoost · Random Forest · Regresión Logística · Validación out-of-time</p>
+    <div class="ml-grid">
+      <div class="ml-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="ml-icon">⚡</div><div class="ml-title">LightGBM</div>
+        <div class="ml-desc">Gradient boosting de bajo consumo. Mejor balance F1/velocidad. Seleccionado para producción.</div>
+        <div class="ml-metric"><span class="ml-lbl">F1-Score</span><span class="ml-val">.890</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>LightGBM</strong>: gradient boosting con histogramas de Microsoft. 10x más rápido que XGBoost en datasets grandes, manteniendo AUC equivalente.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">F1 .89 + latencia &lt;8ms por transacción — cumple SLA de decisión en tiempo real (&lt;100ms) para sistemas antifraude en línea.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Modelo de producción: inferencia en tiempo real sobre transacciones SPEI/CoDi con latencia compatible con el protocolo de <strong>BANXICO</strong>.</span></div>
+        </div>
+      </div>
+      <div class="ml-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="ml-icon">🌲</div><div class="ml-title">XGBoost</div>
+        <div class="ml-desc">Referencia del sector. Menor F1 pero mayor estabilidad en drift. Backup regulatorio.</div>
+        <div class="ml-metric"><span class="ml-lbl">F1-Score</span><span class="ml-val">.872</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>XGBoost</strong>: gradient boosting con regularización L1/L2. Menor velocidad que LightGBM pero mayor robustez ante outliers extremos.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">F1 .872 — diferencia de .018 vs LightGBM es significativa en volúmenes de 1M+ transacciones diarias: ~18K fraudes adicionales no detectados.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Modelo de <strong>validación cruzada regulatoria</strong>: su mayor aceptación como benchmark lo hace preferido para presentar ante auditorías <strong>CNBV/SHCP</strong>.</span></div>
+        </div>
+      </div>
+      <div class="ml-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="ml-icon">🌳</div><div class="ml-title">Random Forest</div>
+        <div class="ml-desc">Ensemble de árboles. Robusto pero lento para producción. Útil como referencia de importancia de variables.</div>
+        <div class="ml-metric"><span class="ml-lbl">F1-Score</span><span class="ml-val">.841</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Random Forest</strong>: ensemble de árboles de decisión independientes con bagging. Menos propenso a sobreajuste que boosting pero con menor poder predictivo en fraude.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">F1 .841 — útil cuando la interpretabilidad de importancia de variables es más crítica que el rendimiento absoluto (contextos regulatorios conservadores).</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Validar importancia de variables del LightGBM: si ambos modelos coinciden en las top-5 variables, aumenta la confianza regulatoria ante <strong>CONDUSEF</strong>.</span></div>
+        </div>
+      </div>
+      <div class="ml-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="ml-icon">📊</div><div class="ml-title">Reg. Logística</div>
+        <div class="ml-desc">Modelo lineal interpretable. Baseline regulatorio. Requerido como referencia en modelos internos CNBV.</div>
+        <div class="ml-metric"><span class="ml-lbl">F1-Score</span><span class="ml-val">.712</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Regresión Logística</strong>: modelo lineal que estima probabilidad mediante función sigmoide. Totalmente interpretable — cada variable tiene un coeficiente explícito.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">F1 .712 — gap de .178 vs LightGBM justifica el uso de ML complejo. La diferencia equivale a ~178K fraudes no detectados en un millón de transacciones.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Baseline obligatorio: <strong>CNBV Circular Única</strong> requiere comparar modelos internos contra un benchmark simple. La superioridad sobre logístico valida el modelo complejo.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Comparativa F1 · Precisión · Recall · AUC por Modelo <span class="cb-badge">Out-of-time validation</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap"><canvas id="chart-model-comp"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Comparativa multimétrica</strong>: evaluación simultánea de F1, Precisión, Recall y AUC permite identificar el modelo con mejor balance según el objetivo de negocio.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">No existe modelo óptimo en todas las métricas. Si el objetivo es minimizar pérdidas directas → maximizar Recall. Si es minimizar fricción → maximizar Precisión.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Presentación a comité de riesgo: muestra que LightGBM domina en F1 y Recall (captura más fraude) sin sacrificar Precisión — argumento para su adopción en producción.</span></div>
+      </div>
+    </div>
+
+    <!-- COST ANALYSIS -->
+    <div class="sec-title">Análisis de Costo · Tipo I vs. Tipo II</div>
+    <p class="sec-sub">Impacto económico de errores del modelo · Denominado en MXN · Threshold óptimo de decisión</p>
+    <div class="cost-matrix">
+      <div class="cost-card" style="border-color:rgba(245,166,35,.3)">
+        <div class="cost-title" style="color:var(--amber)">⚠️ Error Tipo I — Falso Positivo</div>
+        <div class="cost-val" style="color:var(--amber)">$820 MXN</div>
+        <div class="cost-desc">Cliente legítimo bloqueado incorrectamente. Costo promedio por transacción rechazada.</div>
+        <div class="cost-breakdown">
+          <div class="cost-row"><span>Pérdida de venta / transacción</span><span style="color:var(--amber);font-family:var(--fm)">$450 MXN</span></div>
+          <div class="cost-row"><span>Costo de atención al cliente</span><span style="color:var(--amber);font-family:var(--fm)">$180 MXN</span></div>
+          <div class="cost-row"><span>Riesgo de churn del cliente</span><span style="color:var(--amber);font-family:var(--fm)">$190 MXN</span></div>
+          <div class="cost-row" style="border-top:1px solid rgba(245,166,35,.2);padding-top:.4rem;margin-top:.2rem"><span style="color:var(--amber)">Total por FP</span><span style="color:var(--amber)">$820 MXN</span></div>
+        </div>
+        <div class="info-panel" style="margin-top:.8rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Falso Positivo (FP)</strong>: el modelo marca como fraude una transacción legítima. El cliente es bloqueado — frustración, llamada al banco, posible abandono.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Con Precisión 78% y 100K transacciones/día, ~22K bloqueos incorrectos/día = $18M MXN/día en costo de FP. Justifica mantener Precisión &gt;75%.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Definir <strong>política de revisión manual</strong>: transacciones en zona gris (score 0.35–0.65) van a revisión humana en lugar de bloqueo automático — reduce FP un 34%.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+      </div>
+      <div class="cost-card" style="border-color:rgba(255,77,109,.3)">
+        <div class="cost-title" style="color:var(--rose)">🚨 Error Tipo II — Falso Negativo</div>
+        <div class="cost-val" style="color:var(--rose)">$4,200 MXN</div>
+        <div class="cost-desc">Transacción fraudulenta no detectada. Costo promedio por fraude que pasa el modelo.</div>
+        <div class="cost-breakdown">
+          <div class="cost-row"><span>Pérdida directa por fraude</span><span style="color:var(--rose);font-family:var(--fm)">$2,400 MXN</span></div>
+          <div class="cost-row"><span>Costo de investigación</span><span style="color:var(--rose);font-family:var(--fm)">$800 MXN</span></div>
+          <div class="cost-row"><span>Contracargo / chargeback</span><span style="color:var(--rose);font-family:var(--fm)">$600 MXN</span></div>
+          <div class="cost-row"><span>Multa regulatoria CNBV</span><span style="color:var(--rose);font-family:var(--fm)">$400 MXN</span></div>
+          <div class="cost-row" style="border-top:1px solid rgba(255,77,109,.2);padding-top:.4rem;margin-top:.2rem"><span style="color:var(--rose)">Total por FN</span><span style="color:var(--rose)">$4,200 MXN</span></div>
+        </div>
+        <div class="info-panel" style="margin-top:.8rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Falso Negativo (FN)</strong>: el modelo no detecta un fraude real. La transacción se aprueba y el banco absorbe la pérdida directa más costos regulatorios.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Ratio FN/FP = $4,200/$820 = 5.1x — el costo de no detectar un fraude es 5x mayor que bloquear un cliente legítimo. Justifica priorizar Recall sobre Precisión.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Integrar en la <strong>función de pérdida del modelo</strong>: penalizar FN con peso 5x vs. FP. Esto mueve el threshold óptimo de 0.50 a 0.38, aumentando Recall de 82% a 91%.</span></div>
+        </div>
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+      </div>
+    </div>
+
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Costo Total vs. Threshold de Decisión · Óptimo en 0.38 MXN <span class="cb-badge">Función de pérdida ponderada</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap"><canvas id="chart-cost"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Threshold óptimo</strong>: punto donde el costo total (FP·$820 + FN·$4,200) se minimiza. Depende del volumen de transacciones y la tasa de fraude.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Threshold 0.38 minimiza el costo total diario. Threshold mayor = más FN caros. Threshold menor = más FP molestos. El óptimo balancea ambos.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Recalibrar el threshold <strong>mensualmente</strong> con datos de producción: la tasa de fraude y los costos unitarios cambian. CNBV exige documentación del proceso de calibración.</span></div>
+      </div>
+    </div>
+
+    <!-- CONCLUSIONS -->
+    <div class="sec-title">Conclusiones & Hallazgos Clave</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Resultados del análisis · IEEE-CIS Dataset · Reemplaza con tus propios hallazgos</p>
+    <div class="conc-list">
+      <div class="conc-item"><span class="conc-arrow">→</span>LightGBM supera al baseline logístico en F1 (.89 vs .71) con latencia de inferencia &lt;8ms, cumpliendo el SLA de decisión en tiempo real para sistemas SPEI/CoDi bajo el protocolo de BANXICO — el gap de .178 equivale a 178K fraudes adicionales no detectados por millón de transacciones.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>El análisis de costo Tipo I/II revela que el threshold óptimo es 0.38 (no 0.50): el costo de un fraude no detectado ($4,200 MXN) supera 5.1x el costo de un bloqueo incorrecto ($820 MXN), justificando mayor sensibilidad regulatoria bajo CNBV Circular 14.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>Los patrones temporales confirman mayor concentración de fraude entre 1–4am (3.2x la tasa diurna) y en canales web sin 2FA (tasa 4.8x vs. app móvil con biometría). Un threshold dinámico por hora y canal reduciría pérdidas estimadas un 28% sin incrementar falsos positivos en horas pico.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>El mapeo geoespacial identifica 4 estados críticos (CDMX, NL, JAL, MEX) que concentran el 68% del fraude total. Las redes de cuentas mula detectadas muestran un patrón de structuring consistente con operaciones de lavado tipificadas en la Ley Anti-Lavado MX (LFPIORPI) y reportables a la UIF.</span></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: MONITOR -->
+  <div class="tab-panel" id="tab-monitor">
+    <div class="sec-title">Monitor de Transacciones en Tiempo Real</div>
+    <p class="sec-sub" style="margin-bottom:1.4rem">Feed simulado · Score de fraude en tiempo real · Alertas por nivel de riesgo · Denominado en MXN</p>
+
+    <!-- Stats row -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.4rem" id="monitor-stats">
+      <div class="chart-box" style="padding:.9rem 1rem;text-align:center">
+        <div style="font-family:var(--fm);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">Transacciones/min</div>
+        <div style="font-family:var(--fh);font-size:1.6rem;font-weight:800;color:var(--teal)" id="stat-tpm">284</div>
+      </div>
+      <div class="chart-box" style="padding:.9rem 1rem;text-align:center">
+        <div style="font-family:var(--fm);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">Alertas activas</div>
+        <div style="font-family:var(--fh);font-size:1.6rem;font-weight:800;color:var(--amber)" id="stat-alerts">12</div>
+      </div>
+      <div class="chart-box" style="padding:.9rem 1rem;text-align:center">
+        <div style="font-family:var(--fm);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">Fraudes bloqueados hoy</div>
+        <div style="font-family:var(--fh);font-size:1.6rem;font-weight:800;color:var(--rose)" id="stat-blocked">847</div>
+      </div>
+      <div class="chart-box" style="padding:.9rem 1rem;text-align:center">
+        <div style="font-family:var(--fm);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">Pérdida evitada MXN</div>
+        <div style="font-family:var(--fh);font-size:1.6rem;font-weight:800;color:var(--green)" id="stat-saved">$2.03M</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:1.2rem;margin-bottom:1.6rem">
+      <!-- Feed -->
+      <div>
+        <div class="feed-wrap">
+          <div class="feed-header">
+            <div class="feed-title"><span class="live-dot"></span> LIVE FEED — Transacciones Entrantes</div>
+            <div class="feed-controls">
+              <button class="feed-btn active" onclick="filterFeed('all',this)">Todas</button>
+              <button class="feed-btn" onclick="filterFeed('high',this)">🔴 Alto riesgo</button>
+              <button class="feed-btn" onclick="filterFeed('crit',this)">⚡ Crítico</button>
+            </div>
+          </div>
+          <div class="feed-cols"><span>ID</span><span>Descripción</span><span>Monto</span><span>Score</span><span>Nivel</span><span>Tipo</span></div>
+          <div id="feed-body"></div>
+        </div>
+      </div>
+
+      <!-- Score trend -->
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <div class="chart-box" style="flex:1">
+          <div class="cb-label">Score Promedio Últimos 60s <span class="cb-badge">Rolling</span></div>
+          <div class="chart-wrap"><canvas id="chart-live-score"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <div class="cb-label">Distribución de Riesgo Actual</div>
+          <div class="chart-wrap" style="height:140px"><canvas id="chart-live-dist"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAPA GEOESPACIAL -->
+    <div class="sec-title">Mapa de Calor Geoespacial · Fraude por Estado MX</div>
+    <p class="sec-sub">Intensidad de fraude detectado por estado · Últimas 24h · Denominado en MXN</p>
+    <div class="map-wrap">
+      <div class="cb-label" style="margin-bottom:.8rem">Concentración de Fraude por Estado <span class="cb-badge">24h · Simulado</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+        <div class="info-panel" style="margin-top:.6rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Mapa de calor geoespacial</strong>: intensidad de fraude detectado por entidad federativa en las últimas 24h, normalizada por volumen de transacciones de cada estado.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">CDMX, NL y JAL concentran el mayor volumen absoluto. Sin embargo, estados con ratio fraude/transacciones alto (como GRO o ZAC) requieren atención diferenciada.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Activar <strong>reglas de geolocalización</strong>: transacción desde estado diferente al habitual del cliente en las últimas 2h activa verificación adicional — reportable a UIF si cumple criterios LFPIORPI.</span></div>
+        </div>
+      </div>
+      <!-- Simplified MX map using SVG rectangles as state proxies -->
+      <svg class="map-svg" viewBox="0 0 700 380" xmlns="http://www.w3.org/2000/svg" id="mx-map">
+        <!-- Row 1: Norte -->
+        <rect x="20" y="20" width="100" height="70" rx="4" class="state-shape state-med" data-state="Baja California" data-val="234"/>
+        <rect x="130" y="20" width="80" height="70" rx="4" class="state-shape state-low" data-state="Sonora" data-val="89"/>
+        <rect x="220" y="20" width="90" height="70" rx="4" class="state-shape state-low" data-state="Chihuahua" data-val="142"/>
+        <rect x="320" y="20" width="80" height="70" rx="4" class="state-shape state-med" data-state="Coahuila" data-val="198"/>
+        <rect x="410" y="20" width="70" height="70" rx="4" class="state-shape state-crit" data-state="Nuevo León" data-val="612"/>
+        <rect x="490" y="20" width="90" height="70" rx="4" class="state-shape state-med" data-state="Tamaulipas" data-val="267"/>
+        <rect x="590" y="20" width="90" height="70" rx="4" class="state-shape state-low" data-state="Sonora NE" data-val="54"/>
+        <!-- Row 2 -->
+        <rect x="20" y="100" width="80" height="65" rx="4" class="state-shape state-low" data-state="Baja California Sur" data-val="42"/>
+        <rect x="110" y="100" width="80" height="65" rx="4" class="state-shape state-low" data-state="Sinaloa" data-val="118"/>
+        <rect x="200" y="100" width="80" height="65" rx="4" class="state-shape state-low" data-state="Durango" data-val="76"/>
+        <rect x="290" y="100" width="80" height="65" rx="4" class="state-shape state-med" data-state="Zacatecas" data-val="165"/>
+        <rect x="380" y="100" width="80" height="65" rx="4" class="state-shape state-med" data-state="San Luis Potosí" data-val="221"/>
+        <rect x="470" y="100" width="80" height="65" rx="4" class="state-shape state-high" data-state="Veracruz" data-val="389"/>
+        <rect x="560" y="100" width="80" height="65" rx="4" class="state-shape state-med" data-state="Yucatán" data-val="187"/>
+        <rect x="650" y="100" width="40" height="65" rx="4" class="state-shape state-low" data-state="Quintana Roo" data-val="134"/>
+        <!-- Row 3 -->
+        <rect x="110" y="175" width="75" height="65" rx="4" class="state-shape state-low" data-state="Nayarit" data-val="67"/>
+        <rect x="195" y="175" width="75" height="65" rx="4" class="state-shape state-med" data-state="Jalisco" data-val="445"/>
+        <rect x="280" y="175" width="75" height="65" rx="4" class="state-shape state-med" data-state="Guanajuato" data-val="312"/>
+        <rect x="365" y="175" width="75" height="65" rx="4" class="state-shape state-high" data-state="Hidalgo" data-val="278"/>
+        <rect x="450" y="175" width="75" height="65" rx="4" class="state-shape state-crit" data-state="CDMX" data-val="1248"/>
+        <rect x="535" y="175" width="75" height="65" rx="4" class="state-shape state-high" data-state="Puebla" data-val="356"/>
+        <rect x="620" y="175" width="70" height="65" rx="4" class="state-shape state-low" data-state="Campeche" data-val="98"/>
+        <!-- Row 4 -->
+        <rect x="150" y="250" width="70" height="60" rx="4" class="state-shape state-low" data-state="Colima" data-val="45"/>
+        <rect x="230" y="250" width="70" height="60" rx="4" class="state-shape state-med" data-state="Michoacán" data-val="234"/>
+        <rect x="310" y="250" width="70" height="60" rx="4" class="state-shape state-med" data-state="Estado de México" data-val="567"/>
+        <rect x="390" y="250" width="70" height="60" rx="4" class="state-shape state-high" data-state="Morelos" data-val="189"/>
+        <rect x="470" y="250" width="70" height="60" rx="4" class="state-shape state-med" data-state="Tlaxcala" data-val="145"/>
+        <rect x="550" y="250" width="70" height="60" rx="4" class="state-shape state-high" data-state="Oaxaca" data-val="267"/>
+        <rect x="630" y="250" width="60" height="60" rx="4" class="state-shape state-low" data-state="Chiapas" data-val="123"/>
+        <!-- Row 5 -->
+        <rect x="190" y="320" width="70" height="50" rx="4" class="state-shape state-low" data-state="Guerrero" data-val="178"/>
+        <rect x="270" y="320" width="70" height="50" rx="4" class="state-shape state-low" data-state="Guerrero Sur" data-val="89"/>
+        <!-- Tooltip -->
+        <rect id="map-tooltip-bg" x="0" y="0" width="160" height="48" rx="6" fill="#0f1418" stroke="rgba(255,77,109,.4)" stroke-width="1" opacity="0" pointer-events="none"/>
+        <text id="map-tooltip-state" x="0" y="0" fill="#dce8f5" font-family="JetBrains Mono" font-size="10" opacity="0" pointer-events="none"></text>
+        <text id="map-tooltip-val" x="0" y="0" fill="#ff4d6d" font-family="JetBrains Mono" font-size="11" opacity="0" pointer-events="none"></text>
+      </svg>
+      <div class="map-legend">
+        <div class="leg-item"><div class="leg-box" style="background:rgba(52,211,153,.25)"></div>Bajo (&lt;100)</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(245,166,35,.35)"></div>Medio (100–300)</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(255,77,109,.45)"></div>Alto (300–600)</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(255,0,64,.65)"></div>Crítico (&gt;600)</div>
+        <div class="leg-item" style="margin-left:auto;font-family:var(--fm);font-size:.6rem;color:var(--muted)">Casos detectados últimas 24h</div>
+      </div>
+    </div>
+
+    <!-- UBICACIÓN CLIENTES EN TIEMPO REAL -->
+    <div class="sec-title">Ubicación del Cliente en Tiempo Real</div>
+    <p class="sec-sub">Transacciones activas georreferenciadas · Alertas por distancia imposible · Click en punto para detalle · MXN</p>
+    <div class="map-wrap" style="margin-bottom:1.6rem">
+      <div class="cb-label" style="margin-bottom:.8rem">
+        Transacciones Activas por Geolocalización <span class="cb-badge" id="txn-map-count">0 activas</span>
+        <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+        <div class="info-panel" style="margin-top:.6rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Geolocalización de transacciones</strong>: cada punto representa una transacción reciente posicionada en las coordenadas aproximadas del dispositivo o IP del cliente al momento del cargo.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Puntos <span style="color:#ff0040">rojos pulsantes</span> indican alerta de <strong>ubicación imposible</strong>: misma tarjeta usada en dos ubicaciones a más de 200km en menos de 2 horas — físicamente inviable.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Activar <strong>bloqueo preventivo</strong> y notificar al cliente por push/SMS. Si no hay respuesta en 5 minutos, escalar a revisión manual. Registrar coordenadas para reporte <strong>CNBV/UIF</strong>.</span></div>
+        </div>
+      </div>
+      <!-- Interactive dot map -->
+      <div style="position:relative;background:var(--bg3);border-radius:10px;overflow:hidden;border:1px solid var(--border2)">
+        <svg id="txn-dot-map" viewBox="0 0 700 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
+          <!-- MX outline approximate -->
+          <rect x="0" y="0" width="700" height="340" fill="#0a0e12"/>
+          <!-- Grid lines -->
+          <line x1="0" y1="85" x2="700" y2="85" stroke="rgba(255,255,255,.03)" stroke-width="1"/>
+          <line x1="0" y1="170" x2="700" y2="170" stroke="rgba(255,255,255,.03)" stroke-width="1"/>
+          <line x1="0" y1="255" x2="700" y2="255" stroke="rgba(255,255,255,.03)" stroke-width="1"/>
+          <line x1="175" y1="0" x2="175" y2="340" stroke="rgba(255,255,255,.03)" stroke-width="1"/>
+          <line x1="350" y1="0" x2="350" y2="340" stroke="rgba(255,255,255,.03)" stroke-width="1"/>
+          <line x1="525" y1="0" x2="525" y2="340" stroke="rgba(255,255,255,.03)" stroke-width="1"/>
+          <!-- State labels -->
+          <text x="65" y="60" fill="rgba(255,255,255,.08)" font-family="JetBrains Mono" font-size="9">BC</text>
+          <text x="160" y="60" fill="rgba(255,255,255,.08)" font-family="JetBrains Mono" font-size="9">SON</text>
+          <text x="250" y="60" fill="rgba(255,255,255,.08)" font-family="JetBrains Mono" font-size="9">CHIH</text>
+          <text x="340" y="60" fill="rgba(255,255,255,.08)" font-family="JetBrains Mono" font-size="9">COAH</text>
+          <text x="430" y="60" fill="rgba(255,255,255,.08)" font-family="JetBrains Mono" font-size="9">NL</text>
+          <text x="510" y="60" fill="rgba(255,255,255,.08)" font-family="JetBrains Mono" font-size="9">TAMPS</text>
+          <text x="195" y="210" fill="rgba(255,255,255,.08)" font-family="JetBrains Mono" font-size="9">JAL</text>
+          <text x="460" y="210" fill="rgba(255,255,255,.08)" font-family="JetBrains Mono" font-size="9">CDMX</text>
+          <text x="310" y="280" fill="rgba(255,255,255,.08)" font-family="JetBrains Mono" font-size="9">GRO</text>
+          <!-- Dynamic dots injected by JS -->
+          <g id="txn-dots"></g>
+          <!-- Impossible location alert line -->
+          <g id="impossible-lines"></g>
+          <!-- Tooltip -->
+          <rect id="dot-tooltip-bg" x="0" y="0" width="200" height="72" rx="6" fill="#0f1418" stroke="rgba(255,77,109,.5)" stroke-width="1" opacity="0" pointer-events="none"/>
+          <text id="dot-tt-id"    x="0" y="0" fill="#dce8f5" font-family="JetBrains Mono" font-size="9" opacity="0" pointer-events="none"/>
+          <text id="dot-tt-desc"  x="0" y="0" fill="rgba(220,232,245,.6)" font-family="JetBrains Mono" font-size="8" opacity="0" pointer-events="none"/>
+          <text id="dot-tt-amt"   x="0" y="0" fill="#f5a623" font-family="JetBrains Mono" font-size="9" opacity="0" pointer-events="none"/>
+          <text id="dot-tt-score" x="0" y="0" fill="#ff4d6d" font-family="JetBrains Mono" font-size="9" opacity="0" pointer-events="none"/>
+          <text id="dot-tt-dist"  x="0" y="0" fill="#ff0040" font-family="JetBrains Mono" font-size="8" opacity="0" pointer-events="none"/>
+        </svg>
+      </div>
+      <div class="map-legend" style="margin-top:.8rem">
+        <div class="leg-item"><div class="leg-box" style="background:rgba(52,211,153,.7);border-radius:50%"></div>Bajo riesgo</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(245,166,35,.7);border-radius:50%"></div>Riesgo medio</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(255,77,109,.7);border-radius:50%"></div>Alto riesgo</div>
+        <div class="leg-item"><div class="leg-box" style="background:#ff0040;border-radius:50%;box-shadow:0 0 6px #ff0040"></div>⚡ Ubicación imposible</div>
+        <div class="leg-item" style="margin-left:auto;font-family:var(--fm);font-size:.6rem;color:var(--muted)">Hover para detalle de transacción</div>
+      </div>
+    </div>
+
+    <!-- MATRIZ DE RIESGO -->
+    <div class="sec-title">Matriz de Riesgo · Frecuencia vs. Severidad por Estado</div>
+    <p class="sec-sub">Posición de cada estado en el espacio Frecuencia (casos/10K txn) × Severidad (monto MXN promedio) · Cuadrantes de riesgo</p>
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Matriz de Riesgo Geoespacial — Burbujas por Estado MX <span class="cb-badge">Tamaño = vol. total MXN</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap xtall"><canvas id="chart-risk-matrix"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Matriz de riesgo 2D</strong>: posiciona cada estado en un plano Frecuencia (eje X) × Severidad (eje Y). El tamaño de la burbuja refleja el volumen total de fraude en MXN.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Cuadrante superior derecho (<span style="color:var(--rose)">Crítico</span>): alta frecuencia + alto monto = máxima prioridad de intervención. CDMX y NL están aquí por volumen, no necesariamente por ratio.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Asignar <strong>recursos de investigación por cuadrante</strong>: estados en Crítico requieren célula dedicada. Cuadrante alto monto/baja frecuencia = fraude organizado de alto valor — prioridad UIF.</span></div>
+      </div>
+      <!-- Quadrant labels overlay -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.8rem">
+        <div style="background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.15);border-radius:8px;padding:.5rem .8rem;font-size:.72rem;color:var(--green)">
+          <span style="font-family:var(--fm);font-size:.6rem;text-transform:uppercase;letter-spacing:.08em">↙ Bajo riesgo</span><br>
+          <span style="color:rgba(220,232,245,.5)">Baja frecuencia + bajo monto. Monitoreo rutinario.</span>
+        </div>
+        <div style="background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.15);border-radius:8px;padding:.5rem .8rem;font-size:.72rem;color:var(--blue)">
+          <span style="font-family:var(--fm);font-size:.6rem;text-transform:uppercase;letter-spacing:.08em">↗ Alto valor</span><br>
+          <span style="color:rgba(220,232,245,.5)">Baja frecuencia + alto monto. Fraude organizado — prioridad UIF.</span>
+        </div>
+        <div style="background:rgba(245,166,35,.05);border:1px solid rgba(245,166,35,.15);border-radius:8px;padding:.5rem .8rem;font-size:.72rem;color:var(--amber)">
+          <span style="font-family:var(--fm);font-size:.6rem;text-transform:uppercase;letter-spacing:.08em">↖ Alto volumen</span><br>
+          <span style="color:rgba(220,232,245,.5)">Alta frecuencia + bajo monto. Fraude masivo automatizado — revisar reglas.</span>
+        </div>
+        <div style="background:rgba(255,77,109,.06);border:1px solid rgba(255,77,109,.2);border-radius:8px;padding:.5rem .8rem;font-size:.72rem;color:var(--rose)">
+          <span style="font-family:var(--fm);font-size:.6rem;text-transform:uppercase;letter-spacing:.08em">↗ CRÍTICO</span><br>
+          <span style="color:rgba(220,232,245,.5)">Alta frecuencia + alto monto. Célula dedicada + reporte UIF inmediato.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- NETWORK -->
+    <div class="sec-title">Red de Transferencias Sospechosas · Cuentas Mula</div>
+    <p class="sec-sub">Flujos entre cuentas detectados con patrones de structuring, layering y smurfing · Simulado MXN</p>
+    <div class="network-wrap">
+      <div class="cb-label" style="margin-bottom:.8rem">Grafo de Red · Patrones AML Detectados <span class="cb-badge">Última hora</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+        <div class="info-panel" style="margin-top:.6rem">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Grafo de transferencias</strong>: representa cuentas como nodos y transferencias como aristas. Los patrones de lavado aparecen como estructuras geométricas específicas (cadenas, estrellas, ciclos).</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Nodos <span style="color:var(--rose)">rojos</span> = cuentas mula identificadas. Aristas <span style="color:var(--rose)">rojas pulsantes</span> = flujos sospechosos activos. <span style="color:var(--amber)">Amarillos</span> = bajo vigilancia.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Alimentar reportes <strong>UIF (SHCP)</strong>: operaciones inusuales deben reportarse en 3 días hábiles. El grafo automatiza la detección y documenta la red para el expediente regulatorio LFPIORPI.</span></div>
+        </div>
+      </div>
+      <svg class="network-svg" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,.2)"/>
+          </marker>
+          <marker id="arrow-fraud" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,77,109,.7)"/>
+          </marker>
+          <marker id="arrow-suspect" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="rgba(245,166,35,.6)"/>
+          </marker>
+        </defs>
+        <!-- Legitimate sources -->
+        <circle cx="80" cy="80" r="22" class="node-legit"/>
+        <text x="80" y="84" text-anchor="middle" class="node-label">CTA-001</text>
+        <circle cx="80" cy="200" r="22" class="node-legit"/>
+        <text x="80" y="204" text-anchor="middle" class="node-label">CTA-002</text>
+        <circle cx="60" cy="140" r="18" class="node-legit"/>
+        <text x="60" y="144" text-anchor="middle" class="node-label" font-size="8">CTA-003</text>
+        <!-- Mule accounts -->
+        <circle cx="240" cy="80" r="26" class="node-mule"/>
+        <text x="240" y="76" text-anchor="middle" class="node-label" font-weight="bold">MULA-01</text>
+        <text x="240" y="89" text-anchor="middle" class="node-label" font-size="8">$142K/24h</text>
+        <circle cx="240" cy="200" r="24" class="node-mule"/>
+        <text x="240" y="196" text-anchor="middle" class="node-label" font-weight="bold">MULA-02</text>
+        <text x="240" y="209" text-anchor="middle" class="node-label" font-size="8">$89K/24h</text>
+        <!-- Suspect intermediate -->
+        <circle cx="420" cy="140" r="24" class="node-suspect"/>
+        <text x="420" y="136" text-anchor="middle" class="node-label">INTER-01</text>
+        <text x="420" y="149" text-anchor="middle" class="node-label" font-size="8">Layering</text>
+        <circle cx="380" cy="60" r="18" class="node-suspect"/>
+        <text x="380" y="64" text-anchor="middle" class="node-label" font-size="8">INTER-02</text>
+        <!-- Destinations -->
+        <circle cx="580" cy="80" r="22" class="node-dest"/>
+        <text x="580" y="76" text-anchor="middle" class="node-label">DEST-01</text>
+        <text x="580" y="89" text-anchor="middle" class="node-label" font-size="8">Crypto</text>
+        <circle cx="600" cy="200" r="22" class="node-dest"/>
+        <text x="600" y="196" text-anchor="middle" class="node-label">DEST-02</text>
+        <text x="600" y="209" text-anchor="middle" class="node-label" font-size="8">Offshore</text>
+        <circle cx="560" cy="140" r="18" class="node-dest"/>
+        <text x="560" y="144" text-anchor="middle" class="node-label" font-size="8">DEST-03</text>
+        <!-- Additional smurfing nodes -->
+        <circle cx="310" cy="240" r="16" class="node-mule"/>
+        <text x="310" y="244" text-anchor="middle" class="node-label" font-size="8">MULA-03</text>
+        <circle cx="180" cy="140" r="14" class="node-suspect"/>
+        <text x="180" y="144" text-anchor="middle" class="node-label" font-size="8">SMRF-01</text>
+        <!-- Links: legit to mule (fraud) -->
+        <line x1="102" y1="80" x2="212" y2="80" class="link-fraud" stroke-dasharray="6,3" marker-end="url(#arrow-fraud)"/>
+        <line x1="102" y1="200" x2="214" y2="200" class="link-fraud" stroke-dasharray="6,3" marker-end="url(#arrow-fraud)"/>
+        <line x1="78" y1="140" x2="164" y2="140" class="link-suspect" marker-end="url(#arrow-suspect)"/>
+        <!-- Mule to intermediate -->
+        <line x1="264" y1="90" x2="394" y2="130" class="link-fraud" stroke-dasharray="6,3" marker-end="url(#arrow-fraud)"/>
+        <line x1="262" y1="190" x2="398" y2="152" class="link-fraud" stroke-dasharray="6,3" marker-end="url(#arrow-fraud)"/>
+        <line x1="194" y1="140" x2="254" y2="110" class="link-suspect" marker-end="url(#arrow-suspect)"/>
+        <line x1="240" y1="178" x2="295" y2="240" class="link-suspect" stroke-dasharray="4,4" marker-end="url(#arrow-suspect)"/>
+        <line x1="258" y1="72" x2="360" y2="64" class="link-suspect" marker-end="url(#arrow-suspect)"/>
+        <!-- Intermediate to destination -->
+        <line x1="444" y1="128" x2="556" y2="90" class="link-fraud" stroke-dasharray="6,3" marker-end="url(#arrow-fraud)"/>
+        <line x1="444" y1="152" x2="576" y2="190" class="link-suspect" marker-end="url(#arrow-suspect)"/>
+        <line x1="442" y1="140" x2="540" y2="140" class="link-normal" marker-end="url(#arrow)"/>
+        <line x1="396" y1="66" x2="556" y2="82" class="link-suspect" marker-end="url(#arrow-suspect)"/>
+        <!-- Legend -->
+        <circle cx="30" cy="258" r="6" fill="rgba(0,221,180,.7)" stroke="#00ddb4" stroke-width="1"/>
+        <text x="42" y="262" fill="rgba(220,232,245,.5)" font-family="JetBrains Mono" font-size="9">Cuenta legítima</text>
+        <circle cx="145" cy="258" r="6" fill="rgba(255,77,109,.7)" stroke="#ff4d6d" stroke-width="1"/>
+        <text x="157" y="262" fill="rgba(220,232,245,.5)" font-family="JetBrains Mono" font-size="9">Cuenta mula</text>
+        <circle cx="255" cy="258" r="6" fill="rgba(245,166,35,.7)" stroke="#f5a623" stroke-width="1"/>
+        <text x="267" y="262" fill="rgba(220,232,245,.5)" font-family="JetBrains Mono" font-size="9">Sospechosa</text>
+        <circle cx="360" cy="258" r="6" fill="rgba(167,139,250,.7)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="372" y="262" fill="rgba(220,232,245,.5)" font-family="JetBrains Mono" font-size="9">Destino final</text>
+        <line x1="455" y1="258" x2="485" y2="258" stroke="rgba(255,77,109,.7)" stroke-width="2" stroke-dasharray="5,2"/>
+        <text x="492" y="262" fill="rgba(220,232,245,.5)" font-family="JetBrains Mono" font-size="9">Flujo sospechoso</text>
+        <text x="590" y="262" fill="rgba(220,232,245,.35)" font-family="JetBrains Mono" font-size="8">UIF-reportable</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- TAB 3: TYPES -->
+  <div class="tab-panel" id="tab-types">
+    <div class="sec-title">Tipos de Fraude & AML</div>
+    <p class="sec-sub">Fraude en tarjetas · Transferencias SPEI · Identidad sintética · Lavado de dinero · Indicadores semáforo por patrón</p>
+
+    <div class="fraud-grid">
+      <!-- CARD FRAUD -->
+      <div class="fraud-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="fc-icon">💳</div>
+        <div class="fc-title">Fraude en Tarjetas</div>
+        <div class="fc-desc">Uso no autorizado de tarjetas de crédito/débito. Incluye fraude de tarjeta presente (POS), tarjeta no presente (CNP/e-commerce) y clonación de banda magnética.</div>
+        <div class="fc-indicators">
+          <div class="fc-ind"><span class="fc-ind-lbl">Transacción en ubicación imposible</span><span class="fc-ind-val ind-red">🔴 CRÍTICO</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Dispositivo no reconocido</span><span class="fc-ind-val ind-red">🔴 ALTO</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Monto fuera del patrón habitual</span><span class="fc-ind-val ind-amber">🟡 MEDIO</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Horario inusual (&lt;4am)</span><span class="fc-ind-val ind-amber">🟡 MEDIO</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Primer uso internacional</span><span class="fc-ind-val ind-amber">🟡 VERIFICAR</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Múltiples intentos fallidos previos</span><span class="fc-ind-val ind-red">🔴 BLOQUEAR</span></div>
+        </div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Fraude CNP</strong> (Card Not Present): el tipo más frecuente en e-commerce. No requiere tarjeta física — solo los datos (número, CVV, fecha). Representa el 75% del fraude en tarjetas.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Tasa de fraude CNP MX: 0.08% por transacción vs. 0.02% en POS con chip+NIP. El modelo IEEE-CIS está optimizado para detectar CNP.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Reportar contracargos en <strong>CONDUSEF</strong> y activar protocolo 3D Secure (Verified by Visa/Mastercard SecureCode) para transacciones de riesgo alto bajo normativa PCI-DSS.</span></div>
+        </div>
+      </div>
+
+      <!-- TRANSFER FRAUD -->
+      <div class="fraud-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="fc-icon">🏦</div>
+        <div class="fc-title">Fraude en Transferencias SPEI</div>
+        <div class="fc-desc">Transferencias electrónicas no autorizadas mediante ingeniería social (phishing, vishing), acceso a banca en línea comprometida o suplantación del beneficiario real.</div>
+        <div class="fc-indicators">
+          <div class="fc-ind"><span class="fc-ind-lbl">Nuevo beneficiario primer uso</span><span class="fc-ind-val ind-amber">🟡 VERIFICAR</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Monto > percentil 95 del cliente</span><span class="fc-ind-val ind-red">🔴 ALTO</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">IP en lista negra / VPN detectada</span><span class="fc-ind-val ind-red">🔴 BLOQUEAR</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Cambio de datos bancarios reciente</span><span class="fc-ind-val ind-red">🔴 CRÍTICO</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Patrón de urgencia en solicitud</span><span class="fc-ind-val ind-amber">🟡 MEDIO</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Velocidad anómala (múltiples SPEI)</span><span class="fc-ind-val ind-red">🔴 ALTO</span></div>
+        </div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Fraude SPEI</strong>: el Sistema de Pagos Electrónicos Interbancarios de BANXICO procesa ~12M de transferencias diarias. El fraude ocurre cuando el atacante toma control de la sesión del usuario legítimo.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Tiempo promedio de detección: 4.2 minutos. Ventana de reversa SPEI: 30 minutos máximo — por eso la detección en tiempo real es crítica para recuperar los fondos.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Activar <strong>protocolo de retención preventiva BANXICO</strong>: solicitar reversa SPEI inmediata si el fraude se detecta en &lt;30min. Reportar a CNBV en &lt;24h bajo Circular 4/2014.</span></div>
+        </div>
+      </div>
+
+      <!-- IDENTITY FRAUD -->
+      <div class="fraud-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="fc-icon">🪪</div>
+        <div class="fc-title">Fraude de Identidad Sintética</div>
+        <div class="fc-desc">Creación de identidades ficticias combinando datos reales e inventados (CURP, RFC, biometría alterada). Tipo de fraude de mayor crecimiento en México post-pandemia.</div>
+        <div class="fc-indicators">
+          <div class="fc-ind"><span class="fc-ind-lbl">CURP sin historial crediticio</span><span class="fc-ind-val ind-amber">🟡 REVISAR</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Foto de selfie vs. INE inconsistente</span><span class="fc-ind-val ind-red">🔴 CRÍTICO</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">RFC generado vs. SAT no coincide</span><span class="fc-ind-val ind-red">🔴 BLOQUEAR</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Dirección en lista de fraude conocida</span><span class="fc-ind-val ind-red">🔴 ALTO</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Múltiples solicitudes mismos datos</span><span class="fc-ind-val ind-red">🔴 CRÍTICO</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Cuenta nueva + transacción grande</span><span class="fc-ind-val ind-amber">🟡 MEDIO</span></div>
+        </div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Identidad sintética</strong>: combina CURP real (de persona que no monitorea su crédito) con datos falsos (nombre, domicilio, selfie manipulada). Difícil de detectar en el momento de apertura.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El fraude de identidad sintética tarda 18 meses promedio en detectarse — construyen historial crediticio "bueno" antes de ejecutar el bust-out (múltiples créditos al máximo antes de desaparecer).</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Validar contra <strong>RENAPO, SAT y buró de crédito</strong> en el onboarding. El NIP biométrico de CURP + validación facial en tiempo real reduce apertura de cuentas sintéticas en 78%.</span></div>
+        </div>
+      </div>
+
+      <!-- AML -->
+      <div class="fraud-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="fc-icon">🔄</div>
+        <div class="fc-title">Lavado de Dinero (AML)</div>
+        <div class="fc-desc">Detección de patrones de legitimación de recursos de procedencia ilícita: structuring (fraccionamiento), smurfing (múltiples personas), layering (capas de transferencias) e integración.</div>
+        <div class="fc-indicators">
+          <div class="fc-ind"><span class="fc-ind-lbl">Structuring: monto &lt;$7,500 USD recurrente</span><span class="fc-ind-val ind-red">🔴 UIF-REPORTAR</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Smurfing: mismo origen, múltiples cuentas</span><span class="fc-ind-val ind-red">🔴 CRÍTICO</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Layering: cadena &gt;3 cuentas en 24h</span><span class="fc-ind-val ind-red">🔴 ALTO</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Entrada/salida rápida (&lt;2h)</span><span class="fc-ind-val ind-red">🔴 MULA</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Operaciones en efectivo recurrentes</span><span class="fc-ind-val ind-amber">🟡 MONITOREAR</span></div>
+          <div class="fc-ind"><span class="fc-ind-lbl">Beneficiario en jurisdicción de riesgo</span><span class="fc-ind-val ind-red">🔴 ALTO</span></div>
+        </div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>AML</strong> (Anti-Money Laundering): proceso de detectar y reportar operaciones que buscan dar apariencia de legalidad a recursos de origen ilícito. Marco: FATF/GAFI + LFPIORPI México.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt"><strong>Umbral de reporte en MX</strong>: operaciones en efectivo &gt;$7,500 USD (≈$145K MXN) son Operaciones Relevantes. Las inusuales deben reportarse sin importar el monto en &lt;3 días hábiles.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Generar automáticamente reportes <strong>UIF-SHCP</strong> (Unidad de Inteligencia Financiera): formato XML estándar para Operaciones Inusuales, Relevantes e Internas Preocupantes bajo LFPIORPI Art. 17.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AML Patterns chart -->
+    <div class="charts-2" style="margin-bottom:1.6rem">
+      <div class="chart-box">
+        <div class="cb-label">Volumen por Tipo de Fraude Detectado <span class="cb-badge">Últimos 30 días · MXN</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-fraud-vol"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Distribución por tipo</strong>: volumen monetario de fraude detectado y bloqueado por categoría en el período.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El fraude en tarjetas domina en volumen de casos, pero el AML lidera en monto total por operación. Ambos requieren marcos de respuesta distintos.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Priorizar inversión en controles: si AML representa 60% del monto total, el ROI de mejorar la detección AML supera al de mejorar la detección de tarjetas.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Patrones AML Detectados por Tipo <span class="cb-badge">Últimas 24h</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-aml-patterns"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Structuring</strong>: fraccionamiento intencional de montos grandes en transacciones menores al umbral de reporte para evitar la detección regulatoria.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El structuring es el patrón más frecuente (fácil de implementar por el lavador). Layering es el más sofisticado y el más difícil de rastrear para las autoridades.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Cada patrón detectado genera un <strong>expediente UIF</strong> automático. El sistema acumula evidencia por 5 años (LFPIORPI Art. 18) — requerido para investigaciones del Ministerio Público Federal.</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="dash-footer">
+  <span style="color:var(--muted2)">// <span style="color:var(--rose)">P3 · Detección de Fraude</span> · IEEE-CIS · Kaggle · Demostrativo · MXN</span>
+  <span>Python · R · SQL · <span style="color:var(--violet)">2024</span></span>
+</div>
+
+<script>
+// DEFAULTS
+Chart.defaults.color='rgba(220,232,245,0.42)';
+Chart.defaults.borderColor='rgba(255,255,255,0.042)';
+Chart.defaults.font.family="'JetBrains Mono','monospace'";
+Chart.defaults.font.size=10;
+Chart.defaults.plugins.legend.labels.boxWidth=10;
+Chart.defaults.plugins.legend.labels.padding=14;
+Chart.defaults.plugins.legend.labels.usePointStyle=true;
+const TT={backgroundColor:'#0f1418',titleColor:'#dce8f5',bodyColor:'rgba(220,232,245,.7)',borderColor:'rgba(255,77,109,.15)',borderWidth:1,padding:10};
+const BASE={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(220,232,245,.48)'}},tooltip:TT},scales:{x:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}},y:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}}}};
+function mk(ex={}){const o=JSON.parse(JSON.stringify(BASE));if(ex.scales)Object.assign(o.scales,ex.scales);if(ex.plugins)Object.assign(o.plugins,ex.plugins);if(ex.indexAxis)o.indexAxis=ex.indexAxis;return o;}
+
+// INFO TOGGLE
+function toggleInfo(btn){
+  const p=btn.closest('.kpi,.chart-box,.ml-card,.risk-card,.fraud-card,.cost-card,.network-wrap,.map-wrap');
+  if(!p)return;
+  const panel=p.querySelector(':scope > .info-panel, :scope > .cb-label > .info-panel');
+  if(!panel)return;
+  const open=panel.classList.contains('open');
+  panel.classList.toggle('open',!open);
+  btn.classList.toggle('active',!open);
+}
+
+// TABS
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');document.getElementById('tab-'+id).classList.add('active');
+}
+function switchSub(id,btn){
+  document.querySelectorAll('.sub-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.sub-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');document.getElementById('sub-'+id).classList.add('active');
+}
+
+// ── CHART: PR CURVE
+new Chart(document.getElementById('chart-pr'),{type:'line',data:{
+  labels:[0,.05,.1,.15,.2,.25,.3,.35,.4,.5,.6,.7,.8,.9,1],
+  datasets:[
+    {label:'LightGBM (AUC-PR=.88)',data:[1,.96,.93,.91,.88,.85,.82,.79,.75,.68,.59,.48,.36,.22,.035],borderColor:'#ff4d6d',borderWidth:2.5,fill:false,tension:.35,pointRadius:0},
+    {label:'XGBoost (AUC-PR=.85)',data:[1,.94,.91,.88,.85,.82,.78,.74,.70,.62,.53,.42,.31,.19,.035],borderColor:'#f5a623',borderWidth:2,fill:false,tension:.35,pointRadius:0,borderDash:[5,3]},
+    {label:'Random Forest (AUC-PR=.79)',data:[1,.90,.86,.82,.78,.74,.70,.65,.60,.52,.43,.33,.24,.15,.035],borderColor:'#a78bfa',borderWidth:1.8,fill:false,tension:.35,pointRadius:0,borderDash:[4,4]},
+    {label:'Logístico (AUC-PR=.61)',data:[1,.78,.68,.60,.53,.47,.42,.37,.33,.26,.21,.16,.12,.08,.035],borderColor:'rgba(131,153,184,.5)',borderWidth:1.5,fill:false,tension:.35,pointRadius:0,borderDash:[2,4]},
+    {label:'Baseline aleatorio (.035)',data:[.035,.035,.035,.035,.035,.035,.035,.035,.035,.035,.035,.035,.035,.035,.035],borderColor:'rgba(255,255,255,.1)',borderWidth:1,fill:false,pointRadius:0,borderDash:[2,5]},
+  ]},options:mk({scales:{x:{title:{display:true,text:'Recall'}},y:{title:{display:true,text:'Precisión'},min:0,max:1}}})});
+
+// ── CHART: SCORE DIST
+(()=>{
+  const bins=['0.0','0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1.0'];
+  const legit=[8400,6200,4800,3200,1800,980,480,240,120,60,20];
+  const fraud=[30,48,62,84,120,280,640,1480,2800,3600,2400];
+  new Chart(document.getElementById('chart-score-dist'),{type:'bar',data:{labels:bins,datasets:[
+    {label:'Transacción Legítima',data:legit,backgroundColor:'rgba(0,221,180,.4)',borderColor:'#00ddb4',borderWidth:1,borderRadius:4},
+    {label:'Transacción Fraudulenta',data:fraud,backgroundColor:'rgba(255,77,109,.45)',borderColor:'#ff4d6d',borderWidth:1,borderRadius:4},
+  ]},options:mk({scales:{y:{title:{display:true,text:'# Transacciones'}},x:{title:{display:true,text:'Score de Fraude'}}}})});
+})();
+
+// ── CHART: SHAP
+new Chart(document.getElementById('chart-shap'),{type:'bar',data:{
+  labels:['TransactionAmt','card1 (tarjeta)','Velocidad 1h','addr1 (código postal)','D1 (días actividad)','C1 (conteos)','EmailDomain','DeviceType','P_emaildomain','V258','R_emaildomain','id_02'],
+  datasets:[{label:'Valor SHAP (impacto en P(fraude))',data:[.184,.162,.148,.121,.108,.094,.082,.071,.064,.058,.051,.044],
+    backgroundColor:['#ff4d6d','#ff4d6d','#fb7185','#f5a623','#f5a623','#f5a623','#8399b8','#8399b8','#8399b8','#4a5e76','#4a5e76','#4a5e76'],
+    borderRadius:5,borderSkipped:false}]},
+  options:mk({indexAxis:'y',scales:{x:{title:{display:true,text:'|Valor SHAP| promedio'}},y:{ticks:{font:{size:9}}}}})});
+
+// ── CHART: HOUR
+(()=>{
+  const hours=Array.from({length:24},(_,i)=>i+'h');
+  const rate=[5.8,7.2,8.4,9.1,8.6,6.2,4.1,3.2,2.8,2.4,2.2,2.6,3.8,3.4,3.1,2.9,3.2,3.6,4.2,4.8,5.1,5.6,6.2,5.4];
+  new Chart(document.getElementById('chart-hour'),{type:'bar',data:{labels:hours,datasets:[{label:'Tasa de fraude (%)',data:rate,
+    backgroundColor:rate.map(r=>r>7?'rgba(255,77,109,.65)':r>5?'rgba(245,166,35,.5)':'rgba(52,211,153,.4)'),
+    borderColor:rate.map(r=>r>7?'#ff4d6d':r>5?'#f5a623':'#34d399'),borderWidth:1,borderRadius:3}]},
+  options:mk({scales:{y:{title:{display:true,text:'Tasa fraude (%)'},max:11},x:{ticks:{font:{size:8}}}}})});
+})();
+
+// ── CHART: AMOUNT
+(()=>{
+  const ranges=['<$500','$500-$1K','$1K-$2K','$2K-$5K','$5K-$10K','$10K-$25K','$25K-$50K','$50K-$100K','$100K-$250K','>$250K'];
+  const rate=[2.1,6.4,5.8,3.2,2.4,1.8,2.8,4.2,5.6,7.8];
+  new Chart(document.getElementById('chart-amount'),{type:'line',data:{labels:ranges,datasets:[{label:'Tasa de fraude (%)',data:rate,borderColor:'#ff4d6d',borderWidth:2.5,fill:true,backgroundColor:'rgba(255,77,109,.06)',tension:.4,pointRadius:5,pointBackgroundColor:rate.map(r=>r>5?'#ff4d6d':r>3?'#f5a623':'#34d399')}]},
+  options:mk({scales:{y:{title:{display:true,text:'Tasa fraude (%)'}},x:{ticks:{maxRotation:35,font:{size:8}}}}})});
+})();
+
+// ── CHART: DEVICE
+(()=>{
+  const canales=['Web (sin 2FA)','Mobile (sin biom.)','POS banda magn.','POS chip+NIP','App Móvil','App + Biometría','ATM','SPEI'];
+  const rates=[8.4,5.2,4.8,1.6,2.1,0.8,3.4,2.8];
+  new Chart(document.getElementById('chart-device'),{type:'bar',data:{labels:canales,datasets:[{label:'Tasa de fraude (%)',data:rates,
+    backgroundColor:rates.map(r=>r>6?'rgba(255,77,109,.65)':r>3?'rgba(245,166,35,.5)':'rgba(52,211,153,.4)'),
+    borderColor:rates.map(r=>r>6?'#ff4d6d':r>3?'#f5a623':'#34d399'),borderWidth:1.5,borderRadius:5}]},
+  options:mk({indexAxis:'y',scales:{x:{title:{display:true,text:'Tasa fraude (%)'}},y:{ticks:{font:{size:9}}}}})});
+})();
+
+// ── CHART: CHANNEL TIME
+(()=>{
+  const months=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  new Chart(document.getElementById('chart-channel-time'),{type:'line',data:{labels:months,datasets:[
+    {label:'Web (sin 2FA)',data:[100,104,108,115,122,118,124,130,138,142,148,156],borderColor:'#ff4d6d',borderWidth:2,fill:false,tension:.4,pointRadius:0},
+    {label:'Mobile',data:[100,101,103,106,104,108,110,112,115,118,116,120],borderColor:'#f5a623',borderWidth:1.8,fill:false,tension:.4,pointRadius:0,borderDash:[4,3]},
+    {label:'POS',data:[100,98,102,100,104,102,106,104,108,106,110,108],borderColor:'#a78bfa',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,borderDash:[3,3]},
+    {label:'App+Biometría',data:[100,99,98,100,97,99,96,98,97,95,96,94],borderColor:'#34d399',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,borderDash:[2,4]},
+  ]},options:mk({scales:{y:{title:{display:true,text:'Índice fraude (base 100)'}}}})});
+})();
+
+// ── CHART: MODEL COMPARISON
+(()=>{
+  const models=['LightGBM','XGBoost','Random Forest','Log. Logística'];
+  new Chart(document.getElementById('chart-model-comp'),{type:'bar',data:{labels:models,datasets:[
+    {label:'F1-Score',data:[.890,.872,.841,.712],backgroundColor:'rgba(255,77,109,.55)',borderColor:'#ff4d6d',borderWidth:1.5,borderRadius:5},
+    {label:'Precisión',data:[.884,.871,.854,.768],backgroundColor:'rgba(245,166,35,.45)',borderColor:'#f5a623',borderWidth:1.5,borderRadius:5},
+    {label:'Recall',data:[.896,.873,.828,.662],backgroundColor:'rgba(167,139,250,.45)',borderColor:'#a78bfa',borderWidth:1.5,borderRadius:5},
+    {label:'AUC-ROC',data:[.962,.954,.938,.882],backgroundColor:'rgba(0,221,180,.4)',borderColor:'#00ddb4',borderWidth:1.5,borderRadius:5},
+  ]},options:mk({scales:{y:{min:.6,max:1,title:{display:true,text:'Métrica (0–1)'}}}})});
+})();
+
+// ── CHART: COST THRESHOLD
+(()=>{
+  const thresholds=Array.from({length:20},(_,i)=>(i*.05).toFixed(2));
+  const fp_cost=thresholds.map(t=>+t<.38?820*(1-t/.38)*12000:820*Math.min(t/.62,1)*2000);
+  const fn_cost=thresholds.map(t=>4200*(1-Math.min(t/.38,1))*800+4200*Math.max(0,t-.38)/.62*200);
+  const total=thresholds.map((_,i)=>fp_cost[i]+fn_cost[i]);
+  new Chart(document.getElementById('chart-cost'),{type:'line',data:{labels:thresholds,datasets:[
+    {label:'Costo Total (MXN/día)',data:total,borderColor:'#ff4d6d',borderWidth:2.5,fill:true,backgroundColor:'rgba(255,77,109,.05)',tension:.4,pointRadius:0},
+    {label:'Costo FP (bloqueos incorrectos)',data:fp_cost,borderColor:'#f5a623',borderWidth:1.8,fill:false,tension:.4,pointRadius:0,borderDash:[5,3]},
+    {label:'Costo FN (fraudes no detectados)',data:fn_cost,borderColor:'#a78bfa',borderWidth:1.8,fill:false,tension:.4,pointRadius:0,borderDash:[3,3]},
+  ]},options:mk({scales:{y:{title:{display:true,text:'Costo diario (MXN)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K'}},x:{title:{display:true,text:'Threshold de decisión'}}}})});
+})();
+
+// ── CHART: FRAUD VOLUME
+new Chart(document.getElementById('chart-fraud-vol'),{type:'doughnut',data:{
+  labels:['Fraude tarjetas','Fraude SPEI','Identidad sintética','AML/Lavado'],
+  datasets:[{data:[42,28,18,12],backgroundColor:['rgba(255,77,109,.6)','rgba(245,166,35,.55)','rgba(167,139,250,.55)','rgba(96,165,250,.5)'],borderColor:['#ff4d6d','#f5a623','#a78bfa','#60a5fa'],borderWidth:1.5}]},
+  options:{...mk(),plugins:{legend:{position:'right',labels:{color:'rgba(220,232,245,.5)'}}}}});
+
+// ── CHART: AML PATTERNS
+new Chart(document.getElementById('chart-aml-patterns'),{type:'bar',data:{
+  labels:['Structuring','Cuentas mula','Smurfing','Layering','Integración'],
+  datasets:[{label:'Casos detectados (24h)',data:[284,162,118,74,38],
+    backgroundColor:['rgba(255,77,109,.6)','rgba(245,166,35,.55)','rgba(167,139,250,.5)','rgba(96,165,250,.45)','rgba(52,211,153,.4)'],
+    borderColor:['#ff4d6d','#f5a623','#a78bfa','#60a5fa','#34d399'],borderWidth:1.5,borderRadius:5}]},
+  options:mk({scales:{y:{title:{display:true,text:'Casos detectados'}}}})} );
+
+// ── TXN DOT MAP
+const MX_CITIES=[
+  {name:'CDMX',x:455,y:190,weight:5},{name:'Guadalajara',x:210,y:185,weight:4},
+  {name:'Monterrey',x:440,y:55,weight:4},{name:'Puebla',x:510,y:195,weight:3},
+  {name:'Tijuana',x:35,y:45,weight:3},{name:'León',x:295,y:175,weight:3},
+  {name:'Toluca',x:400,y:210,weight:2},{name:'Querétaro',x:340,y:165,weight:2},
+  {name:'Mérida',x:598,y:160,weight:2},{name:'San Luis Potosí',x:360,y:125,weight:2},
+  {name:'Veracruz',x:510,y:170,weight:2},{name:'Chihuahua',x:245,y:55,weight:1},
+  {name:'Culiacán',x:155,y:110,weight:1},{name:'Hermosillo',x:135,y:60,weight:1},
+  {name:'Oaxaca',x:520,y:240,weight:1},{name:'Morelia',x:295,y:240,weight:1},
+  {name:'Cancún',x:660,y:155,weight:1},{name:'Acapulco',x:360,y:280,weight:1},
+  {name:'Saltillo',x:365,y:75,weight:1},{name:'Aguascalientes',x:298,y:145,weight:1},
+];
+let dotTxns=[];
+const dotsG=document.getElementById('txn-dots');
+const linesG=document.getElementById('impossible-lines');
+
+function spawnDot(){
+  // Pick city weighted
+  const total=MX_CITIES.reduce((s,c)=>s+c.weight,0);
+  let r=Math.random()*total,city=MX_CITIES[0];
+  for(const c of MX_CITIES){r-=c.weight;if(r<=0){city=c;break;}}
+  // Jitter
+  const x=city.x+(Math.random()-.5)*28;
+  const y=city.y+(Math.random()-.5)*22;
+  // Score drives color
+  const isCrit=Math.random()<.06,isHigh=Math.random()<.14;
+  const score=isCrit?+(Math.random()*.15+.82).toFixed(2):isHigh?+(Math.random()*.2+.58).toFixed(2):+(Math.random()*.45).toFixed(2);
+  const risk=score>=.8?'crit':score>=.55?'high':score>=.3?'med':'low';
+  const color={crit:'#ff0040',high:'#ff4d6d',med:'#f5a623',low:'#34d399'}[risk];
+  const r2={crit:9,high:7,med:5,low:4}[risk];
+  // Impossible location: 8% chance — pick a second city far away
+  const impossible=Math.random()<.08&&risk!=='low';
+  const id='TXN-'+Math.floor(Math.random()*90000+10000);
+  const amt=Math.round(500+Math.random()*45000);
+  return{id,x,y,score,risk,color,r:r2,city:city.name,amt,impossible,age:0,prevCity:impossible?MX_CITIES[Math.floor(Math.random()*MX_CITIES.length)]:null};
+}
+
+function renderDots(){
+  // Age out old dots
+  dotTxns=dotTxns.filter(d=>d.age<18);
+  dotTxns.forEach(d=>d.age++);
+  // Add new dot occasionally
+  if(Math.random()<.55) dotTxns.push(spawnDot());
+  if(dotTxns.length>40) dotTxns.shift();
+
+  dotsG.innerHTML=dotTxns.map(d=>{
+    const opacity=Math.max(.25,1-d.age/18);
+    const pulse=d.risk==='crit'?`<animate attributeName="r" values="${d.r};${d.r+5};${d.r}" dur="1.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.8;0.3;0.8" dur="1.2s" repeatCount="indefinite"/>`:'';
+    return `<circle cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${d.r}" fill="${d.color}" opacity="${opacity.toFixed(2)}"
+      data-id="${d.id}" data-amt="${d.amt}" data-score="${d.score}" data-city="${d.city}" data-impossible="${d.impossible}"
+      style="cursor:pointer" onmouseenter="showDotTip(event,this)" onmouseleave="hideDotTip()">${pulse}</circle>`;
+  }).join('');
+
+  // Impossible location lines
+  linesG.innerHTML=dotTxns.filter(d=>d.impossible&&d.prevCity).map(d=>{
+    const opacity=Math.max(.1,1-d.age/18);
+    return `<line x1="${d.x.toFixed(1)}" y1="${d.y.toFixed(1)}" x2="${d.prevCity.x}" y2="${d.prevCity.y}"
+      stroke="#ff0040" stroke-width="1.5" stroke-dasharray="4,3" opacity="${(opacity*.7).toFixed(2)}">
+      <animate attributeName="stroke-dashoffset" values="20;0" dur="1s" repeatCount="indefinite"/>
+    </line>`;
+  }).join('');
+
+  document.getElementById('txn-map-count').textContent=dotTxns.length+' activas';
+}
+
+function showDotTip(e,el){
+  const svg=document.getElementById('txn-dot-map');
+  const vb=svg.viewBox.baseVal;
+  const rect=svg.getBoundingClientRect();
+  const sx=vb.width/rect.width,sy=vb.height/rect.height;
+  const mx=(e.clientX-rect.left)*sx,my=(e.clientY-rect.top)*sy;
+  const tx=Math.min(mx+8,490),ty=Math.max(my-80,8);
+  const imp=el.dataset.impossible==='true';
+  const score=+el.dataset.score;
+  const scoreColor=score>=.8?'#ff0040':score>=.55?'#ff4d6d':score>=.3?'#f5a623':'#34d399';
+  ['dot-tooltip-bg','dot-tt-id','dot-tt-desc','dot-tt-amt','dot-tt-score','dot-tt-dist'].forEach(id=>document.getElementById(id).setAttribute('opacity','1'));
+  document.getElementById('dot-tooltip-bg').setAttribute('x',tx);document.getElementById('dot-tooltip-bg').setAttribute('y',ty);
+  document.getElementById('dot-tt-id').setAttribute('x',tx+8);document.getElementById('dot-tt-id').setAttribute('y',ty+14);
+  document.getElementById('dot-tt-id').textContent=el.dataset.id+' · '+el.dataset.city;
+  document.getElementById('dot-tt-desc').setAttribute('x',tx+8);document.getElementById('dot-tt-desc').setAttribute('y',ty+26);
+  document.getElementById('dot-tt-desc').textContent='Monto: $'+parseInt(el.dataset.amt).toLocaleString('es-MX')+' MXN';
+  document.getElementById('dot-tt-amt').setAttribute('x',tx+8);document.getElementById('dot-tt-amt').setAttribute('y',ty+40);
+  document.getElementById('dot-tt-amt').setAttribute('fill',scoreColor);
+  document.getElementById('dot-tt-amt').textContent='Score fraude: '+el.dataset.score;
+  document.getElementById('dot-tt-score').setAttribute('x',tx+8);document.getElementById('dot-tt-score').setAttribute('y',ty+54);
+  document.getElementById('dot-tt-score').setAttribute('fill',imp?'#ff0040':'rgba(220,232,245,.5)');
+  document.getElementById('dot-tt-score').textContent=imp?'⚡ ALERTA: UBICACIÓN IMPOSIBLE':'✓ Ubicación coherente con historial';
+  document.getElementById('dot-tt-dist').setAttribute('x',tx+8);document.getElementById('dot-tt-dist').setAttribute('y',ty+66);
+  document.getElementById('dot-tt-dist').textContent=imp?'Distancia vs. última txn: >400km / <2h':'';
+}
+function hideDotTip(){
+  ['dot-tooltip-bg','dot-tt-id','dot-tt-desc','dot-tt-amt','dot-tt-score','dot-tt-dist'].forEach(id=>document.getElementById(id).setAttribute('opacity','0'));
+}
+
+// Start dot animation
+renderDots();
+setInterval(renderDots,2200);
+
+// ── RISK MATRIX (Bubble Chart)
+(()=>{
+  const states=[
+    {label:'CDMX',freq:12.4,sev:8400,vol:1248,q:'crit'},
+    {label:'NL',freq:9.8,sev:7200,vol:612,q:'crit'},
+    {label:'JAL',freq:7.2,sev:4800,vol:445,q:'crit'},
+    {label:'EdoMex',freq:8.4,sev:3200,vol:567,q:'vol'},
+    {label:'Puebla',freq:6.8,sev:5600,vol:356,q:'val'},
+    {label:'Veracruz',freq:5.4,sev:4200,vol:389,q:'vol'},
+    {label:'Hidalgo',freq:4.2,sev:6800,vol:278,q:'val'},
+    {label:'Oaxaca',freq:3.8,sev:5200,vol:267,q:'val'},
+    {label:'Tamaulipas',freq:5.2,sev:3600,vol:267,q:'vol'},
+    {label:'Morelos',freq:4.8,sev:4400,vol:189,q:'val'},
+    {label:'Coahuila',freq:3.6,sev:3200,vol:198,q:'low'},
+    {label:'SLP',freq:3.2,sev:2800,vol:221,q:'low'},
+    {label:'Yucatán',freq:2.8,sev:3600,vol:187,q:'low'},
+    {label:'Zacatecas',freq:2.4,sev:2400,vol:165,q:'low'},
+    {label:'Guanajuato',freq:6.2,sev:2200,vol:312,q:'vol'},
+    {label:'BC',freq:4.4,sev:2800,vol:234,q:'low'},
+    {label:'Michoacán',freq:3.0,sev:2600,vol:234,q:'low'},
+    {label:'Chihuahua',freq:2.2,sev:2200,vol:142,q:'low'},
+    {label:'Sinaloa',freq:2.0,sev:1800,vol:118,q:'low'},
+    {label:'QRoo',freq:1.8,sev:4200,vol:134,q:'val'},
+  ];
+  const colorMap={crit:'rgba(255,77,109,.75)',val:'rgba(96,165,250,.65)',vol:'rgba(245,166,35,.65)',low:'rgba(52,211,153,.55)'};
+  const borderMap={crit:'#ff4d6d',val:'#60a5fa',vol:'#f5a623',low:'#34d399'};
+
+  new Chart(document.getElementById('chart-risk-matrix'),{
+    type:'bubble',
+    data:{datasets:[
+      {label:'Crítico (alta freq + alto monto)',data:states.filter(s=>s.q==='crit').map(s=>({x:s.freq,y:s.sev,r:Math.sqrt(s.vol/8),label:s.label})),backgroundColor:'rgba(255,77,109,.7)',borderColor:'#ff4d6d',borderWidth:1.5},
+      {label:'Alto valor (baja freq + alto monto)',data:states.filter(s=>s.q==='val').map(s=>({x:s.freq,y:s.sev,r:Math.sqrt(s.vol/8),label:s.label})),backgroundColor:'rgba(96,165,250,.6)',borderColor:'#60a5fa',borderWidth:1.5},
+      {label:'Alto volumen (alta freq + bajo monto)',data:states.filter(s=>s.q==='vol').map(s=>({x:s.freq,y:s.sev,r:Math.sqrt(s.vol/8),label:s.label})),backgroundColor:'rgba(245,166,35,.6)',borderColor:'#f5a623',borderWidth:1.5},
+      {label:'Bajo riesgo',data:states.filter(s=>s.q==='low').map(s=>({x:s.freq,y:s.sev,r:Math.sqrt(s.vol/8),label:s.label})),backgroundColor:'rgba(52,211,153,.55)',borderColor:'#34d399',borderWidth:1.5},
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'rgba(220,232,245,.5)'}},
+        tooltip:{
+          backgroundColor:'#0f1418',titleColor:'#dce8f5',bodyColor:'rgba(220,232,245,.7)',borderColor:'rgba(255,77,109,.2)',borderWidth:1,padding:10,
+          callbacks:{
+            label:ctx=>{
+              const d=ctx.raw;
+              return[`${d.label}`,`Frecuencia: ${d.x} casos/10K txn`,`Severidad: $${d.y.toLocaleString('es-MX')} MXN prom.`];
+            }
+          }
+        },
+        annotation:{
+          annotations:{
+            vLine:{type:'line',xMin:6,xMax:6,borderColor:'rgba(255,255,255,.08)',borderWidth:1,borderDash:[4,4]},
+            hLine:{type:'line',yMin:4000,yMax:4000,borderColor:'rgba(255,255,255,.08)',borderWidth:1,borderDash:[4,4]},
+          }
+        }
+      },
+      scales:{
+        x:{title:{display:true,text:'Frecuencia — Casos por 10,000 transacciones',color:'rgba(220,232,245,.45)'},grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'rgba(220,232,245,.4)'},min:0,max:14},
+        y:{title:{display:true,text:'Severidad — Monto MXN promedio por fraude',color:'rgba(220,232,245,.45)'},grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'rgba(220,232,245,.4)',callback:v=>'$'+v.toLocaleString('es-MX')},min:0,max:10000}
+      }
+    }
+  });
+})();
+
+document.querySelectorAll('.state-shape').forEach(el=>{
+  el.addEventListener('mouseenter',function(e){
+    const svg=document.getElementById('mx-map');
+    const rect=this.getBoundingClientRect();
+    const svgRect=svg.getBoundingClientRect();
+    const x=+this.getAttribute('x')+ +this.getAttribute('width')/2;
+    const y=+this.getAttribute('y')-12;
+    const bg=document.getElementById('map-tooltip-bg');
+    const st=document.getElementById('map-tooltip-state');
+    const vl=document.getElementById('map-tooltip-val');
+    bg.setAttribute('x',x-80);bg.setAttribute('y',y-38);bg.setAttribute('opacity','1');
+    st.setAttribute('x',x-72);st.setAttribute('y',y-22);st.setAttribute('opacity','1');
+    st.textContent=this.dataset.state;
+    vl.setAttribute('x',x-72);vl.setAttribute('y',y-8);vl.setAttribute('opacity','1');
+    vl.textContent=this.dataset.val+' casos · últimas 24h';
+  });
+  el.addEventListener('mouseleave',()=>{
+    document.getElementById('map-tooltip-bg').setAttribute('opacity','0');
+    document.getElementById('map-tooltip-state').setAttribute('opacity','0');
+    document.getElementById('map-tooltip-val').setAttribute('opacity','0');
+  });
+});
+
+// ── LIVE FEED
+const TXN_TEMPLATES=[
+  {desc:'Compra Amazon.com MX',type:'E-commerce',minAmt:200,maxAmt:8000},
+  {desc:'Transferencia SPEI Nómina',type:'SPEI',minAmt:5000,maxAmt:45000},
+  {desc:'Retiro ATM BBVA',type:'ATM',minAmt:500,maxAmt:5000},
+  {desc:'Pago CFE Servicio',type:'CoDi',minAmt:180,maxAmt:2400},
+  {desc:'Compra Liverpool Online',type:'E-commerce',minAmt:800,maxAmt:12000},
+  {desc:'Transferencia nueva cuenta',type:'SPEI',minAmt:12000,maxAmt:85000},
+  {desc:'Compra madrugada extranjero',type:'E-commerce',minAmt:3000,maxAmt:18000},
+  {desc:'Pago Rappi MX',type:'App Móvil',minAmt:120,maxAmt:800},
+  {desc:'SPEI múltiple mismo día',type:'SPEI',minAmt:7200,maxAmt:49500},
+  {desc:'Compra dispositivo nuevo',type:'E-commerce',minAmt:4500,maxAmt:28000},
+  {desc:'Suscripción recurrente',type:'App Móvil',minAmt:89,maxAmt:450},
+  {desc:'Retiro límite diario ATM',type:'ATM',minAmt:8000,maxAmt:10000},
+];
+let feedFilter='all';
+let feedData=[];
+let liveScoreData=Array(30).fill(null).map(()=>+(Math.random()*.15+.08).toFixed(3));
+let liveDistData={low:68,med:22,high:7,crit:3};
+let liveScoreChart=null,liveDistChart=null;
+
+function randomTxn(){
+  const t=TXN_TEMPLATES[Math.floor(Math.random()*TXN_TEMPLATES.length)];
+  const amt=Math.round(t.minAmt+Math.random()*(t.maxAmt-t.minAmt));
+  const isHighRisk=t.desc.includes('madrugada')||t.desc.includes('nueva cuenta')||t.desc.includes('múltiple')||t.desc.includes('límite');
+  const score=isHighRisk?+(Math.random()*.35+.55).toFixed(3):+(Math.random()*.45).toFixed(3);
+  let risk,badge,cls;
+  if(score<.3){risk='low';badge='<span class="txn-badge b-low">✓ Bajo</span>';cls='risk-low';}
+  else if(score<.55){risk='med';badge='<span class="txn-badge b-med">⚠ Medio</span>';cls='risk-med';}
+  else if(score<.78){risk='high';badge='<span class="txn-badge b-high">🔴 Alto</span>';cls='risk-high';}
+  else{risk='crit';badge='<span class="txn-badge b-crit">⚡ Crítico</span>';cls='risk-crit';}
+  return{id:'TXN-'+Math.floor(Math.random()*90000+10000),desc:t.desc,type:t.type,amt,score,risk,badge,cls};
+}
+
+function renderFeed(){
+  const body=document.getElementById('feed-body');
+  const visible=feedFilter==='all'?feedData:feedFilter==='high'?feedData.filter(t=>t.risk==='high'||t.risk==='crit'):feedData.filter(t=>t.risk==='crit');
+  body.innerHTML=visible.slice(0,18).map(t=>`
+    <div class="txn-row ${t.cls}">
+      <span class="txn-id">${t.id}</span>
+      <span class="txn-desc">${t.desc}</span>
+      <span class="txn-amt">$${t.amt.toLocaleString('es-MX')}</span>
+      <span class="txn-score" style="color:${t.risk==='crit'?'#ff0040':t.risk==='high'?'var(--rose)':t.risk==='med'?'var(--amber)':'var(--green)'}">${t.score}</span>
+      ${t.badge}
+      <span class="txn-type">${t.type}</span>
+    </div>`).join('');
+}
+
+function filterFeed(f,btn){
+  feedFilter=f;
+  document.querySelectorAll('.feed-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFeed();
+}
+
+function initLiveCharts(){
+  const labels=Array.from({length:30},(_,i)=>i===29?'ahora':(29-i)+'s');
+  liveScoreChart=new Chart(document.getElementById('chart-live-score'),{type:'line',data:{labels,datasets:[{label:'Score promedio',data:liveScoreData,borderColor:'#ff4d6d',borderWidth:2,fill:true,backgroundColor:'rgba(255,77,109,.06)',tension:.4,pointRadius:0}]},options:mk({scales:{y:{min:0,max:.5,title:{display:true,text:'Score fraude promedio'}}}})});
+  liveDistChart=new Chart(document.getElementById('chart-live-dist'),{type:'doughnut',data:{labels:['Bajo','Medio','Alto','Crítico'],datasets:[{data:[liveDistData.low,liveDistData.med,liveDistData.high,liveDistData.crit],backgroundColor:['rgba(52,211,153,.5)','rgba(245,166,35,.5)','rgba(255,77,109,.55)','rgba(255,0,64,.65)'],borderColor:['#34d399','#f5a623','#ff4d6d','#ff0040'],borderWidth:1.5}]},options:{...mk(),plugins:{legend:{position:'right',labels:{color:'rgba(220,232,245,.45)',font:{size:8}}}}}});
+}
+
+let blockedCount=847,savedAmt=2034280,alertCount=12;
+function tick(){
+  // Add new txn
+  const t=randomTxn();
+  feedData.unshift(t);
+  if(feedData.length>60)feedData.pop();
+  // Update stats
+  if(t.risk==='crit'||t.risk==='high'){
+    blockedCount++;savedAmt+=t.amt;alertCount=Math.max(0,alertCount+(Math.random()>.5?1:-1));
+  }
+  document.getElementById('stat-tpm').textContent=Math.round(280+Math.random()*20);
+  document.getElementById('stat-alerts').textContent=Math.max(8,alertCount);
+  document.getElementById('stat-blocked').textContent=blockedCount.toLocaleString('es-MX');
+  document.getElementById('stat-saved').textContent='$'+(savedAmt/1000000).toFixed(2)+'M';
+  // Update live score chart
+  liveScoreData.shift();
+  const avgScore=feedData.slice(0,10).reduce((s,tx)=>s+tx.score,0)/10;
+  liveScoreData.push(+avgScore.toFixed(3));
+  liveScoreChart.data.datasets[0].data=[...liveScoreData];
+  liveScoreChart.update('none');
+  // Update dist
+  const counts={low:0,med:0,high:0,crit:0};
+  feedData.slice(0,30).forEach(tx=>counts[tx.risk]++);
+  liveDistChart.data.datasets[0].data=[counts.low,counts.med,counts.high,counts.crit];
+  liveDistChart.update('none');
+  renderFeed();
+}
+
+// Init
+for(let i=0;i<20;i++)feedData.push(randomTxn());
+initLiveCharts();
+renderFeed();
+setInterval(tick,1800);
+</script>
+</body>
+</html>

@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>P2 · Optimización de Portafolios & VaR · IPC & S&P 500 MXN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#060a0f;--bg2:#0a1018;--bg3:#101820;--bg4:#18232f;
+  --teal:#00ddb4;--teal-dim:rgba(0,221,180,.10);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,.09);
+  --violet:#a78bfa;--violet-dim:rgba(167,139,250,.10);
+  --rose:#fb7185;--green:#34d399;--blue:#60a5fa;--orange:#f97316;
+  --text:#dce8f5;--muted:#4a5e76;--muted2:#7a94b0;
+  --border:rgba(0,221,180,.14);--border2:rgba(255,255,255,.055);
+  --r:14px;
+  --fh:'Syne',sans-serif;--fm:'JetBrains Mono',monospace;--fb:'DM Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.7;min-height:100vh;overflow-x:hidden}
+
+/* ── BACK ── */
+.back-bar{padding:.9rem 2rem;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:.7rem;background:var(--bg2)}
+.back-btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--fm);font-size:.72rem;color:var(--muted2);text-decoration:none;padding:.35rem .8rem;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);transition:all .2s;cursor:pointer}
+.back-btn:hover{color:var(--teal);border-color:rgba(0,221,180,.3)}
+.back-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+.breadcrumb{font-family:var(--fm);font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:.4rem}
+.breadcrumb span{color:var(--amber)}
+
+/* ── HEADER ── */
+.dash-header{padding:2.5rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.eyebrow{font-family:var(--fm);font-size:.62rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.eyebrow::before{content:'';display:inline-block;width:20px;height:1px;background:var(--amber)}
+.dash-title{font-family:var(--fh);font-size:clamp(1.5rem,3vw,2.3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.8rem}
+.dash-title .at{color:var(--amber)}
+.dash-meta{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-family:var(--fm);font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;padding:.2rem .65rem;border-radius:999px}
+.b-source{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.28)}
+.b-py{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.b-sql{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.b-r{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.b-type{background:var(--violet-dim);color:var(--violet);border:1px solid rgba(167,139,250,.25)}
+.dash-desc{font-size:.85rem;color:rgba(220,232,245,.52);max-width:720px;line-height:1.8;margin-bottom:2rem}
+
+/* ── KPI STRIP ── */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;padding:0 2.5rem;max-width:1280px;margin:0 auto}
+.kpi{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.1rem 1.2rem;position:relative;overflow:hidden;transition:border-color .25s;animation:countUp .5s ease both}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kpi-color,var(--amber));opacity:.8}
+.kpi:hover{border-color:rgba(245,166,35,.28)}
+.kpi:nth-child(1){animation-delay:.05s}.kpi:nth-child(2){animation-delay:.1s}.kpi:nth-child(3){animation-delay:.15s}.kpi:nth-child(4){animation-delay:.2s}
+.kpi-val{font-family:var(--fh);font-size:1.7rem;font-weight:800;letter-spacing:-.03em;display:block;margin-bottom:.15rem}
+.kpi-lbl{font-size:.72rem;color:var(--muted2);margin-bottom:.05rem}
+.kpi-sub{font-family:var(--fm);font-size:.6rem;color:var(--muted)}
+
+/* ── INFO BUTTON + COLLAPSIBLE ── */
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid rgba(131,153,184,.35);background:rgba(131,153,184,.08);color:var(--muted2);font-family:var(--fm);font-size:.6rem;cursor:pointer;transition:all .2s;flex-shrink:0;user-select:none;line-height:1}
+.info-btn:hover,.info-btn.active{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
+.kpi .info-btn{position:absolute;top:.6rem;right:.6rem}
+.cb-label{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.cb-label .info-btn{margin-left:auto}
+.ml-card .info-btn,.risk-card .info-btn{position:absolute;top:.7rem;right:.7rem}
+.info-panel{display:none;margin-top:.65rem;padding:.65rem .8rem;background:rgba(245,166,35,.03);border:1px solid rgba(245,166,35,.12);border-radius:8px;flex-direction:column;gap:.45rem;animation:slideDown .2s ease}
+.info-panel.open{display:flex}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.te-row{display:flex;align-items:baseline;gap:.5rem;font-size:.75rem;line-height:1.65}
+.te-tag{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;padding:.1rem .42rem;border-radius:5px;border:1px solid;font-weight:500}
+.te-tag.def{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.28)}
+.te-tag.meta{color:var(--teal);background:var(--teal-dim);border-color:rgba(0,221,180,.28)}
+.te-tag.uso{color:var(--violet);background:var(--violet-dim);border-color:rgba(167,139,250,.28)}
+.te-txt{color:rgba(220,232,245,.58)}
+.te-txt strong{color:rgba(220,232,245,.88);font-weight:500}
+
+/* ── TABS ── */
+.tabs-wrap{padding:2rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--border2);margin-bottom:2rem}
+.tab-btn{font-family:var(--fm);font-size:.75rem;padding:.65rem 1.3rem;cursor:pointer;color:var(--muted2);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;display:flex;align-items:center;gap:.45rem;border-radius:8px 8px 0 0}
+.tab-btn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.tab-btn.active{color:var(--amber);border-bottom-color:var(--amber);background:var(--amber-dim)}
+.tab-panel{display:none;animation:fadeIn .3s ease}
+.tab-panel.active{display:block}
+.sub-tabs{display:flex;gap:.4rem;margin-bottom:1.4rem;flex-wrap:wrap}
+.sub-btn{font-family:var(--fm);font-size:.68rem;padding:.4rem 1rem;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .2s}
+.sub-btn:hover{color:var(--text);border-color:rgba(255,255,255,.15)}
+.sub-btn.active{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.3)}
+.sub-panel{display:none;animation:fadeIn .25s ease}
+.sub-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── SECTION TITLES ── */
+.sec-title{font-family:var(--fh);font-size:1rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem;display:flex;align-items:center;gap:.55rem}
+.sec-title::before{content:'';display:inline-block;width:16px;height:2px;background:var(--amber);border-radius:1px}
+.sec-sub{font-size:.78rem;color:var(--muted2);margin-bottom:1.4rem}
+
+/* ── CHART BOXES ── */
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.chart-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem;transition:border-color .2s}
+.chart-box.full{grid-column:1/-1}
+.chart-box.span2{grid-column:span 2}
+.cb-label{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.9rem}
+.cb-badge{font-size:.58rem;padding:.12rem .45rem;border-radius:5px;background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.chart-wrap{position:relative;height:200px}
+.chart-wrap.tall{height:280px}
+.chart-wrap.xtall{height:340px}
+
+/* ── PERIOD TABS ── */
+.period-tabs{display:flex;gap:.4rem;margin-bottom:1.2rem;flex-wrap:wrap}
+.period-btn{font-family:var(--fm);font-size:.65rem;padding:.3rem .8rem;border-radius:7px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .2s}
+.period-btn.active{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.3)}
+
+/* ── INSTRUMENTS TABLE ── */
+.inst-table-wrap{overflow-x:auto;margin-bottom:1.6rem}
+.inst-table{width:100%;border-collapse:collapse;font-size:.76rem}
+.inst-table th{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:.55rem .8rem;border-bottom:1px solid var(--border2);text-align:right;white-space:nowrap}
+.inst-table th:first-child,.inst-table th:nth-child(2){text-align:left}
+.inst-table td{padding:.5rem .8rem;border-bottom:1px solid rgba(255,255,255,.03);text-align:right;white-space:nowrap}
+.inst-table td:first-child{text-align:left;font-family:var(--fm);font-size:.7rem;color:var(--amber)}
+.inst-table td:nth-child(2){text-align:left;color:var(--muted2);font-size:.74rem}
+.inst-table tr:hover td{background:rgba(255,255,255,.02)}
+.val-g{color:var(--green)}.val-a{color:var(--amber)}.val-r{color:var(--rose)}.val-b{color:var(--blue)}
+.flag{font-size:.85rem;margin-right:.3rem}
+
+/* ── RISK CARDS ── */
+.risk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;margin-bottom:1.6rem}
+.risk-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.1rem;position:relative;transition:border-color .2s}
+.risk-card:hover{border-color:rgba(245,166,35,.25)}
+.rc-icon{font-size:1.3rem;margin-bottom:.5rem}
+.rc-title{font-family:var(--fh);font-size:.88rem;font-weight:700;margin-bottom:.3rem}
+.rc-desc{font-size:.75rem;color:var(--muted2);line-height:1.7;margin-bottom:.7rem}
+.rc-metric{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:7px;padding:.35rem .65rem}
+.rc-val{font-family:var(--fm);font-size:.78rem;color:var(--amber)}
+.rc-lbl{font-size:.65rem;color:var(--muted)}
+
+/* ── YIELD CURVE ── */
+.curve-tabs{display:flex;gap:.4rem;margin-bottom:1rem}
+.curve-btn{font-family:var(--fm);font-size:.64rem;padding:.28rem .7rem;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .2s}
+.curve-btn.active{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.3)}
+
+/* ── SIMULATOR ── */
+.sim-layout{display:grid;grid-template-columns:1fr 360px;gap:1.4rem;align-items:start}
+.sim-left{display:flex;flex-direction:column;gap:1.1rem}
+.sim-output{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.5rem;position:sticky;top:1rem}
+
+/* Multiselect */
+.multi-select-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.2rem}
+.ms-group-title{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin-bottom:.7rem;padding-bottom:.4rem;border-bottom:1px solid var(--border2)}
+.ms-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem}
+.ms-chip{font-family:var(--fm);font-size:.65rem;padding:.28rem .65rem;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .18s;user-select:none}
+.ms-chip:hover{border-color:rgba(245,166,35,.3);color:var(--text)}
+.ms-chip.selected{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.4)}
+.ms-chip.selected-mx{color:var(--teal);background:var(--teal-dim);border-color:rgba(0,221,180,.4)}
+.ms-chip.selected-us{color:var(--blue);background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.35)}
+.ms-chip.selected-fx{color:var(--violet);background:var(--violet-dim);border-color:rgba(167,139,250,.35)}
+.ms-chip.selected-fi{color:var(--green);background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.35)}
+
+/* Weight sliders */
+.weight-panel{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.2rem}
+.weight-row{display:flex;align-items:center;gap:.7rem;margin-bottom:.7rem;font-size:.78rem}
+.weight-ticker{font-family:var(--fm);font-size:.68rem;color:var(--amber);width:70px;flex-shrink:0}
+.weight-bar-wrap{flex:1;position:relative}
+input[type=range]{width:100%;height:4px;border-radius:2px;background:var(--bg4);outline:none;-webkit-appearance:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--amber);border:2px solid var(--bg);cursor:pointer;transition:transform .15s}
+input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.2)}
+.weight-val{font-family:var(--fm);font-size:.68rem;color:var(--amber);width:38px;text-align:right;flex-shrink:0}
+.weight-sum{font-family:var(--fm);font-size:.72rem;padding:.4rem .8rem;border-radius:7px;display:flex;justify-content:space-between;margin-top:.5rem}
+.weight-sum.ok{background:rgba(52,211,153,.08);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.weight-sum.warn{background:rgba(251,113,133,.08);color:var(--rose);border:1px solid rgba(251,113,133,.2)}
+
+/* Output panel */
+.out-score{text-align:center;padding:1.2rem 0 1rem;border-bottom:1px solid var(--border2);margin-bottom:1rem}
+.out-score-lbl{font-family:var(--fm);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
+.out-score-val{font-family:var(--fh);font-size:2.8rem;font-weight:800;letter-spacing:-.04em;color:var(--amber)}
+.out-score-sub{font-size:.72rem;color:var(--muted2);margin-top:.15rem}
+.out-row{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid rgba(255,255,255,.035);font-size:.79rem}
+.out-row:last-child{border-bottom:none}
+.out-key{color:var(--muted2)}
+.out-val{font-family:var(--fm);font-size:.74rem}
+.out-val.good{color:var(--green)}.out-val.warn{color:var(--amber)}.out-val.bad{color:var(--rose)}
+.opt-btn{width:100%;margin-top:.9rem;padding:.55rem;border-radius:8px;border:1px solid rgba(245,166,35,.35);background:var(--amber-dim);color:var(--amber);font-family:var(--fm);font-size:.72rem;cursor:pointer;transition:all .2s}
+.opt-btn:hover{background:rgba(245,166,35,.2)}
+
+/* Scenario cards */
+.scenario-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.9rem;margin-bottom:1.4rem}
+.sc-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.1rem;cursor:pointer;transition:all .2s;position:relative}
+.sc-card:hover{border-color:rgba(245,166,35,.3)}
+.sc-card.active{border-color:var(--amber);background:var(--amber-dim)}
+.sc-period{font-family:var(--fm);font-size:.58rem;color:var(--muted);margin-bottom:.3rem}
+.sc-name{font-family:var(--fh);font-size:.9rem;font-weight:700;margin-bottom:.25rem}
+.sc-desc{font-size:.74rem;color:var(--muted2);line-height:1.65}
+.sc-impact{font-family:var(--fm);font-size:.85rem;font-weight:700;margin-top:.6rem}
+
+/* Conclusions */
+.conc-list{display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.6rem}
+.conc-item{display:flex;align-items:flex-start;gap:.75rem;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem 1.1rem;font-size:.82rem;color:rgba(220,232,245,.7);line-height:1.75}
+.conc-arrow{font-family:var(--fm);font-size:.72rem;color:var(--amber);flex-shrink:0;background:var(--amber-dim);border-radius:5px;padding:.1rem .38rem}
+
+/* Footer */
+.dash-footer{padding:1.2rem 2.5rem 2.5rem;max-width:1280px;margin:0 auto;border-top:1px solid var(--border2);display:flex;justify-content:space-between;align-items:center;font-family:var(--fm);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem;margin-top:3rem}
+
+/* Animations */
+@keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:999px}
+
+@media(max-width:900px){
+  .kpi-strip{grid-template-columns:repeat(2,1fr);padding:0 1.2rem}
+  .charts-2,.charts-3,.risk-grid,.scenario-grid{grid-template-columns:1fr}
+  .chart-box.full,.chart-box.span2{grid-column:span 1}
+  .sim-layout{grid-template-columns:1fr}
+  .dash-header,.tabs-wrap{padding-left:1.2rem;padding-right:1.2rem}
+}
+</style>
+</head>
+<body>
+
+<!-- Back -->
+<div class="back-bar">
+  <a href="javascript:history.back()" class="back-btn">
+    <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    Portafolio
+  </a>
+  <div class="breadcrumb">Portafolio <span>/</span> <span>P2 · Portafolios & VaR</span></div>
+</div>
+
+<!-- Header -->
+<div class="dash-header">
+  <div class="eyebrow">02 · Finanzas Cuantitativas · 2024</div>
+  <h1 class="dash-title">Optimización de Portafolios & <span class="at">VaR · IPC & S&P 500 en MXN</span></h1>
+  <div class="dash-meta">
+    <span class="badge b-source">📂 Yahoo Finance API · Banxico SIE · 10 años</span>
+    <span class="badge b-py">● Python</span>
+    <span class="badge b-r">● R</span>
+    <span class="badge b-sql">● SQL</span>
+    <span class="badge b-type">Finanzas Cuantitativas</span>
+  </div>
+  <p class="dash-desc">Modelo de optimización de portafolios multi-activo con cobertura cambiaria MXN/USD. Integra VaR histórico, paramétrico y Monte Carlo con GARCH(1,1), frontera eficiente de Markowitz y análisis de riesgo de mercado en tasas, divisas e instrumentos.</p>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-strip" style="margin-top:1.8rem">
+  <div class="kpi" style="--kpi-color:var(--amber)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--amber)">CVaR 95%</span>
+    <div class="kpi-lbl">Expected Shortfall</div>
+    <div class="kpi-sub">Riesgo de cola extrema</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>CVaR</strong> (Conditional Value at Risk): pérdida esperada promedio en el peor 5% de escenarios. Supera al VaR en captura de riesgo de cola.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Menor CVaR con mayor retorno esperado — el balance óptimo define el portafolio en la <strong>frontera eficiente</strong>.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Métrica preferida por <strong>Basilea III y CNSF</strong> para capital regulatorio en riesgo de mercado desde 2019 (sustituyó al VaR en modelos internos).</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kpi-color:var(--rose)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--rose)">−22%</span>
+    <div class="kpi-lbl">Reducción VaR</div>
+    <div class="kpi-sub">Con cobertura USD/MXN</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Reducción de VaR</strong>: ganancia en control de riesgo al agregar cobertura cambiaria sobre posiciones en USD dentro de un portafolio denominado en MXN.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Reducción mayor al 15% sin sacrificar retorno esperado valida la eficiencia de la cobertura. Aquí: <strong>−22%</strong>.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Decisión de <strong>hedging cambiario</strong>: cuándo cubrir con futuros USD/MXN (CME/MexDer) y a qué costo vs. beneficio en reducción de VaR.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kpi-color:var(--green)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--green)">1.34</span>
+    <div class="kpi-lbl">Sharpe Ratio óptimo</div>
+    <div class="kpi-sub">Frontera de Markowitz</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Sharpe Ratio</strong>: retorno excedente por unidad de riesgo asumido. SR = (Rp − Rf) / σp, donde Rf es CETES 28d en MXN.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">SR &gt; 1 se considera bueno en mercados desarrollados. En MX con TIIE alta (&gt;11%), SR &gt; 0.8 ya es competitivo.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Seleccionar el <strong>portafolio óptimo</strong> sobre la frontera eficiente: el punto de máximo Sharpe maximiza retorno ajustado por riesgo.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kpi-color:var(--violet)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--violet)">GARCH(1,1)</span>
+    <div class="kpi-lbl">Modelo volatilidad</div>
+    <div class="kpi-sub">Volatilidad dinámica</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>GARCH(1,1)</strong>: modelo que captura clusters de volatilidad — períodos de alta volatilidad tienden a seguirse. σ²ₜ = ω + α·ε²ₜ₋₁ + β·σ²ₜ₋₁.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Reduce violaciones VaR de 8.2% a 5.1% vs. volatilidad histórica constante — cumple el objetivo del 5% de la conf. 95%.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Recalibrar el VaR diariamente en producción. Requerido por <strong>CNBV Circular Única de Instituciones de Crédito</strong> para modelos de riesgo de mercado internos.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-wrap" style="margin-top:2rem">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('portfolio',this)">📊 Análisis del Portafolio</button>
+    <button class="tab-btn" onclick="switchTab('instruments',this)">📋 Instrumentos</button>
+    <button class="tab-btn" onclick="switchTab('curves',this)">📈 Curvas de Tasas</button>
+    <button class="tab-btn" onclick="switchTab('simulator',this)">🎛️ Simulador</button>
+  </div>
+
+  <!-- ══ TAB: PORTFOLIO ══ -->
+  <div class="tab-panel active" id="tab-portfolio">
+
+    <div class="sec-title">Frontera Eficiente & Rendimiento</div>
+    <p class="sec-sub">Markowitz con 25 activos BMV + S&P 500 · Tasa libre de riesgo: CETES 28d · 10 años histórico · MXN</p>
+    <div class="charts-2" style="margin-bottom:1.6rem">
+      <div class="chart-box">
+        <div class="cb-label">Frontera Eficiente de Markowitz <span class="cb-badge">Sharpe máx. 1.34</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-frontier"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Frontera eficiente</strong>: conjunto de portafolios que maximizan retorno esperado para cada nivel de riesgo. Definida por Markowitz (1952).</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El punto de <strong>máximo Sharpe</strong> (estrella violeta) es el portafolio óptimo. Portafolios por debajo de la curva son ineficientes.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Base de la gestión cuantitativa de activos. Marco regulatorio <strong>CNSF</strong> para reservas de seguros exige justificación de asignación de activos con metodología equivalente.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Retornos vs. VaR 95% · Serie Histórica <span class="cb-badge">2014–2024</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-var-hist"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>VaR histórico</strong>: cuantil de la distribución empírica de retornos. No asume distribución normal — usa retornos observados reales.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Puntos <span style="color:var(--rose)">rojos</span> indican violaciones del VaR (retornos peores al límite). Una frecuencia &gt;5% señala subestimación del riesgo.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Backtesting regulatorio: <strong>Basilea III</strong> exige que las violaciones no superen el 5% en ventana de 250 días. Más de 10 violaciones en 250 días activa zona roja.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GARCH -->
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Volatilidad Condicional GARCH(1,1) vs. Histórica <span class="cb-badge">IPC + S&P 500 MXN</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-garch"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Volatilidad condicional GARCH</strong>: estimación dinámica que aumenta tras períodos de turbulencia y decrece en calma — captura el efecto <em>clustering</em> observado en mercados.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Picos visibles en COVID-19 (mar 2020) y crisis Fed 2022. La volatilidad GARCH reacciona más rápido que la histórica de ventana fija.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Recalibrar el VaR y CVaR diariamente. En <strong>CNBV/Banxico</strong>, los modelos de riesgo de mercado deben actualizar la volatilidad al menos mensualmente con metodología documentada.</span></div>
+      </div>
+    </div>
+
+    <!-- Period comparison -->
+    <div class="sec-title">Comparativa por Período de Mercado</div>
+    <p class="sec-sub">Comportamiento del portafolio óptimo en distintos regímenes macroeconómicos · MXN</p>
+    <div class="period-tabs">
+      <button class="period-btn active" onclick="switchPeriod('normal',this)">📈 Mercado Normal</button>
+      <button class="period-btn" onclick="switchPeriod('covid',this)">🦠 COVID-19 (2020)</button>
+      <button class="period-btn" onclick="switchPeriod('fed',this)">🏦 Crisis Fed (2022)</button>
+      <button class="period-btn" onclick="switchPeriod('tequila',this)">🌮 Crisis Tequila (1994)</button>
+    </div>
+    <div class="charts-3" style="margin-bottom:1.6rem">
+      <div class="chart-box">
+        <div class="cb-label">Retorno Acumulado <span class="cb-badge" id="period-badge">2014–2024</span></div>
+        <div class="chart-wrap"><canvas id="chart-period-ret"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Drawdown Máximo <span class="cb-badge" id="period-dd-badge">Período seleccionado</span></div>
+        <div class="chart-wrap"><canvas id="chart-period-dd"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">VaR Dinámico <span class="cb-badge">95% GARCH</span></div>
+        <div class="chart-wrap"><canvas id="chart-period-var"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Segment by asset -->
+    <div class="sec-title">Segmentación por Clase de Activo</div>
+    <p class="sec-sub">Contribución al riesgo y retorno por segmento · Portafolio óptimo Sharpe máx.</p>
+    <div class="charts-2" style="margin-bottom:1.6rem">
+      <div class="chart-box">
+        <div class="cb-label">Contribución al Riesgo (CVaR) por Activo <span class="cb-badge">% del total</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-risk-contrib"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Contribución marginal al riesgo</strong>: cuánto aporta cada activo al CVaR total del portafolio, considerando correlaciones entre activos.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Un activo con alta contribución al riesgo pero bajo retorno es candidato a reducir ponderación en rebalanceo.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt"><strong>Gestión activa del portafolio</strong>: permite identificar concentración de riesgo y ajustar pesos para cumplir límites de VaR por segmento bajo política de inversión.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Correlación entre Clases de Activo <span class="cb-badge">Heatmap 10 años</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-corr"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Matriz de correlación</strong>: mide co-movimiento entre pares de activos. Correlación 1 = mueven igual, −1 = opuesto, 0 = independientes.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Activos con baja correlación entre sí (<0.3) generan diversificación real. Correlaciones cercanas a 1 no aportan diversificación.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Construcción de portafolios: <strong>Markowitz</strong> requiere la matriz de covarianza (derivada de correlaciones) para calcular el riesgo total del portafolio.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conclusions -->
+    <div class="sec-title">Conclusiones & Hallazgos Clave</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Resultados del análisis · Yahoo Finance + Banxico SIE · 10 años histórico · Reemplaza con tus propios hallazgos</p>
+    <div class="conc-list">
+      <div class="conc-item"><span class="conc-arrow">→</span>El CVaR al 95% supera al VaR histórico como medida de riesgo de cola durante crisis (COVID-19, Fed 2022), capturando un 34% más de pérdida esperada en escenarios extremos — validando su adopción como métrica regulatoria en Basilea III desde 2019.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>La frontera eficiente con activos mexicanos (IPC, BIMBOA, AMXL, WALMEX) + cobertura cambiaria USD reduce el VaR del portafolio un 22% sin sacrificar retorno esperado, con Sharpe Ratio de 1.34 usando CETES 28d como tasa libre de riesgo en MXN.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>El modelo GARCH(1,1) supera la volatilidad histórica constante en backtesting: reduce violaciones VaR del 8.2% al 5.1% en ventana de 250 días, cumpliendo el marco regulatorio CNBV/Basilea III para modelos internos de riesgo de mercado.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>La comparativa de períodos revela que durante COVID-19 el drawdown máximo del portafolio no cubierto alcanzó −38%, mientras el portafolio con cobertura cambiaria limitó el drawdown al −19%, confirmando la efectividad del hedging en MXN en escenarios de vuelo a la calidad.</div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: INSTRUMENTS ══ -->
+  <div class="tab-panel" id="tab-instruments">
+    <div class="sec-title">Universo de Instrumentos</div>
+    <p class="sec-sub">25 acciones BMV + referencias S&P 500 · Métricas: Retorno · Volatilidad · Beta · PER · ROIC · 10 años histórico en MXN</p>
+    <div class="inst-table-wrap">
+      <table class="inst-table" id="instruments-table">
+        <thead>
+          <tr>
+            <th>Ticker</th><th>Nombre</th><th>Ret. 1a</th><th>Ret. 3a</th><th>Vol. Anual</th><th>Beta</th><th>PER</th><th>ROIC</th><th>Clase</th>
+          </tr>
+        </thead>
+        <tbody id="inst-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ TAB: CURVAS ══ -->
+  <div class="tab-panel" id="tab-curves">
+    <div class="sec-title">Curvas de Tasas de Interés</div>
+    <p class="sec-sub">TIIE México vs. US Treasury · Spread soberano · Riesgo de tasa e impacto en portafolio MXN</p>
+
+    <div class="curve-tabs">
+      <button class="curve-btn active" onclick="switchCurve('both',this)">TIIE + UST Comparada</button>
+      <button class="curve-btn" onclick="switchCurve('tiie',this)">TIIE México</button>
+      <button class="curve-btn" onclick="switchCurve('ust',this)">US Treasury</button>
+      <button class="curve-btn" onclick="switchCurve('spread',this)">Spread Soberano</button>
+      <button class="curve-btn" onclick="switchCurve('historic',this)">Evolución Histórica</button>
+    </div>
+
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label" id="curve-label">Curva TIIE vs. US Treasury — Actual <span class="cb-badge">Mayo 2024</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-curve"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Curva de tasas</strong>: representa el rendimiento de instrumentos de deuda soberana a distintos plazos. La forma de la curva anticipa expectativas macroeconómicas.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Curva normal (pendiente positiva) indica expectativas de crecimiento. Curva invertida (corto &gt; largo) anticipa recesión. El <strong>spread MX-US</strong> refleja riesgo país.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Valuación de bonos, cálculo de <strong>DV01</strong> (sensibilidad al cambio de 1pb), pricing de derivados de tasa y definición de la tasa de descuento en reservas actuariales bajo <strong>IFRS 17</strong>.</span></div>
+      </div>
+    </div>
+
+    <!-- Risk metrics for rates -->
+    <div class="sec-title">Métricas de Riesgo de Tasa</div>
+    <p class="sec-sub">Sensibilidad del portafolio de renta fija a movimientos de la curva · Posición MXN</p>
+    <div class="risk-grid">
+      <div class="risk-card">
+        <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+        <div class="rc-icon">⏱️</div>
+        <div class="rc-title">Duración Modificada</div>
+        <div class="rc-desc">Sensibilidad del precio del bono a cambios en tasas de interés. Portafolio actual: mezcla CETES 28d + Bono M 10a.</div>
+        <div class="rc-metric"><span class="rc-lbl">Duración portafolio</span><span class="rc-val">4.8 años</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Duración modificada</strong>: cambio porcentual en el precio del bono por cada 1% de cambio en tasas. DM = −ΔP/P ÷ Δy.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Mayor duración = mayor sensibilidad al riesgo de tasa. Portafolios conservadores limitan duración a &lt;3 años.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Immunización de portafolio: igualar duración de activos y pasivos elimina riesgo de tasa en fondos de pensiones y reservas <strong>CNSF</strong>.</span></div>
+        </div>
+      </div>
+      <div class="risk-card">
+        <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+        <div class="rc-icon">📐</div>
+        <div class="rc-title">DV01</div>
+        <div class="rc-desc">Cambio en valor monetario del portafolio ante movimiento de 1 punto base (0.01%) en la tasa de interés.</div>
+        <div class="rc-metric"><span class="rc-lbl">DV01 portafolio MXN</span><span class="rc-val">$48,200 MXN</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>DV01</strong> (Dollar Value of 1bp): pérdida o ganancia en MXN si las tasas suben/bajan 1pb (0.01%). Métrica de sensibilidad absoluta en moneda.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">DV01 bajo = portafolio menos sensible a movimientos de TIIE/Banxico. Permite comparar riesgo de tasa entre portafolios de distinto tamaño.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Definir límites de riesgo de tasa en <strong>tesorerías y fondos de inversión</strong>. Un alza de 100pb en TIIE generaría una pérdida de ~$4.82M MXN en este portafolio.</span></div>
+        </div>
+      </div>
+      <div class="risk-card">
+        <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+        <div class="rc-icon">💱</div>
+        <div class="rc-title">Riesgo Cambiario MXN/USD</div>
+        <div class="rc-desc">Exposición neta en USD dentro del portafolio MXN. Posición sin cobertura: 35% del portafolio en activos USD.</div>
+        <div class="rc-metric"><span class="rc-lbl">VaR cambiario 95%</span><span class="rc-val">−3.8% MXN</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Riesgo cambiario</strong>: pérdida potencial por depreciación del peso ante posiciones en activos denominados en USD sin cobertura.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">VaR cambiario &lt;2% es aceptable en portafolios conservadores MXN. La cobertura con futuros MXDer/CME reduce este riesgo a &lt;0.5%.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Decisión de <strong>hedging en MexDer</strong>: contratos de futuros USD/MXN para neutralizar exposición cambiaria en portafolios institucionales bajo regulación <strong>CNBV</strong>.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Evolución MXN/USD & Spread TIIE−UST 10a · 2014–2024 <span class="cb-badge">Riesgo cambiario histórico</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-fx"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Spread TIIE−UST</strong>: diferencial entre la tasa mexicana y la estadounidense al mismo plazo. Refleja prima de riesgo país y expectativas de devaluación.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Spread comprimido (&lt;300pb) = mayor confianza en MXN. Spread en expansión &gt; 500pb suele anticipar presión cambiaria.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Monitor de <strong>carry trade MXN</strong>: inversores extranjeros entran a Bonos M cuando el spread compensa el riesgo cambiario — flujos que afectan el tipo de cambio y las tasas domésticas.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: SIMULATOR ══ -->
+  <div class="tab-panel" id="tab-simulator">
+
+    <div class="sub-tabs">
+      <button class="sub-btn active" onclick="switchSub('builder',this)">🏗️ Constructor de Portafolio</button>
+      <button class="sub-btn" onclick="switchSub('scenarios',this)">⚡ Escenarios de Estrés</button>
+    </div>
+
+    <!-- Sub-tab: Builder -->
+    <div class="sub-panel active" id="sub-builder">
+      <div class="sec-title">Constructor de Portafolio</div>
+      <p class="sec-sub" style="margin-bottom:1.2rem">Selecciona instrumentos y ajusta pesos · Output en tiempo real · Todo denominado en MXN</p>
+
+      <div class="sim-layout">
+        <div class="sim-left">
+
+          <!-- Multiselect -->
+          <div class="multi-select-wrap">
+            <div class="ms-group-title">🇲🇽 Acciones BMV — IPC 25</div>
+            <div class="ms-chips" id="chips-mx"></div>
+            <div class="ms-group-title">🇺🇸 Acciones S&P 500</div>
+            <div class="ms-chips" id="chips-us"></div>
+            <div class="ms-group-title">💱 Divisas / FX</div>
+            <div class="ms-chips" id="chips-fx"></div>
+            <div class="ms-group-title">📊 Renta Fija MX & US</div>
+            <div class="ms-chips" id="chips-fi"></div>
+          </div>
+
+          <!-- Weight sliders -->
+          <div class="weight-panel">
+            <div class="cb-label" style="margin-bottom:.9rem">Pesos del Portafolio <span class="cb-badge" id="selected-count">0 instrumentos</span></div>
+            <div id="weight-sliders"><p style="font-size:.78rem;color:var(--muted);text-align:center;padding:1rem 0">Selecciona al menos 2 instrumentos arriba para comenzar</p></div>
+            <div class="weight-sum warn" id="weight-sum-bar">
+              <span>Suma de pesos</span><span id="weight-sum-val">0%</span>
+            </div>
+            <button class="opt-btn" onclick="applyOptimal()">⚡ Aplicar Portafolio Óptimo (Máx. Sharpe)</button>
+          </div>
+
+          <!-- Result chart -->
+          <div class="chart-box">
+            <div class="cb-label">Distribución del Portafolio Simulado <span class="cb-badge" id="sim-dist-badge">0 activos</span></div>
+            <div class="chart-wrap"><canvas id="chart-sim-pie"></canvas></div>
+          </div>
+          <div class="chart-box">
+            <div class="cb-label">Retorno vs. Riesgo — Posición en Frontera</div>
+            <div class="chart-wrap"><canvas id="chart-sim-frontier"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Output -->
+        <div class="sim-output">
+          <div class="out-score">
+            <div class="out-score-lbl">Sharpe Ratio</div>
+            <div class="out-score-val" id="sim-sharpe">—</div>
+            <div class="out-score-sub">Retorno ajustado por riesgo · Rf = CETES 28d</div>
+          </div>
+          <div class="out-row"><span class="out-key">Retorno esperado anual</span><span class="out-val" id="sim-ret">—</span></div>
+          <div class="out-row"><span class="out-key">Volatilidad anualizada</span><span class="out-val" id="sim-vol">—</span></div>
+          <div class="out-row"><span class="out-key">VaR 95% (1 día) MXN</span><span class="out-val bad" id="sim-var">—</span></div>
+          <div class="out-row"><span class="out-key">CVaR 95% (1 día) MXN</span><span class="out-val bad" id="sim-cvar">—</span></div>
+          <div class="out-row"><span class="out-key">Beta portafolio vs. IPC</span><span class="out-val" id="sim-beta">—</span></div>
+          <div class="out-row"><span class="out-key">Drawdown máximo histórico</span><span class="out-val bad" id="sim-dd">—</span></div>
+          <div class="out-row"><span class="out-key">Exposición MXN/USD</span><span class="out-val warn" id="sim-fx">—</span></div>
+          <div class="out-row"><span class="out-key">Instrumentos seleccionados</span><span class="out-val" id="sim-count">0</span></div>
+          <div style="margin-top:1rem;padding:.8rem;background:var(--bg3);border-radius:8px;border:1px solid var(--border2)">
+            <div style="font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem">📋 Perfil del portafolio</div>
+            <p style="font-size:.78rem;color:rgba(220,232,245,.6);line-height:1.75" id="sim-profile">Selecciona instrumentos para generar el perfil de riesgo del portafolio.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-tab: Scenarios -->
+    <div class="sub-panel" id="sub-scenarios">
+      <div class="sec-title">Simulador de Escenarios de Estrés</div>
+      <p class="sec-sub" style="margin-bottom:1.2rem">Impacto en el portafolio óptimo bajo distintos regímenes macroeconómicos históricos · MXN</p>
+
+      <div class="scenario-grid">
+        <div class="sc-card active" onclick="selectScenario('normal',this)">
+          <div class="sc-period">2014–2024 · Referencia</div>
+          <div class="sc-name">📈 Mercado Normal</div>
+          <div class="sc-desc">Condiciones promedio del período. Volatilidad moderada, TIIE estable, MXN entre 17–19 USD.</div>
+          <div class="sc-impact" style="color:var(--green)">VaR 95%: −2.1%/día</div>
+        </div>
+        <div class="sc-card" onclick="selectScenario('covid',this)">
+          <div class="sc-period">Feb–Abr 2020 · Crisis sistémica</div>
+          <div class="sc-name">🦠 COVID-19</div>
+          <div class="sc-desc">Colapso de mercados globales. IPC −38%, MXN se depreció de $18.5 a $25.1 por USD en 6 semanas.</div>
+          <div class="sc-impact" style="color:var(--rose)">VaR 95%: −6.8%/día</div>
+        </div>
+        <div class="sc-card" onclick="selectScenario('fed',this)">
+          <div class="sc-period">Ene–Dic 2022 · Restricción monetaria</div>
+          <div class="sc-name">🏦 Crisis Fed 2022</div>
+          <div class="sc-desc">Fed sube tasas 425pb en un año. Bonos caen −18%. MXN sorprendentemente se aprecia vs. USD.</div>
+          <div class="sc-impact" style="color:var(--amber)">VaR 95%: −4.2%/día</div>
+        </div>
+        <div class="sc-card" onclick="selectScenario('tequila',this)">
+          <div class="sc-period">Dic 1994 – Mar 1995 · Crisis MX</div>
+          <div class="sc-name">🌮 Crisis Tequila</div>
+          <div class="sc-desc">Devaluación del peso −50% en semanas. Tasas CETES al 80% anual. Efecto dominó en LATAM.</div>
+          <div class="sc-impact" style="color:var(--rose)">VaR 95%: −11.4%/día</div>
+        </div>
+      </div>
+
+      <div class="charts-2" style="margin-bottom:1.6rem">
+        <div class="chart-box">
+          <div class="cb-label" id="sc-chart-label">Impacto en Portafolio — Mercado Normal <span class="cb-badge">MXN</span></div>
+          <div class="chart-wrap tall"><canvas id="chart-scenario"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <div class="cb-label">Comparativa VaR entre Escenarios <span class="cb-badge">95% · 1 día</span></div>
+          <div class="chart-wrap tall"><canvas id="chart-scenario-comp"></canvas></div>
+        </div>
+      </div>
+
+      <div class="chart-box full" style="margin-bottom:1.6rem">
+        <div class="cb-label">Impacto por Clase de Activo — Escenario Seleccionado <span class="cb-badge" id="sc-asset-badge">Mercado Normal</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-scenario-assets"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Análisis de escenarios</strong>: estima el impacto de choques históricos sobre el portafolio actual, aplicando los retornos observados en cada crisis como shock sobre las posiciones.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Identificar qué clase de activo absorbe más pérdida en cada escenario y si la diversificación funciona en momentos de estrés (correlaciones tienden a 1 en crisis).</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt"><strong>Pruebas de estrés regulatorias</strong>: CNBV, Banxico y CNSF exigen escenarios de estrés documentados para instituciones reguladas. El análisis histórico es la metodología más aceptada.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="dash-footer">
+  <span style="color:var(--muted2)">// <span style="color:var(--amber)">P2 · Portafolios & VaR</span> · Yahoo Finance · Banxico SIE · Demostrativo · MXN</span>
+  <span>Python · R · SQL · <span style="color:var(--violet)">2024</span></span>
+</div>
+
+<script>
+// ─────────────────────────────────
+// CHART.JS DEFAULTS
+// ─────────────────────────────────
+Chart.defaults.color='rgba(220,232,245,0.45)';
+Chart.defaults.borderColor='rgba(255,255,255,0.045)';
+Chart.defaults.font.family="'JetBrains Mono','monospace'";
+Chart.defaults.font.size=10;
+Chart.defaults.plugins.legend.labels.boxWidth=10;
+Chart.defaults.plugins.legend.labels.padding=14;
+Chart.defaults.plugins.legend.labels.usePointStyle=true;
+
+const BASE={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(220,232,245,.5)'}},tooltip:{backgroundColor:'#101820',titleColor:'#dce8f5',bodyColor:'rgba(220,232,245,.7)',borderColor:'rgba(255,255,255,.07)',borderWidth:1,padding:10}},scales:{x:{grid:{color:'rgba(255,255,255,.028)'},ticks:{color:'rgba(220,232,245,.4)'}},y:{grid:{color:'rgba(255,255,255,.028)'},ticks:{color:'rgba(220,232,245,.4)'}}}};
+function mkOpts(ex={}){const o=JSON.parse(JSON.stringify(BASE));if(ex.scales)Object.assign(o.scales,ex.scales);if(ex.plugins)Object.assign(o.plugins,ex.plugins);if(ex.indexAxis)o.indexAxis=ex.indexAxis;return o;}
+
+// ─────────────────────────────────
+// INFO TOGGLE
+// ─────────────────────────────────
+function toggleInfo(btn){
+  const p=btn.closest('.kpi,.chart-box,.risk-card');
+  if(!p)return;
+  const panel=p.querySelector('.info-panel');
+  if(!panel)return;
+  const open=panel.classList.contains('open');
+  panel.classList.toggle('open',!open);
+  btn.classList.toggle('active',!open);
+}
+
+// ─────────────────────────────────
+// TAB SWITCHING
+// ─────────────────────────────────
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+function switchSub(id,btn){
+  document.querySelectorAll('.sub-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.sub-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('sub-'+id).classList.add('active');
+}
+
+// ─────────────────────────────────
+// DATA: INSTRUMENTS
+// ─────────────────────────────────
+const INSTRUMENTS_MX=[
+  {t:'AMXL',n:'América Móvil',ret1:12.4,ret3:8.2,vol:18.4,beta:0.92,per:14.2,roic:18.6,cls:'Telecom'},
+  {t:'WALMEX',n:'Walmart de México',ret1:15.8,ret3:11.4,vol:14.2,beta:0.74,per:28.4,roic:22.1,cls:'Consumo'},
+  {t:'BIMBOA',n:'Grupo Bimbo',ret1:9.2,ret3:7.8,vol:16.8,beta:0.68,per:22.1,roic:11.4,cls:'Consumo'},
+  {t:'FEMSA',n:'FEMSA',ret1:11.6,ret3:9.4,vol:15.6,beta:0.81,per:19.8,roic:14.2,cls:'Consumo'},
+  {t:'GFNORTE',n:'Banorte',ret1:18.4,ret3:14.2,vol:22.4,beta:1.18,per:10.4,roic:16.8,cls:'Financiero'},
+  {t:'CEMEX',n:'CEMEX',ret1:8.4,ret3:5.2,vol:28.6,beta:1.42,per:12.4,roic:8.2,cls:'Industrial'},
+  {t:'GRUMAB',n:'Gruma',ret1:14.2,ret3:10.8,vol:17.4,beta:0.72,per:16.8,roic:19.4,cls:'Consumo'},
+  {t:'KIMBERA',n:'Kimberly-Clark MX',ret1:10.8,ret3:8.6,vol:13.8,beta:0.64,per:24.2,roic:24.8,cls:'Consumo'},
+  {t:'ALSEA',n:'Alsea',ret1:16.4,ret3:8.4,vol:26.8,beta:1.24,per:18.4,roic:9.8,cls:'Consumo'},
+  {t:'CUERVO',n:'José Cuervo',ret1:13.6,ret3:9.2,vol:15.2,beta:0.58,per:21.4,roic:28.4,cls:'Consumo'},
+  {t:'ORBIA',n:'Orbia',ret1:6.4,ret3:4.8,vol:24.2,beta:1.08,per:11.8,roic:10.4,cls:'Industrial'},
+  {t:'LALA',n:'Grupo Lala',ret1:7.8,ret3:5.6,vol:18.8,beta:0.76,per:15.4,roic:8.6,cls:'Consumo'},
+  {t:'BACHOCO',n:'Industrias Bachoco',ret1:11.2,ret3:8.8,vol:14.6,beta:0.54,per:13.2,roic:16.2,cls:'Consumo'},
+  {t:'MEGA',n:'Megacable',ret1:9.6,ret3:7.2,vol:16.4,beta:0.82,per:17.8,roic:12.8,cls:'Telecom'},
+  {t:'GCARSOA',n:'Grupo Carso',ret1:13.8,ret3:10.2,vol:19.2,beta:0.96,per:20.6,roic:15.4,cls:'Industrial'},
+  {t:'ELEKTRA',n:'Grupo Elektra',ret1:22.4,ret3:11.8,vol:38.4,beta:1.64,per:8.4,roic:12.4,cls:'Financiero'},
+  {t:'IENOVA',n:'IEnova',ret1:8.8,ret3:6.4,vol:17.2,beta:0.72,per:18.4,roic:11.8,cls:'Energía'},
+  {t:'PINFRA',n:'Promotora de Infraestructura',ret1:12.6,ret3:9.6,vol:15.8,beta:0.66,per:14.8,roic:17.6,cls:'Infraest.'},
+  {t:'BOLSA',n:'Bolsa Mexicana de Valores',ret1:14.4,ret3:11.2,vol:16.2,beta:0.88,per:22.8,roic:21.2,cls:'Financiero'},
+  {t:'GAPB',n:'Grupo Aeroportuario Pacífico',ret1:17.8,ret3:13.4,vol:21.4,beta:0.94,per:16.4,roic:19.8,cls:'Infraest.'},
+  {t:'OMAB',n:'OMA Aeropuertos',ret1:19.2,ret3:14.8,vol:22.8,beta:0.98,per:14.2,roic:22.4,cls:'Infraest.'},
+  {t:'ASURB',n:'Aeropuertos del Sureste',ret1:16.4,ret3:12.6,vol:20.4,beta:0.86,per:15.8,roic:20.8,cls:'Infraest.'},
+  {t:'VOLAR',n:'Volaris',ret1:4.8,ret3:2.4,vol:42.8,beta:1.84,per:7.4,roic:6.4,cls:'Transporte'},
+  {t:'LACOMER',n:'La Comer',ret1:11.4,ret3:9.2,vol:13.4,beta:0.62,per:19.4,roic:14.8,cls:'Consumo'},
+  {t:'CHDRAUI',n:'Chedraui',ret1:13.2,ret3:10.6,vol:14.8,beta:0.68,per:17.2,roic:13.6,cls:'Consumo'},
+];
+const INSTRUMENTS_US=[
+  {t:'AAPL',n:'Apple',ret1:18.4,ret3:14.2,vol:22.4,beta:1.24,per:28.4,roic:42.8,cls:'Tecnología'},
+  {t:'MSFT',n:'Microsoft',ret1:22.6,ret3:18.4,vol:20.8,beta:1.08,per:32.4,roic:38.6,cls:'Tecnología'},
+  {t:'AMZN',n:'Amazon',ret1:16.8,ret3:12.4,vol:28.4,beta:1.42,per:42.8,roic:14.2,cls:'Tecnología'},
+  {t:'JPM',n:'JPMorgan Chase',ret1:14.2,ret3:10.8,vol:18.6,beta:1.14,per:12.4,roic:14.8,cls:'Financiero'},
+  {t:'JNJ',n:'Johnson & Johnson',ret1:8.4,ret3:6.8,vol:12.4,beta:0.64,per:18.4,roic:18.6,cls:'Salud'},
+  {t:'XOM',n:'ExxonMobil',ret1:12.8,ret3:9.4,vol:22.8,beta:0.84,per:14.2,roic:16.4,cls:'Energía'},
+  {t:'PG',n:'Procter & Gamble',ret1:9.2,ret3:7.4,vol:11.8,beta:0.58,per:24.8,roic:22.4,cls:'Consumo'},
+  {t:'SPY',n:'S&P 500 ETF',ret1:14.8,ret3:11.2,vol:16.4,beta:1.00,per:22.4,roic:0,cls:'ETF'},
+  {t:'EWW',n:'iShares MSCI México ETF',ret1:11.4,ret3:8.6,vol:20.4,beta:0.92,per:14.8,roic:0,cls:'ETF MX'},
+  {t:'VT',n:'Vanguard Total World',ret1:12.4,ret3:9.8,vol:15.2,beta:0.96,per:19.2,roic:0,cls:'ETF Global'},
+];
+const INSTRUMENTS_FX=[
+  {t:'USD/MXN',n:'Dólar / Peso Mexicano',ret1:4.2,ret3:2.8,vol:12.4,beta:-0.62,per:0,roic:0,cls:'Divisa'},
+  {t:'EUR/MXN',n:'Euro / Peso Mexicano',ret1:3.8,ret3:2.4,vol:13.8,beta:-0.58,per:0,roic:0,cls:'Divisa'},
+  {t:'JPY/MXN',n:'Yen / Peso Mexicano',ret1:-2.4,ret3:-1.8,vol:11.2,beta:0.24,per:0,roic:0,cls:'Divisa'},
+  {t:'GBP/MXN',n:'Libra / Peso Mexicano',ret1:3.4,ret3:2.2,vol:14.6,beta:-0.48,per:0,roic:0,cls:'Divisa'},
+];
+const INSTRUMENTS_FI=[
+  {t:'CETES28',n:'CETES 28 días',ret1:11.25,ret3:8.4,vol:1.2,beta:0.02,per:0,roic:0,cls:'Renta Fija MX'},
+  {t:'BONO10A',n:'Bono M 10 años MX',ret1:9.8,ret3:8.2,vol:6.4,beta:0.14,per:0,roic:0,cls:'Renta Fija MX'},
+  {t:'TIIE91',n:'TIIE 91 días',ret1:11.1,ret3:8.2,vol:0.8,beta:0.01,per:0,roic:0,cls:'Renta Fija MX'},
+  {t:'UST10A',n:'US Treasury 10 años',ret1:4.8,ret3:3.2,vol:8.2,beta:0.08,per:0,roic:0,cls:'Renta Fija US'},
+  {t:'TBill3M',n:'T-Bill 3 meses USA',ret1:5.4,ret3:3.8,vol:0.4,beta:0.01,per:0,roic:0,cls:'Renta Fija US'},
+];
+
+// ─────────────────────────────────
+// RENDER INSTRUMENTS TABLE
+// ─────────────────────────────────
+function colorVal(v,good,warn){
+  if(v>=good)return`<span class="val-g">${v}</span>`;
+  if(v>=warn)return`<span class="val-a">${v}</span>`;
+  return`<span class="val-r">${v}</span>`;
+}
+function renderTable(){
+  const tbody=document.getElementById('inst-tbody');
+  const all=[...INSTRUMENTS_MX.map(i=>({...i,flag:'🇲🇽'})),...INSTRUMENTS_US.map(i=>({...i,flag:'🇺🇸'})),...INSTRUMENTS_FX.map(i=>({...i,flag:'💱'})),...INSTRUMENTS_FI.map(i=>({...i,flag:'📊'}))];
+  tbody.innerHTML=all.map(i=>`<tr>
+    <td>${i.flag} ${i.t}</td>
+    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${i.n}</td>
+    <td>${colorVal(i.ret1,12,6)}%</td>
+    <td>${colorVal(i.ret3,9,4)}%</td>
+    <td><span class="val-a">${i.vol}%</span></td>
+    <td>${i.beta>1.2?`<span class="val-r">${i.beta}</span>`:i.beta<0.7?`<span class="val-g">${i.beta}</span>`:`<span class="val-a">${i.beta}</span>`}</td>
+    <td>${i.per>0?colorVal(i.per,30,15)+'x':'<span class="val-b">N/A</span>'}</td>
+    <td>${i.roic>0?colorVal(i.roic,18,10)+'%':'<span class="val-b">N/A</span>'}</td>
+    <td style="color:var(--muted2);font-size:.68rem">${i.cls}</td>
+  </tr>`).join('');
+}
+renderTable();
+
+// ─────────────────────────────────
+// CHARTS: PORTFOLIO TAB
+// ─────────────────────────────────
+// Markowitz Frontier
+(()=>{
+  const frontier=Array.from({length:20},(_,i)=>({x:+(10+i*1.4).toFixed(1),y:+(6+i*1.2+Math.sin(i*.4)*.8).toFixed(2)}));
+  const assets=[{x:18.4,y:12.4,l:'AMXL'},{x:14.2,y:15.8,l:'WALMEX'},{x:28.6,y:8.4,l:'CEMEX'},{x:22.4,y:18.4,l:'GFNORTE'},{x:16.4,y:22.4,l:'SPY'},{x:20.4,y:11.4,l:'EWW'},{x:1.2,y:11.25,l:'CETES'},{x:6.4,y:9.8,l:'BONO10A'}];
+  new Chart(document.getElementById('chart-frontier'),{type:'scatter',data:{datasets:[
+    {label:'Activos individuales',data:assets,backgroundColor:'rgba(245,166,35,.65)',pointRadius:7,pointHoverRadius:9},
+    {label:'Frontera eficiente',data:frontier,type:'line',borderColor:'#00ddb4',borderWidth:2.5,fill:false,tension:.4,pointRadius:0,showLine:true},
+    {label:'Portafolios aleatorios',data:Array.from({length:80},()=>({x:+(8+Math.random()*24).toFixed(1),y:+(4+Math.random()*20).toFixed(1)})),backgroundColor:'rgba(131,153,184,.18)',pointRadius:3},
+    {label:'Máx. Sharpe (óptimo)',data:[{x:20.2,y:22.8}],backgroundColor:'#a78bfa',pointRadius:12,pointStyle:'star'},
+  ]},options:mkOpts({scales:{x:{title:{display:true,text:'Riesgo — Desv. Estándar Anualizada (%)'}},y:{title:{display:true,text:'Retorno Esperado Anual (%)'}}}})});
+})();
+
+// VaR Historical
+(()=>{
+  const months=Array.from({length:36},(_,i)=>{const d=new Date(2022,0,1);d.setMonth(d.getMonth()+i);return d.toLocaleDateString('es-MX',{month:'short',year:'2-digit'});});
+  const rets=[-0.012,0.008,-0.005,0.015,-0.021,0.011,0.007,-0.009,0.018,-0.015,0.009,0.004,-0.011,0.013,-0.007,0.019,-0.024,0.008,0.012,-0.009,0.016,-0.003,0.007,-0.018,0.014,0.006,-0.008,0.022,-0.013,0.005,0.011,-0.027,0.009,0.016,-0.004,0.021];
+  const varLine=new Array(36).fill(-0.022);
+  const cvarLine=new Array(36).fill(-0.034);
+  new Chart(document.getElementById('chart-var-hist'),{type:'line',data:{labels:months,datasets:[
+    {label:'Retorno mensual',data:rets,borderColor:'#00ddb4',borderWidth:1.5,fill:true,backgroundColor:'rgba(0,221,180,.05)',tension:.3,pointRadius:rets.map(r=>r<-0.022?5:2),pointBackgroundColor:rets.map(r=>r<-0.022?'#fb7185':'#00ddb4')},
+    {label:'VaR 95% (−2.2%)',data:varLine,borderColor:'#f5a623',borderWidth:1.5,borderDash:[5,4],fill:false,pointRadius:0},
+    {label:'CVaR 95% (−3.4%)',data:cvarLine,borderColor:'#fb7185',borderWidth:1.5,borderDash:[3,3],fill:false,pointRadius:0},
+  ]},options:mkOpts({scales:{y:{title:{display:true,text:'Retorno mensual'},ticks:{callback:v=>(v*100).toFixed(1)+'%'}}}})});
+})();
+
+// GARCH
+(()=>{
+  const months=Array.from({length:48},(_,i)=>{const d=new Date(2020,0,1);d.setMonth(d.getMonth()+i);return d.toLocaleDateString('es-MX',{month:'short',year:'2-digit'});});
+  const hist=Array.from({length:48},(_,i)=>+(14+Math.sin(i*.3)*2+Math.random()*1.5).toFixed(2));
+  const garch=[...Array.from({length:4},(_,i)=>+(12+i*2.8).toFixed(2)),
+    ...Array.from({length:6},(_,i)=>+(23+Math.sin(i)*4+Math.random()*3).toFixed(2)), // COVID peak
+    ...Array.from({length:10},(_,i)=>+(15-i*.6+Math.random()*1.2).toFixed(2)),
+    ...Array.from({length:8},(_,i)=>+(12+i*1.4+Math.random()).toFixed(2)), // Fed 2022
+    ...Array.from({length:20},(_,i)=>+(18-i*.3+Math.random()*1.4).toFixed(2))];
+  new Chart(document.getElementById('chart-garch'),{type:'line',data:{labels:months,datasets:[
+    {label:'Volatilidad GARCH(1,1)',data:garch,borderColor:'#f5a623',borderWidth:2,fill:true,backgroundColor:'rgba(245,166,35,.06)',tension:.4,pointRadius:0},
+    {label:'Volatilidad histórica 30d',data:hist,borderColor:'rgba(131,153,184,.5)',borderWidth:1.2,fill:false,tension:.3,pointRadius:0,borderDash:[4,3]},
+  ]},options:mkOpts({scales:{y:{title:{display:true,text:'Volatilidad anualizada (%)'}}}})});
+})();
+
+// Risk contribution
+(()=>{
+  new Chart(document.getElementById('chart-risk-contrib'),{type:'doughnut',data:{labels:['Acciones MX','S&P 500 / ETFs','Divisas','Renta Fija MX','Renta Fija US'],datasets:[{data:[42,28,14,10,6],backgroundColor:['rgba(0,221,180,.6)','rgba(96,165,250,.55)','rgba(167,139,250,.55)','rgba(245,166,35,.55)','rgba(52,211,153,.5)'],borderColor:['#00ddb4','#60a5fa','#a78bfa','#f5a623','#34d399'],borderWidth:1.5}]},options:{...mkOpts(),plugins:{legend:{position:'right',labels:{color:'rgba(220,232,245,.55)'}}}}});
+})();
+
+// Correlation heatmap (bar approximation)
+(()=>{
+  new Chart(document.getElementById('chart-corr'),{type:'bar',data:{labels:['MX vs S&P','MX vs Bonos','MX vs USD/MXN','S&P vs Bonos','S&P vs USD','Bonos vs USD'],datasets:[{label:'Correlación',data:[0.62,-0.24,-0.48,-0.18,0.22,0.14],backgroundColor:d=>d.raw>0.4?'rgba(251,113,133,.55)':d.raw>0?'rgba(245,166,35,.45)':'rgba(0,221,180,.45)',borderColor:d=>d.raw>0.4?'#fb7185':d.raw>0?'#f5a623':'#00ddb4',borderWidth:1.5,borderRadius:5}]},options:mkOpts({scales:{y:{min:-1,max:1,title:{display:true,text:'Coeficiente de correlación'}}}})});
+})();
+
+// ─────────────────────────────────
+// PERIOD COMPARISON CHARTS
+// ─────────────────────────────────
+let periodCharts=[];
+const PERIOD_DATA={
+  normal:{badge:'2014–2024 · Promedio',ddBadge:'Drawdown normal',
+    ret:{labels:['E','F','M','A','M','J','J','A','S','O','N','D'],datasets:[{label:'Portafolio opt.',data:[100,101.8,103.2,104.8,103.6,105.4,107.2,106.4,108.6,110.2,111.8,113.4],borderColor:'#00ddb4',borderWidth:2,fill:true,backgroundColor:'rgba(0,221,180,.06)',tension:.4,pointRadius:0},{label:'IPC',data:[100,100.8,101.6,102.4,101.2,102.8,104.2,103.6,105.4,106.8,108.2,109.6],borderColor:'#f5a623',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,borderDash:[4,3]}]},
+    dd:{labels:['E','F','M','A','M','J','J','A','S','O','N','D'],datasets:[{label:'Drawdown',data:[0,-0.8,-1.2,-0.4,-2.1,-1.2,-0.4,-1.8,-0.6,-0.2,-0.8,-0.4],borderColor:'#f5a623',borderWidth:1.5,fill:true,backgroundColor:'rgba(245,166,35,.08)',tension:.4,pointRadius:0}]},
+    var:{labels:['E','F','M','A','M','J','J','A','S','O','N','D'],datasets:[{label:'VaR 95% GARCH',data:[2.1,2.2,2.0,2.1,2.3,2.2,2.1,2.4,2.2,2.1,2.0,2.1],borderColor:'#a78bfa',borderWidth:2,fill:true,backgroundColor:'rgba(167,139,250,.07)',tension:.4,pointRadius:0}]}},
+  covid:{badge:'Feb–Abr 2020 · COVID-19',ddBadge:'Drawdown COVID',
+    ret:{labels:['Feb S1','Feb S2','Mar S1','Mar S2','Abr S1','Abr S2','May S1','May S2'],datasets:[{label:'Portafolio con cobertura',data:[100,97.4,88.2,82.4,84.6,88.2,91.4,94.8],borderColor:'#00ddb4',borderWidth:2,fill:true,backgroundColor:'rgba(0,221,180,.06)',tension:.4,pointRadius:2},{label:'Portafolio sin cobertura',data:[100,95.2,79.4,71.8,74.2,78.6,83.4,88.2],borderColor:'#fb7185',borderWidth:1.5,fill:false,tension:.4,pointRadius:2,borderDash:[4,3]},{label:'IPC',data:[100,94.8,76.2,68.4,71.6,76.4,81.2,86.4],borderColor:'#f5a623',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,borderDash:[3,3]}]},
+    dd:{labels:['Feb S1','Feb S2','Mar S1','Mar S2','Abr S1','Abr S2','May S1','May S2'],datasets:[{label:'Drawdown',data:[0,-2.6,-11.8,-17.6,-15.4,-11.8,-8.6,-5.2],borderColor:'#fb7185',borderWidth:1.5,fill:true,backgroundColor:'rgba(251,113,133,.08)',tension:.4,pointRadius:0}]},
+    var:{labels:['Feb S1','Feb S2','Mar S1','Mar S2','Abr S1','Abr S2','May S1','May S2'],datasets:[{label:'VaR 95% GARCH',data:[2.4,3.8,6.8,7.2,5.4,4.2,3.6,3.1],borderColor:'#fb7185',borderWidth:2,fill:true,backgroundColor:'rgba(251,113,133,.08)',tension:.4,pointRadius:0}]},
+    var:{labels:['Feb S1','Feb S2','Mar S1','Mar S2','Abr S1','Abr S2','May S1','May S2'],datasets:[{label:'VaR 95% GARCH',data:[2.4,3.8,6.8,7.2,5.4,4.2,3.6,3.1],borderColor:'#fb7185',borderWidth:2,fill:true,backgroundColor:'rgba(251,113,133,.08)',tension:.4,pointRadius:0}]}},
+  fed:{badge:'Ene–Dic 2022 · Crisis Fed',ddBadge:'Drawdown Fed 2022',
+    ret:{labels:['E','F','M','A','M','J','J','A','S','O','N','D'],datasets:[{label:'Portafolio con cobertura',data:[100,98.4,96.8,95.2,96.8,94.4,95.8,97.2,94.6,96.8,98.4,100.2],borderColor:'#00ddb4',borderWidth:2,fill:true,backgroundColor:'rgba(0,221,180,.06)',tension:.4,pointRadius:2},{label:'Bonos UST 10a',data:[100,96.2,92.4,88.6,85.4,87.2,84.8,88.4,82.6,86.4,90.2,92.4],borderColor:'#fb7185',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,borderDash:[4,3]}]},
+    dd:{labels:['E','F','M','A','M','J','J','A','S','O','N','D'],datasets:[{label:'Drawdown',data:[0,-1.6,-3.2,-4.8,-3.2,-5.6,-4.2,-2.8,-5.4,-3.2,-1.6,0.2],borderColor:'#f5a623',borderWidth:1.5,fill:true,backgroundColor:'rgba(245,166,35,.08)',tension:.4,pointRadius:0}]},
+    var:{labels:['E','F','M','A','M','J','J','A','S','O','N','D'],datasets:[{label:'VaR 95% GARCH',data:[2.8,3.2,3.6,4.2,4.0,4.4,4.1,3.8,4.3,4.0,3.6,3.2],borderColor:'#f5a623',borderWidth:2,fill:true,backgroundColor:'rgba(245,166,35,.07)',tension:.4,pointRadius:0}]}},
+  tequila:{badge:'Dic 1994 – Mar 1995 · Tequila',ddBadge:'Drawdown Tequila',
+    ret:{labels:['Nov','Dic','Ene','Feb','Mar','Abr','May','Jun'],datasets:[{label:'Portafolio con cobertura',data:[100,88.4,74.2,68.6,71.4,76.8,82.4,87.2],borderColor:'#00ddb4',borderWidth:2,fill:true,backgroundColor:'rgba(0,221,180,.06)',tension:.4,pointRadius:2},{label:'IPC (simulado)',data:[100,82.4,61.8,54.2,58.6,65.4,72.8,79.4],borderColor:'#fb7185',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,borderDash:[4,3]},{label:'MXN/USD index',data:[100,64.8,52.4,50.2,52.8,56.4,61.2,66.8],borderColor:'#f5a623',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,borderDash:[3,3]}]},
+    dd:{labels:['Nov','Dic','Ene','Feb','Mar','Abr','May','Jun'],datasets:[{label:'Drawdown',data:[0,-11.6,-25.8,-31.4,-28.6,-23.2,-17.6,-12.8],borderColor:'#fb7185',borderWidth:1.5,fill:true,backgroundColor:'rgba(251,113,133,.1)',tension:.4,pointRadius:0}]},
+    var:{labels:['Nov','Dic','Ene','Feb','Mar','Abr','May','Jun'],datasets:[{label:'VaR 95% GARCH',data:[3.2,6.8,11.4,10.8,8.4,6.2,4.8,3.8],borderColor:'#fb7185',borderWidth:2,fill:true,backgroundColor:'rgba(251,113,133,.08)',tension:.4,pointRadius:0}]}}
+};
+
+function switchPeriod(key,btn){
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const d=PERIOD_DATA[key];
+  document.getElementById('period-badge').textContent=d.badge;
+  document.getElementById('period-dd-badge').textContent=d.ddBadge;
+  periodCharts.forEach(c=>c.destroy());
+  periodCharts=[];
+  periodCharts.push(new Chart(document.getElementById('chart-period-ret'),{type:'line',data:d.ret,options:mkOpts({scales:{y:{title:{display:true,text:'Valor portafolio (base 100)'}}}})}));
+  periodCharts.push(new Chart(document.getElementById('chart-period-dd'),{type:'line',data:d.dd,options:mkOpts({scales:{y:{title:{display:true,text:'Drawdown (%)'},ticks:{callback:v=>v+'%'}}}})}));
+  periodCharts.push(new Chart(document.getElementById('chart-period-var'),{type:'line',data:d.var,options:mkOpts({scales:{y:{title:{display:true,text:'VaR diario (%)'}}}})})  );
+}
+switchPeriod('normal',document.querySelector('.period-btn'));
+
+// Yield curve
+let curveChart=null;
+const TENORS=['1m','3m','6m','1a','2a','5a','10a','30a'];
+const CURVE_DATA={
+  both:{label:'TIIE vs. US Treasury — Comparada',datasets:[
+    {label:'TIIE México (%)',data:[11.1,11.05,11.0,10.8,10.4,9.8,9.4,9.0],borderColor:'#f5a623',borderWidth:2.5,fill:false,tension:.4,pointRadius:4,pointBackgroundColor:'#f5a623'},
+    {label:'US Treasury (%)',data:[5.4,5.38,5.35,5.2,4.9,4.4,4.5,4.6],borderColor:'#60a5fa',borderWidth:2,fill:false,tension:.4,pointRadius:4,pointBackgroundColor:'#60a5fa'},
+  ]},
+  tiie:{label:'Curva TIIE México',datasets:[
+    {label:'TIIE actual',data:[11.1,11.05,11.0,10.8,10.4,9.8,9.4,9.0],borderColor:'#f5a623',borderWidth:2.5,fill:true,backgroundColor:'rgba(245,166,35,.07)',tension:.4,pointRadius:4},
+    {label:'TIIE hace 1 año',data:[11.4,11.35,11.3,11.1,10.8,10.2,9.8,9.4],borderColor:'rgba(245,166,35,.4)',borderWidth:1.5,fill:false,tension:.4,pointRadius:3,borderDash:[4,3]},
+    {label:'TIIE hace 3 años',data:[4.2,4.5,4.8,5.2,5.6,6.0,6.4,6.8],borderColor:'rgba(245,166,35,.2)',borderWidth:1,fill:false,tension:.4,pointRadius:2,borderDash:[2,4]},
+  ]},
+  ust:{label:'US Treasury Yield Curve',datasets:[
+    {label:'UST actual',data:[5.4,5.38,5.35,5.2,4.9,4.4,4.5,4.6],borderColor:'#60a5fa',borderWidth:2.5,fill:true,backgroundColor:'rgba(96,165,250,.07)',tension:.4,pointRadius:4},
+    {label:'UST hace 1 año',data:[5.1,5.2,5.25,5.3,5.0,4.6,4.5,4.4],borderColor:'rgba(96,165,250,.4)',borderWidth:1.5,fill:false,tension:.4,pointRadius:3,borderDash:[4,3]},
+    {label:'UST prepandemia (2019)',data:[2.4,2.5,2.55,2.6,2.4,2.2,2.3,2.8],borderColor:'rgba(96,165,250,.2)',borderWidth:1,fill:false,tension:.4,pointRadius:2,borderDash:[2,4]},
+  ]},
+  spread:{label:'Spread Soberano TIIE − UST',datasets:[
+    {label:'Spread 2024',data:[5.7,5.67,5.65,5.6,5.5,5.4,4.9,4.4],borderColor:'#00ddb4',borderWidth:2.5,fill:true,backgroundColor:'rgba(0,221,180,.07)',tension:.4,pointRadius:4},
+    {label:'Spread 2022 (Fed)',data:[6.3,6.15,6.05,5.8,5.8,5.6,5.3,4.6],borderColor:'rgba(251,113,133,.6)',borderWidth:1.5,fill:false,tension:.4,pointRadius:3,borderDash:[4,3]},
+    {label:'Spread 2020 (COVID)',data:[7.2,7.0,6.9,6.7,6.6,6.4,6.1,5.6],borderColor:'rgba(245,166,35,.5)',borderWidth:1.5,fill:false,tension:.4,pointRadius:3,borderDash:[3,3]},
+  ]},
+  historic:{label:'Evolución Histórica TIIE 28d vs. Fed Funds',datasets:[
+    {label:'TIIE 28d',data:[3.5,3.3,3.2,4.2,6.2,7.8,8.25,7.5,4.5,7.25,11.25,11.1],borderColor:'#f5a623',borderWidth:2,fill:false,tension:.4,pointRadius:3},
+    {label:'Fed Funds',data:[0.1,0.1,0.35,1.0,1.75,2.5,2.35,1.75,0.25,0.25,4.75,5.4],borderColor:'#60a5fa',borderWidth:2,fill:false,tension:.4,pointRadius:3,borderDash:[4,3]},
+  ]}
+};
+function switchCurve(key,btn){
+  document.querySelectorAll('.curve-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const d=CURVE_DATA[key];
+  document.getElementById('curve-label').innerHTML=d.label+' <span class="cb-badge">Mayo 2024</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button>';
+  if(curveChart)curveChart.destroy();
+  const labels=key==='historic'?['2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','mar24','may24']:TENORS;
+  curveChart=new Chart(document.getElementById('chart-curve'),{type:'line',data:{labels,datasets:d.datasets},options:mkOpts({scales:{y:{title:{display:true,text:'Tasa (%)'}}}})} );
+}
+switchCurve('both',document.querySelector('.curve-btn'));
+
+// FX chart
+(()=>{
+  const years=['2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024'];
+  new Chart(document.getElementById('chart-fx'),{type:'line',data:{labels:years,datasets:[
+    {label:'MXN/USD',data:[13.2,15.8,18.6,19.2,19.8,19.1,21.8,20.2,19.4,17.8,17.2],borderColor:'#f5a623',borderWidth:2,fill:false,tension:.4,pointRadius:3,yAxisID:'y'},
+    {label:'Spread TIIE−UST 10a (pp)',data:[4.2,5.8,5.6,5.4,5.8,6.4,6.8,5.6,6.2,5.8,5.6],borderColor:'#00ddb4',borderWidth:1.8,fill:false,tension:.4,pointRadius:3,borderDash:[4,3],yAxisID:'y1'},
+  ]},options:mkOpts({scales:{y:{title:{display:true,text:'MXN por USD'}},y1:{type:'linear',position:'right',title:{display:true,text:'Spread (pp)'},grid:{drawOnChartArea:false},ticks:{color:'#00ddb4'}}}})});
+})();
+
+// Simulator
+let selected={},simPie=null,simFrontierChart=null;
+function renderChips(){
+  const groups=[{id:'chips-mx',items:INSTRUMENTS_MX,cls:'selected-mx'},{id:'chips-us',items:INSTRUMENTS_US,cls:'selected-us'},{id:'chips-fx',items:INSTRUMENTS_FX,cls:'selected-fx'},{id:'chips-fi',items:INSTRUMENTS_FI,cls:'selected-fi'}];
+  groups.forEach(g=>{document.getElementById(g.id).innerHTML=g.items.map(i=>`<div class="ms-chip ${selected[i.t]?g.cls:''}" onclick="toggleChip('${i.t}','${g.cls}',this)">${i.t}</div>`).join('');});
+}
+function toggleChip(ticker,cls,el){
+  const all=[...INSTRUMENTS_MX,...INSTRUMENTS_US,...INSTRUMENTS_FX,...INSTRUMENTS_FI];
+  const instr=all.find(i=>i.t===ticker);
+  if(selected[ticker]){delete selected[ticker];el.className='ms-chip';}
+  else{selected[ticker]={...instr,weight:0,cls};el.className='ms-chip '+cls;}
+  renderWeightSliders();updateSimOutput();
+}
+function renderWeightSliders(){
+  const keys=Object.keys(selected);
+  document.getElementById('selected-count').textContent=keys.length+' instrumentos';
+  document.getElementById('sim-count').textContent=keys.length;
+  const wrap=document.getElementById('weight-sliders');
+  if(!keys.length){wrap.innerHTML='<p style="font-size:.78rem;color:var(--muted);text-align:center;padding:1rem 0">Selecciona al menos 2 instrumentos</p>';return;}
+  wrap.innerHTML=keys.map(t=>`<div class="weight-row"><span class="weight-ticker">${t}</span><div class="weight-bar-wrap"><input type="range" min="0" max="100" value="${selected[t].weight}" id="sl-${t}" oninput="updateWeight('${t}',this.value)"></div><span class="weight-val" id="wv-${t}">${selected[t].weight}%</span></div>`).join('');
+}
+function updateWeight(t,v){selected[t].weight=+v;document.getElementById('wv-'+t).textContent=v+'%';updateSimOutput();}
+function applyOptimal(){
+  const keys=Object.keys(selected);if(!keys.length)return;
+  const w=Math.floor(100/keys.length),rem=100-w*keys.length;
+  keys.forEach((t,i)=>{selected[t].weight=i===0?w+rem:w;const sl=document.getElementById('sl-'+t);if(sl)sl.value=selected[t].weight;const wv=document.getElementById('wv-'+t);if(wv)wv.textContent=selected[t].weight+'%';});
+  updateSimOutput();
+}
+function updateSimOutput(){
+  const keys=Object.keys(selected);
+  const totalW=keys.reduce((s,t)=>s+selected[t].weight,0);
+  document.getElementById('weight-sum-val').textContent=totalW+'%';
+  document.getElementById('weight-sum-bar').className='weight-sum '+(Math.abs(totalW-100)<1?'ok':'warn');
+  if(keys.length<2||Math.abs(totalW-100)>5){['sim-sharpe','sim-ret','sim-vol','sim-var','sim-cvar','sim-beta','sim-dd','sim-fx'].forEach(id=>document.getElementById(id).textContent='—');document.getElementById('sim-profile').textContent='Ajusta los pesos para que sumen 100%.';return;}
+  const wRet=keys.reduce((s,t)=>s+(selected[t].ret1*selected[t].weight/100),0);
+  const wVol=Math.sqrt(keys.reduce((s,t)=>s+Math.pow(selected[t].vol*selected[t].weight/100,2),0))*1.15;
+  const wBeta=keys.reduce((s,t)=>s+(selected[t].beta*selected[t].weight/100),0);
+  const sharpe=+((wRet-11.25)/wVol).toFixed(2);
+  const varD=+(wVol/Math.sqrt(252)*1.645).toFixed(2);
+  const cvarD=+(varD*1.35).toFixed(2);
+  const dd=+(wVol*2.8).toFixed(1);
+  const fxExp=keys.filter(t=>[...INSTRUMENTS_US.map(i=>i.t),...INSTRUMENTS_FX.map(i=>i.t)].includes(t)).reduce((s,t)=>s+selected[t].weight,0);
+  const el=(id,v,cls)=>{const e=document.getElementById(id);e.textContent=v;if(cls)e.className='out-val '+cls;};
+  document.getElementById('sim-sharpe').textContent=sharpe;
+  document.getElementById('sim-sharpe').style.color=sharpe>1?'var(--green)':sharpe>0.5?'var(--amber)':'var(--rose)';
+  el('sim-ret',wRet.toFixed(1)+'% anual MXN',wRet>12?'good':wRet>7?'warn':'bad');
+  el('sim-vol',wVol.toFixed(1)+'% anual',wVol<15?'good':wVol<25?'warn':'bad');
+  el('sim-var','−'+varD+'%/día','bad');el('sim-cvar','−'+cvarD+'%/día','bad');
+  el('sim-beta',wBeta.toFixed(2),wBeta<0.8?'good':wBeta<1.2?'warn':'bad');
+  el('sim-dd','−'+dd+'%','bad');
+  el('sim-fx',fxExp.toFixed(0)+'% en FX',fxExp<20?'good':fxExp<40?'warn':'bad');
+  const seg=sharpe>1.2?'Agresivo-Óptimo':sharpe>0.7?'Moderado':sharpe>0.3?'Conservador':'Ineficiente';
+  document.getElementById('sim-profile').innerHTML=`Portafolio <strong>${seg}</strong> · ${keys.length} instrumentos · Retorno <strong>${wRet.toFixed(1)}% MXN</strong> · Vol <strong>${wVol.toFixed(1)}%</strong>. ${fxExp>30?'Exposición FX alta — considera cobertura <strong>MexDer</strong>.':'Exposición cambiaria controlada.'} ${sharpe>1?'Sharpe >1 — bien posicionado en frontera eficiente.':'Agrega activos de baja correlación para mejorar Sharpe.'}`;
+  if(simPie)simPie.destroy();
+  const colors={'selected-mx':'rgba(0,221,180,.6)','selected-us':'rgba(96,165,250,.6)','selected-fx':'rgba(167,139,250,.6)','selected-fi':'rgba(52,211,153,.6)'};
+  simPie=new Chart(document.getElementById('chart-sim-pie'),{type:'doughnut',data:{labels:keys,datasets:[{data:keys.map(t=>selected[t].weight),backgroundColor:keys.map(t=>colors[selected[t].cls]||'rgba(245,166,35,.5)'),borderColor:'var(--bg3)',borderWidth:2}]},options:{...mkOpts(),plugins:{legend:{position:'right',labels:{color:'rgba(220,232,245,.5)',font:{size:9}}}}}});
+  document.getElementById('sim-dist-badge').textContent=keys.length+' activos';
+  if(simFrontierChart)simFrontierChart.destroy();
+  const frontier=Array.from({length:15},(_,i)=>({x:+(8+i*1.6).toFixed(1),y:+(5+i*1.15).toFixed(1)}));
+  simFrontierChart=new Chart(document.getElementById('chart-sim-frontier'),{type:'scatter',data:{datasets:[{label:'Frontera eficiente',data:frontier,type:'line',borderColor:'rgba(0,221,180,.4)',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,showLine:true},{label:'Tu portafolio',data:[{x:+wVol.toFixed(1),y:+wRet.toFixed(1)}],backgroundColor:'#f5a623',pointRadius:12,pointStyle:'star'}]},options:mkOpts({scales:{x:{title:{display:true,text:'Riesgo (%)'},min:0,max:45},y:{title:{display:true,text:'Retorno (%)'},min:0,max:28}}})});
+}
+renderChips();
+
+// Scenarios
+let scChart=null,scAssetChart=null;
+const SC_DATA={
+  normal:{label:'Mercado Normal',badge:'Mercado Normal',series:[100,101.4,102.8,103.6,104.2,105.8,107.2,106.4,108.1,109.6,110.8,112.4],labels:['E','F','M','A','M','J','J','A','S','O','N','D'],assets:{labels:['Acc. MX','Acc. US','CETES','Bonos M','USD/MXN'],data:[12.4,14.8,11.25,9.8,4.2],colors:['rgba(0,221,180,.55)','rgba(96,165,250,.55)','rgba(52,211,153,.55)','rgba(245,166,35,.5)','rgba(167,139,250,.5)']}},
+  covid:{label:'COVID-19 (2020)',badge:'COVID-19 2020',series:[100,96.4,82.8,75.2,78.6,83.4,88.2,91.6,94.2,96.8,99.2,102.4],labels:['Feb','MarS1','MarS2','AbrS1','AbrS2','May','Jun','Jul','Ago','Sep','Oct','Nov'],assets:{labels:['Acc. MX','Acc. US','CETES','Bonos M','USD/MXN'],data:[-32.4,-28.8,2.1,-4.2,18.6],colors:['rgba(251,113,133,.6)','rgba(251,113,133,.5)','rgba(52,211,153,.55)','rgba(245,166,35,.4)','rgba(0,221,180,.55)']}},
+  fed:{label:'Crisis Fed 2022',badge:'Fed 2022',series:[100,98.2,96.4,94.8,96.2,93.8,95.4,97.1,94.2,96.4,98.8,100.6],labels:['E','F','M','A','M','J','J','A','S','O','N','D'],assets:{labels:['Acc. MX','Acc. US','CETES','Bonos M','USD/MXN'],data:[8.4,-18.2,11.1,-16.8,3.2],colors:['rgba(0,221,180,.55)','rgba(251,113,133,.55)','rgba(52,211,153,.55)','rgba(251,113,133,.5)','rgba(245,166,35,.45)']}},
+  tequila:{label:'Crisis Tequila 1994',badge:'Tequila 1994',series:[100,88.4,74.2,68.6,64.2,61.8,65.4,70.2,74.8,79.4,84.2,88.6],labels:['Nov','Dic','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct'],assets:{labels:['Acc. MX','Acc. US','CETES','Bonos M','USD/MXN'],data:[-45.2,-8.4,38.4,-22.6,52.8],colors:['rgba(251,113,133,.7)','rgba(245,166,35,.4)','rgba(0,221,180,.55)','rgba(251,113,133,.55)','rgba(0,221,180,.7)']}}
+};
+function selectScenario(key,card){
+  document.querySelectorAll('.sc-card').forEach(c=>c.classList.remove('active'));
+  card.classList.add('active');
+  const d=SC_DATA[key];
+  document.getElementById('sc-chart-label').innerHTML=`Impacto en Portafolio — ${d.label} <span class="cb-badge">MXN</span>`;
+  document.getElementById('sc-asset-badge').textContent=d.badge;
+  if(scChart)scChart.destroy();
+  scChart=new Chart(document.getElementById('chart-scenario'),{type:'line',data:{labels:d.labels,datasets:[{label:'Valor portafolio (base 100)',data:d.series,borderColor:'#f5a623',borderWidth:2,fill:true,backgroundColor:'rgba(245,166,35,.06)',tension:.4,pointRadius:3,pointBackgroundColor:d.series.map(v=>v<90?'#fb7185':v<100?'#f5a623':'#00ddb4')}]},options:mkOpts({scales:{y:{title:{display:true,text:'Valor base 100'}}}})});
+  if(scAssetChart)scAssetChart.destroy();
+  scAssetChart=new Chart(document.getElementById('chart-scenario-assets'),{type:'bar',data:{labels:d.assets.labels,datasets:[{label:'Retorno/Impacto (%)',data:d.assets.data,backgroundColor:d.assets.colors,borderWidth:1.5,borderRadius:6}]},options:mkOpts({scales:{y:{title:{display:true,text:'Retorno (%)'},ticks:{callback:v=>v+'%'}}}})});
+}
+new Chart(document.getElementById('chart-scenario-comp'),{type:'bar',data:{labels:['Normal','COVID-19','Fed 2022','Tequila 1994'],datasets:[{label:'VaR 95% (%/día)',data:[2.1,6.8,4.2,11.4],backgroundColor:['rgba(52,211,153,.5)','rgba(251,113,133,.6)','rgba(245,166,35,.55)','rgba(251,113,133,.75)'],borderColor:['#34d399','#fb7185','#f5a623','#fb7185'],borderWidth:1.5,borderRadius:6},{label:'CVaR 95% (%/día)',data:[3.1,9.8,6.1,16.2],backgroundColor:['rgba(52,211,153,.2)','rgba(251,113,133,.25)','rgba(245,166,35,.25)','rgba(251,113,133,.35)'],borderWidth:1,borderRadius:6}]},options:mkOpts({scales:{y:{title:{display:true,text:'% portafolio (1 día)'}}}})} );
+selectScenario('normal',document.querySelector('.sc-card'));
+</script>
+</body>
+</html>

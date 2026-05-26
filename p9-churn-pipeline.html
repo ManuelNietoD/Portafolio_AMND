@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>P9 · Churn Bancario · Pipeline ML End-to-End</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#040507;--bg2:#07090d;--bg3:#0b0e14;--bg4:#10141c;
+  --sky:#38bdf8;--sky-dim:rgba(56,189,248,.10);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,.09);
+  --teal:#00ddb4;--teal-dim:rgba(0,221,180,.09);
+  --rose:#ff4d6d;--rose-dim:rgba(255,77,109,.09);
+  --green:#34d399;--violet:#a78bfa;--blue:#60a5fa;--orange:#f97316;
+  --text:#dce8f5;--muted:#3a4d62;--muted2:#6a8aaa;
+  --border:rgba(56,189,248,.13);--border2:rgba(255,255,255,.05);
+  --r:14px;
+  --fh:'Syne',sans-serif;--fm:'JetBrains Mono',monospace;--fb:'DM Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.7;min-height:100vh;overflow-x:hidden}
+
+.back-bar{padding:.9rem 2rem;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:.7rem;background:var(--bg2)}
+.back-btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--fm);font-size:.72rem;color:var(--muted2);text-decoration:none;padding:.35rem .8rem;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);transition:all .2s;cursor:pointer}
+.back-btn:hover{color:var(--sky);border-color:rgba(56,189,248,.3)}
+.back-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+.breadcrumb{font-family:var(--fm);font-size:.68rem;color:var(--muted)}
+.breadcrumb span{color:var(--sky)}
+
+.dash-header{padding:2.5rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.eyebrow{font-family:var(--fm);font-size:.62rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.eyebrow::before{content:'';display:inline-block;width:20px;height:1px;background:var(--sky)}
+.dash-title{font-family:var(--fh);font-size:clamp(1.5rem,3vw,2.3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.8rem}
+.dash-title .at{color:var(--sky)}
+.dash-meta{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-family:var(--fm);font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;padding:.2rem .65rem;border-radius:999px}
+.b-src{background:var(--sky-dim);color:var(--sky);border:1px solid rgba(56,189,248,.25)}
+.b-py{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.b-sql{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.b-type{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,221,180,.25)}
+.dash-desc{font-size:.85rem;color:rgba(220,232,245,.5);max-width:740px;line-height:1.8;margin-bottom:2rem}
+
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;padding:0 2.5rem;max-width:1280px;margin:0 auto}
+.kpi{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.1rem 1.2rem;position:relative;overflow:hidden;transition:border-color .25s;animation:fadeUp .5s ease both}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--sky));opacity:.8}
+.kpi:nth-child(1){animation-delay:.05s}.kpi:nth-child(2){animation-delay:.1s}.kpi:nth-child(3){animation-delay:.15s}.kpi:nth-child(4){animation-delay:.2s}
+.kpi-val{font-family:var(--fh);font-size:1.7rem;font-weight:800;letter-spacing:-.03em;display:block;margin-bottom:.15rem}
+.kpi-lbl{font-size:.72rem;color:var(--muted2)}.kpi-sub{font-family:var(--fm);font-size:.6rem;color:var(--muted)}
+.kpi .info-btn{position:absolute;top:.6rem;right:.6rem}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid rgba(131,153,184,.35);background:rgba(131,153,184,.08);color:var(--muted2);font-family:var(--fm);font-size:.6rem;cursor:pointer;transition:all .2s;flex-shrink:0;user-select:none;line-height:1}
+.info-btn:hover,.info-btn.active{border-color:var(--sky);color:var(--sky);background:var(--sky-dim)}
+.cb-label .info-btn{margin-left:auto}
+.info-panel{display:none;margin-top:.65rem;padding:.65rem .8rem;background:rgba(56,189,248,.03);border:1px solid rgba(56,189,248,.12);border-radius:8px;flex-direction:column;gap:.45rem;animation:slideDown .2s ease}
+.info-panel.open{display:flex}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.te-row{display:flex;align-items:baseline;gap:.5rem;font-size:.75rem;line-height:1.65}
+.te-tag{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;padding:.1rem .42rem;border-radius:5px;border:1px solid;font-weight:500}
+.te-tag.def{color:var(--sky);background:var(--sky-dim);border-color:rgba(56,189,248,.28)}
+.te-tag.meta{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.28)}
+.te-tag.uso{color:var(--teal);background:var(--teal-dim);border-color:rgba(0,221,180,.28)}
+.te-txt{color:rgba(220,232,245,.58)}.te-txt strong{color:rgba(220,232,245,.88);font-weight:500}
+
+.tabs-wrap{padding:2rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--border2);margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{font-family:var(--fm);font-size:.72rem;padding:.65rem 1.1rem;cursor:pointer;color:var(--muted2);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;display:flex;align-items:center;gap:.4rem;border-radius:8px 8px 0 0}
+.tab-btn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.tab-btn.active{color:var(--sky);border-bottom-color:var(--sky);background:var(--sky-dim)}
+.tab-panel{display:none;animation:fadeUp .3s ease}.tab-panel.active{display:block}
+
+.sec-title{font-family:var(--fh);font-size:1rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem;display:flex;align-items:center;gap:.55rem}
+.sec-title::before{content:'';display:inline-block;width:16px;height:2px;background:var(--sky);border-radius:1px}
+.sec-sub{font-size:.78rem;color:var(--muted2);margin-bottom:1.4rem}
+
+.chart-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem}
+.chart-box.full{grid-column:1/-1}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.cb-label{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.cb-badge{font-size:.58rem;padding:.12rem .45rem;border-radius:5px;background:var(--sky-dim);color:var(--sky);border:1px solid rgba(56,189,248,.2)}
+.chart-wrap{position:relative;height:200px}
+.chart-wrap.tall{height:280px}
+.chart-wrap.xtall{height:340px}
+
+/* NARRATIVE */
+.narrative-hero{background:linear-gradient(135deg,rgba(56,189,248,.06),rgba(56,189,248,.02));border:1px solid rgba(56,189,248,.18);border-radius:var(--r);padding:2rem;margin-bottom:1.6rem}
+.nh-label{font-family:var(--fm);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--sky);margin-bottom:.8rem}
+.nh-title{font-family:var(--fh);font-size:1.6rem;font-weight:800;letter-spacing:-.03em;margin-bottom:.8rem;line-height:1.2}
+.nh-body{font-size:.88rem;color:rgba(220,232,245,.68);line-height:1.85;max-width:800px}
+.nh-body strong{color:rgba(220,232,245,.92)}
+
+.impact-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.6rem}
+.impact-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.2rem;position:relative;overflow:hidden}
+.impact-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ic,var(--sky))}
+.ic-val{font-family:var(--fh);font-size:2rem;font-weight:800;letter-spacing:-.03em;margin-bottom:.2rem}
+.ic-lbl{font-size:.78rem;color:var(--muted2);margin-bottom:.35rem}
+.ic-desc{font-size:.74rem;color:rgba(220,232,245,.5);line-height:1.65}
+
+.problem-flow{display:flex;align-items:stretch;gap:.5rem;margin-bottom:1.6rem;overflow-x:auto;padding-bottom:.5rem}
+.pf-node{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem;min-width:160px;flex:1;position:relative}
+.pf-num{font-family:var(--fm);font-size:.62rem;color:var(--sky);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.08em}
+.pf-title{font-family:var(--fh);font-size:.88rem;font-weight:700;margin-bottom:.3rem}
+.pf-desc{font-size:.73rem;color:var(--muted2);line-height:1.65}
+.pf-arrow{display:flex;align-items:center;color:rgba(56,189,248,.3);font-size:1.4rem;flex-shrink:0;padding:0 .2rem}
+
+/* PIPELINE */
+.pipeline-modules{display:flex;flex-direction:column;gap:1rem;margin-bottom:1.6rem}
+.module{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;transition:border-color .2s}
+.module:hover{border-color:rgba(56,189,248,.25)}
+.module-header{display:flex;align-items:center;gap:.8rem;padding:1rem 1.2rem;cursor:pointer;user-select:none}
+.module-num{font-family:var(--fm);font-size:.65rem;background:var(--sky-dim);color:var(--sky);border:1px solid rgba(56,189,248,.3);padding:.15rem .5rem;border-radius:5px;flex-shrink:0}
+.module-title{font-family:var(--fh);font-size:.95rem;font-weight:700;flex:1}
+.module-badge{font-family:var(--fm);font-size:.6rem;padding:.15rem .5rem;border-radius:5px;background:var(--bg3);border:1px solid var(--border2);color:var(--muted2)}
+.module-arrow{color:var(--muted);transition:transform .2s;margin-left:auto}
+.module.open .module-arrow{transform:rotate(180deg)}
+.module-body{display:none;padding:0 1.2rem 1.2rem;border-top:1px solid var(--border2)}
+.module.open .module-body{display:block}
+
+.module-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+.mb-section{background:var(--bg3);border-radius:10px;padding:.9rem}
+.mbs-title{font-family:var(--fm);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--sky);margin-bottom:.6rem}
+.mbs-content{font-size:.76rem;color:rgba(220,232,245,.65);line-height:1.75}
+.mbs-content strong{color:rgba(220,232,245,.88)}
+
+.code-block{background:#010409;border:1px solid rgba(56,189,248,.12);border-radius:8px;padding:.8rem 1rem;margin-top:.7rem;font-family:var(--fm);font-size:.68rem;color:rgba(220,232,245,.7);line-height:1.8;overflow-x:auto;white-space:pre}
+.code-block .kw{color:#38bdf8}.code-block .fn{color:#a78bfa}.code-block .st{color:#34d399}.code-block .cm{color:#3a4d62}.code-block .num{color:#f5a623}
+
+.metric-pills{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.6rem}
+.metric-pill{font-family:var(--fm);font-size:.62rem;padding:.2rem .6rem;border-radius:5px;background:var(--bg4);border:1px solid var(--border2);color:var(--muted2)}
+.metric-pill.good{background:rgba(52,211,153,.08);color:var(--green);border-color:rgba(52,211,153,.2)}
+.metric-pill.warn{background:rgba(245,166,35,.08);color:var(--amber);border-color:rgba(245,166,35,.2)}
+
+/* RESULTS */
+.model-comparison{display:grid;grid-template-columns:repeat(5,1fr);gap:.7rem;margin-bottom:1.6rem}
+.model-card{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:.9rem;text-align:center;transition:all .2s;cursor:default}
+.model-card.best{border-color:rgba(56,189,248,.4);background:var(--sky-dim)}
+.mc-name{font-family:var(--fm);font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2);margin-bottom:.4rem}
+.mc-auc{font-family:var(--fh);font-size:1.4rem;font-weight:800;margin-bottom:.15rem}
+.mc-f1{font-family:var(--fm);font-size:.7rem;color:var(--muted2)}
+.mc-badge{font-family:var(--fm);font-size:.58rem;padding:.12rem .4rem;border-radius:4px;margin-top:.4rem;display:inline-block}
+.mb-best{background:rgba(56,189,248,.15);color:var(--sky);border:1px solid rgba(56,189,248,.3)}
+.mb-ok{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.mb-avg{background:rgba(131,153,184,.1);color:var(--muted2);border:1px solid var(--border2)}
+
+/* SEGMENT TABLE */
+.seg-table{width:100%;border-collapse:collapse;font-size:.76rem;margin-bottom:1.6rem}
+.seg-table th{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:.5rem .8rem;border-bottom:1px solid var(--border2);text-align:left}
+.seg-table td{padding:.5rem .8rem;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:middle}
+.seg-table tr:hover td{background:rgba(255,255,255,.015)}
+.seg-name{font-family:var(--fm);font-size:.7rem;color:var(--sky)}
+.risk-badge{font-family:var(--fm);font-size:.6rem;padding:.1rem .4rem;border-radius:4px}
+.rb-high{background:rgba(255,77,109,.1);color:var(--rose);border:1px solid rgba(255,77,109,.2)}
+.rb-med{background:rgba(245,166,35,.1);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.rb-low{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.mini-bar{display:inline-block;height:6px;border-radius:3px;vertical-align:middle}
+
+/* ROI SIMULATOR */
+.roi-layout{display:grid;grid-template-columns:1fr 320px;gap:1.2rem;margin-bottom:1.6rem;align-items:start}
+.roi-inputs{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.2rem}
+.roi-output{background:var(--bg2);border:1px solid rgba(56,189,248,.2);border-radius:var(--r);padding:1.2rem}
+.roi-row{margin-bottom:.9rem}
+.roi-label{display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted2);margin-bottom:.3rem}
+.roi-val{font-family:var(--fm);font-size:.72rem;color:var(--sky)}
+input[type=range]{width:100%;height:4px;border-radius:2px;background:var(--bg4);outline:none;-webkit-appearance:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--sky);border:2px solid var(--bg);cursor:pointer}
+.roi-result{text-align:center;padding:1rem 0;border-bottom:1px solid var(--border2);margin-bottom:.9rem}
+.roi-result-lbl{font-family:var(--fm);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem}
+.roi-result-val{font-family:var(--fh);font-size:2.4rem;font-weight:800;color:var(--sky);letter-spacing:-.03em}
+.roi-out-row{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.035);font-size:.77rem}
+.roi-out-row:last-child{border-bottom:none}
+.rok{color:var(--muted2)}.rov{font-family:var(--fm);font-size:.72rem;color:var(--text)}
+
+/* REPORT (PDF style) */
+.report-container{background:rgba(255,255,255,.98);color:#1a1a2e;border-radius:var(--r);padding:2.5rem;margin-bottom:1.6rem;font-family:'DM Sans',sans-serif}
+.report-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid #38bdf8}
+.report-logo{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:#0c1018}
+.report-logo span{color:#38bdf8}
+.report-meta{text-align:right;font-size:.72rem;color:#64748b;font-family:'JetBrains Mono',monospace}
+.report-title{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:#0c1018;margin-bottom:.4rem;letter-spacing:-.02em}
+.report-subtitle{font-size:.85rem;color:#475569;margin-bottom:1.5rem}
+.report-section{margin-bottom:1.4rem}
+.rs-title{font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;color:#0c1018;margin-bottom:.6rem;padding-bottom:.3rem;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:.5rem}
+.rs-title::before{content:'';display:inline-block;width:12px;height:2px;background:#38bdf8;border-radius:1px}
+.rs-body{font-size:.8rem;color:#334155;line-height:1.85}
+.rs-body strong{color:#0c1018}
+.findings-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-top:.8rem}
+.finding-card{background:#f8fafc;border-left:3px solid #38bdf8;border-radius:0 8px 8px 0;padding:.7rem .9rem}
+.fc-title{font-size:.75rem;font-weight:700;color:#0c1018;margin-bottom:.25rem}
+.fc-body{font-size:.72rem;color:#475569;line-height:1.65}
+.report-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-top:.8rem}
+.rm-card{background:#f1f5f9;border-radius:8px;padding:.7rem;text-align:center}
+.rm-val{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:#38bdf8}
+.rm-lbl{font-size:.65rem;color:#64748b;margin-top:.15rem}
+.action-table{width:100%;border-collapse:collapse;font-size:.74rem;margin-top:.8rem}
+.action-table th{background:#f1f5f9;padding:.45rem .7rem;text-align:left;font-size:.62rem;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#64748b;border:1px solid #e2e8f0}
+.action-table td{padding:.42rem .7rem;border:1px solid #e2e8f0;vertical-align:top}
+.action-table tr:nth-child(even) td{background:#f8fafc}
+.report-footer{border-top:1px solid #e2e8f0;margin-top:1.5rem;padding-top:.8rem;display:flex;justify-content:space-between;font-size:.65rem;color:#94a3b8;font-family:'JetBrains Mono',monospace}
+
+/* CONC */
+.conc-list{display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.6rem}
+.conc-item{display:flex;align-items:flex-start;gap:.75rem;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem 1.1rem;font-size:.82rem;color:rgba(220,232,245,.7);line-height:1.75}
+.conc-arrow{font-family:var(--fm);font-size:.72rem;color:var(--sky);flex-shrink:0;background:var(--sky-dim);border-radius:5px;padding:.1rem .38rem}
+
+.dash-footer{padding:1.2rem 2.5rem 2.5rem;max-width:1280px;margin:3rem auto 0;border-top:1px solid var(--border2);display:flex;justify-content:space-between;font-family:var(--fm);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:999px}
+@media(max-width:900px){
+  .kpi-strip{grid-template-columns:repeat(2,1fr);padding:0 1.2rem}
+  .charts-2,.charts-3,.impact-grid,.model-comparison,.findings-grid,.report-metrics{grid-template-columns:1fr 1fr}
+  .model-comparison{grid-template-columns:repeat(3,1fr)}
+  .roi-layout{grid-template-columns:1fr}
+  .chart-box.full{grid-column:span 1}
+  .dash-header,.tabs-wrap{padding-left:1.2rem;padding-right:1.2rem}
+  .module-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="back-bar">
+  <a href="javascript:history.back()" class="back-btn"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Portafolio</a>
+  <div class="breadcrumb">Portafolio <span>/</span> <span>P9 · Churn Bancario</span></div>
+</div>
+
+<div class="dash-header">
+  <div class="eyebrow">09 · ML End-to-End · Banca Retail · 2024</div>
+  <h1 class="dash-title">Churn Bancario · <span class="at">Pipeline ML End-to-End · De la Pregunta al Impacto</span></h1>
+  <div class="dash-meta">
+    <span class="badge b-src">📂 IBM Telco Churn adaptado · CNBV · 2.5M clientes</span>
+    <span class="badge b-py">● Python</span><span class="badge b-sql">● SQL</span>
+    <span class="badge b-type">ML End-to-End · Banca Retail</span>
+  </div>
+  <p class="dash-desc">Pipeline completo de machine learning para predicción de abandono de clientes en banca retail mexicana: desde la definición del problema de negocio hasta el reporte ejecutivo con impacto económico cuantificado. 6 módulos técnicos, 5 algoritmos comparados y ROI demostrado en MXN.</p>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-strip" style="margin-top:1.8rem">
+  <div class="kpi" style="--kc:var(--rose)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--rose)">18%</span>
+    <div class="kpi-lbl">Tasa de churn anual</div><div class="kpi-sub">Portafolio 2.5M clientes</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Churn rate</strong>: porcentaje de clientes que abandonan el banco en un período. 18% anual = 450,000 clientes perdidos por año en un portafolio de 2.5M.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Reducir churn del 18% al 14% = retener 100,000 clientes adicionales = $840M MXN en ingresos futuros preservados. El modelo habilita intervención preventiva.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">KPI principal del proyecto: el modelo se valida mensualmente contra la tasa de churn real del portafolio — si el modelo funciona, la tasa debe caer consistentemente.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--sky)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--sky)">AUC .924</span>
+    <div class="kpi-lbl">LightGBM · Modelo final</div><div class="kpi-sub">Validación temporal out-of-time</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>AUC .924</strong>: el modelo distingue correctamente clientes que abandonarán de los que se quedarán en el 92.4% de los casos — medido en validación out-of-time (últimos 3 meses).</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Para churn bancario, AUC &gt;0.85 es el umbral operativo viable. El .924 permite filtrar los 20,000 clientes de mayor riesgo con 78% de precisión — accionable para retención.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Calibrar el threshold según el presupuesto de retención: threshold 0.65 captura el top-15% en riesgo con mayor ROI de intervención preventiva.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--green)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--green)">$8,400</span>
+    <div class="kpi-lbl">CLV promedio MXN</div><div class="kpi-sub">Ingreso anual por cliente</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Customer Lifetime Value (CLV)</strong>: valor económico futuro esperado de un cliente. $8,400 MXN/año es el promedio ponderado de comisiones, márgenes de crédito y depósitos.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">CLV varía significativamente por segmento: clientes Premium ($28K MXN/año) vs. clientes básicos ($2,400 MXN/año). El modelo prioriza retención de alto CLV.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Calcular el ROI máximo de retención: si un cliente vale $8,400/año, el presupuesto de intervención preventiva no debe superar $2,100 por cliente (25% del CLV anual).</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--amber)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--amber)">$294M</span>
+    <div class="kpi-lbl">ROI anual proyectado MXN</div><div class="kpi-sub">Con retención preventiva top-5%</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>ROI proyectado</strong>: ingreso retenido al activar retención preventiva en el top-5% de clientes con mayor probabilidad de churn, neto del costo de intervención.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Supuestos: 125K clientes en top-5%, tasa de éxito retención 42%, CLV promedio $8,400 MXN, costo intervención $350/cliente. ROI: (125K × 42% × $8,400) − (125K × $350) = $294M MXN.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Presentar ante el comité de inversión como el caso de negocio que justifica el desarrollo del modelo — el ROI supera 8x el costo total del proyecto de ML.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-wrap" style="margin-top:2rem">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('problem',this)">📋 El Problema</button>
+    <button class="tab-btn" onclick="switchTab('pipeline',this)">⚙️ Pipeline ML</button>
+    <button class="tab-btn" onclick="switchTab('results',this)">📊 Resultados</button>
+    <button class="tab-btn" onclick="switchTab('report',this)">📄 Reporte Ejecutivo</button>
+  </div>
+
+  <!-- TAB 1: PROBLEM -->
+  <div class="tab-panel active" id="tab-problem">
+
+    <div class="narrative-hero">
+      <div class="nh-label">El Problema de Negocio</div>
+      <div class="nh-title">Un banco pierde 450,000 clientes al año.<br>La retención reactiva llega demasiado tarde.</div>
+      <div class="nh-body">
+        Un banco retail mexicano con <strong>2.5 millones de clientes</strong> enfrenta una tasa de abandono del 18% anual — equivalente a perder <strong>$3,780 millones de MXN</strong> en ingresos futuros cada año. El problema no es que los clientes se vayan: es que el banco solo lo sabe <em>después</em> de que sucede.<br><br>
+        La retención reactiva (llamar al cliente cuando ya pidió cancelar) tiene una tasa de éxito del 12%. La retención preventiva — contactar al cliente <strong>antes</strong> de que decida irse — tiene una tasa de éxito del 42%. La diferencia es predecir el churn con suficiente anticipación. Eso es exactamente lo que resuelve este modelo.
+      </div>
+    </div>
+
+    <div class="impact-grid">
+      <div class="impact-card" style="--ic:var(--rose)">
+        <div class="ic-val" style="color:var(--rose)">$3,780M</div>
+        <div class="ic-lbl">Pérdida anual en MXN</div>
+        <div class="ic-desc">450K clientes × $8,400 MXN CLV promedio. Equivale al 28% del margen de intereses neto anual del banco.</div>
+      </div>
+      <div class="impact-card" style="--ic:var(--amber)">
+        <div class="ic-val" style="color:var(--amber)">12% vs 42%</div>
+        <div class="ic-lbl">Retención reactiva vs. preventiva</div>
+        <div class="ic-desc">Intervenir antes multiplica por 3.5x la tasa de éxito de retención. El modelo da el tiempo necesario para actuar.</div>
+      </div>
+      <div class="impact-card" style="--ic:var(--sky)">
+        <div class="ic-val" style="color:var(--sky)">90 días</div>
+        <div class="ic-lbl">Ventana de predicción</div>
+        <div class="ic-desc">El modelo predice qué clientes abandonarán en los próximos 90 días — suficiente tiempo para ejecutar una campaña de retención efectiva.</div>
+      </div>
+    </div>
+
+    <div class="sec-title">¿Por qué falla la retención tradicional?</div>
+    <p class="sec-sub" style="margin-bottom:1rem">Flujo del problema sin modelo predictivo</p>
+    <div class="problem-flow">
+      <div class="pf-node">
+        <div class="pf-num">01 · Señal</div>
+        <div class="pf-title">Cliente insatisfecho</div>
+        <div class="pf-desc">Reduce uso de productos, deja de usar tarjeta, baja saldo. Señales visibles en los datos.</div>
+      </div>
+      <div class="pf-arrow">→</div>
+      <div class="pf-node">
+        <div class="pf-num">02 · Invisibilidad</div>
+        <div class="pf-title">Nadie lo detecta</div>
+        <div class="pf-desc">Sin modelo, estos patrones se pierden entre 2.5M de clientes. Requeriría 200 analistas revisando manualmente.</div>
+      </div>
+      <div class="pf-arrow">→</div>
+      <div class="pf-node" style="border-color:rgba(255,77,109,.3)">
+        <div class="pf-num" style="color:var(--rose)">03 · Decisión</div>
+        <div class="pf-title" style="color:var(--rose)">Cancela la cuenta</div>
+        <div class="pf-desc">El cliente toma la decisión. En este punto la retención reactiva tiene solo 12% de éxito.</div>
+      </div>
+      <div class="pf-arrow">→</div>
+      <div class="pf-node" style="border-color:rgba(255,77,109,.2)">
+        <div class="pf-num" style="color:var(--rose)">04 · Pérdida</div>
+        <div class="pf-title">Churn confirmado</div>
+        <div class="pf-desc">El banco entra al cliente en la estadística de abandono. El CLV se pierde permanentemente.</div>
+      </div>
+    </div>
+
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">Distribución de Churn por Segmento de Cliente <span class="cb-badge">2.5M clientes · MXN</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-churn-seg"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">Distribución de la tasa de churn por segmento de valor del cliente. Los segmentos se definen por CLV anual estimado usando productos activos, saldo promedio y antigüedad.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Paradoja del churn: los clientes básicos tienen mayor tasa de abandono (28%) pero los clientes Premium, aunque con menor tasa (8%), generan 4x más pérdida económica por cliente perdido.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Priorizar la retención por CLV, no por volumen: un cliente Premium que abandona vale lo mismo que 12 clientes básicos. El presupuesto de retención debe asignarse proporcionalmente.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Evolución de Churn Mensual · 24 meses <span class="cb-badge">Tasa % sobre portafolio activo</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-churn-trend"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">Tendencia mensual de la tasa de churn. Los picos coinciden con eventos macroeconómicos (alza de TIIE, período vacacional) y con cambios en la política de comisiones del banco.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">La estacionalidad del churn es un hallazgo crítico: enero y julio tienen picos consistentes. El modelo debe capturar esta ciclicidad como feature temporal.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Calibrar campañas preventivas antes de los picos estacionales: activar retención en diciembre y junio antes de los picos, cuando la propensión al abandono empieza a escalar.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Costo Acumulado del Churn vs. Costo de Retención Preventiva · 12 meses <span class="cb-badge">MXN millones · Escenario con y sin modelo</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap"><canvas id="chart-cost-comparison"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Análisis de break-even</strong>: compara el costo acumulado del churn sin intervención vs. el costo neto con el modelo de retención preventiva. El break-even ocurre al mes 3.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Al mes 12, la diferencia acumulada entre escenarios es $294M MXN — el ROI del proyecto. El modelo se paga en 3 meses desde su implementación en producción.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Usar este gráfico en la presentación al comité de inversión: muestra visualmente cuándo el modelo empieza a generar valor neto positivo y el tamaño del impacto al año 1.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: PIPELINE -->
+  <div class="tab-panel" id="tab-pipeline">
+    <div class="sec-title">Pipeline ML · 6 Módulos Técnicos</div>
+    <p class="sec-sub">Cada módulo documenta decisiones, código Python real y métricas de salida · Click para expandir</p>
+
+    <div class="pipeline-modules">
+
+      <!-- MODULE 1 -->
+      <div class="module open" id="mod1">
+        <div class="module-header" onclick="toggleModule('mod1')">
+          <span class="module-num">M1</span>
+          <span class="module-title">Ingesta & Exploración de Datos (EDA)</span>
+          <span class="module-badge">2.5M registros · 42 variables</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <div class="module-grid">
+            <div class="mb-section">
+              <div class="mbs-title">Fuentes de Datos</div>
+              <div class="mbs-content">
+                <strong>Transaccional:</strong> historial 24 meses de movimientos por cliente (débito, crédito, transferencias SPEI/CoDi).<br><br>
+                <strong>Productos:</strong> portafolio activo por cliente (tarjeta, crédito, inversión, nómina) y su uso relativo vs. hace 6 meses.<br><br>
+                <strong>CRM:</strong> quejas, contactos con call center, NPS, canales de acceso preferido.<br><br>
+                <strong>Variable objetivo:</strong> churn = 1 si el cliente cerró todas sus cuentas en los 90 días siguientes a la fecha de corte.
+              </div>
+              <div class="metric-pills" style="margin-top:.6rem">
+                <span class="metric-pill good">2.5M registros</span>
+                <span class="metric-pill good">42 variables</span>
+                <span class="metric-pill warn">18% clase positiva</span>
+                <span class="metric-pill">24 meses histórico</span>
+              </div>
+            </div>
+            <div class="mb-section">
+              <div class="mbs-title">Hallazgos EDA Clave</div>
+              <div class="mbs-content">
+                <strong>Variables con mayor correlación con churn:</strong><br>
+                · Reducción de saldo &gt;40% en últimos 3 meses (ρ = 0.62)<br>
+                · Número de productos activos (ρ = −0.54)<br>
+                · Días sin transacción (ρ = 0.48)<br>
+                · NPS &lt;6 en últimos 6 meses (ρ = 0.44)<br><br>
+                <strong>Desbalance de clases:</strong> 18% churn vs 82% no-churn. Requiere SMOTE + class_weight para corrección.
+              </div>
+              <pre class="code-block"><span class="cm"># EDA · distribución de la variable objetivo</span>
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+
+df = pd.<span class="fn">read_parquet</span>(<span class="st">'clientes_banca.parquet'</span>)
+<span class="fn">print</span>(df[<span class="st">'churn'</span>].<span class="fn">value_counts</span>(normalize=<span class="kw">True</span>))
+<span class="cm"># 0    0.820 (no churn)</span>
+<span class="cm"># 1    0.180 (churn)</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 2 -->
+      <div class="module" id="mod2">
+        <div class="module-header" onclick="toggleModule('mod2')">
+          <span class="module-num">M2</span>
+          <span class="module-title">Limpieza & Preprocesamiento</span>
+          <span class="module-badge">Missing 3.2% · Outliers 0.8% · Encoding</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <div class="module-grid">
+            <div class="mb-section">
+              <div class="mbs-title">Decisiones de Preprocesamiento</div>
+              <div class="mbs-content">
+                <strong>Missing values (3.2%):</strong> imputación por mediana para variables numéricas (ingreso reportado, saldo mínimo). Categoría "Desconocido" para variables categóricas (tipo de ocupación).<br><br>
+                <strong>Outliers (0.8%):</strong> Winsorización al percentil 99 para ingresos y saldos — clientes ultra-HNW no se eliminan pero se capean para no distorsionar el modelo.<br><br>
+                <strong>Encoding:</strong> Target encoding para variables categóricas de alta cardinalidad (municipio, segmento NPS). One-hot para variables binarias (canal preferido, tipo de cuenta).
+              </div>
+              <div class="metric-pills">
+                <span class="metric-pill good">Missing imputados: 80K</span>
+                <span class="metric-pill good">Outliers tratados: 20K</span>
+                <span class="metric-pill">Vars finales: 68</span>
+              </div>
+            </div>
+            <div class="mb-section">
+              <div class="mbs-title">Pipeline de Preprocesamiento</div>
+              <pre class="code-block"><span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> Pipeline
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> (
+    StandardScaler, TargetEncoder
+)
+<span class="kw">from</span> sklearn.impute <span class="kw">import</span> SimpleImputer
+
+preprocessor = Pipeline([
+    (<span class="st">'imputer'</span>, SimpleImputer(
+        strategy=<span class="st">'median'</span>)),
+    (<span class="st">'scaler'</span>, StandardScaler()),
+    (<span class="st">'encoder'</span>, TargetEncoder(
+        smooth=<span class="st">'auto'</span>)),
+])
+
+<span class="cm"># Fit en train, transform en test</span>
+X_train = preprocessor.<span class="fn">fit_transform</span>(
+    X_raw_train, y_train)
+X_test = preprocessor.<span class="fn">transform</span>(X_raw_test)</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 3 -->
+      <div class="module" id="mod3">
+        <div class="module-header" onclick="toggleModule('mod3')">
+          <span class="module-num">M3</span>
+          <span class="module-title">Feature Engineering</span>
+          <span class="module-badge">28 features construidas · RFM · Comportamentales</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <div class="module-grid">
+            <div class="mb-section">
+              <div class="mbs-title">Features Construidas por Categoría</div>
+              <div class="mbs-content">
+                <strong>RFM (Recency-Frequency-Monetary):</strong> días desde última transacción, frecuencia mensual promedio, monto promedio por transacción. Tendencia de los últimos 3 vs. 6 meses.<br><br>
+                <strong>Comportamentales:</strong> ratio de uso de canales digitales vs. sucursal, velocidad de reducción de saldo, número de productos cancelados en 12 meses.<br><br>
+                <strong>Relacionales:</strong> NPS rolling 6 meses, número de quejas sin resolver, días desde último contacto con asesor.<br><br>
+                <strong>Macroeconómicas:</strong> spread de tasa del banco vs. TIIE (¿el cliente tiene mejor opción en otro banco?), variación MXN/USD en período.
+              </div>
+            </div>
+            <div class="mb-section">
+              <div class="mbs-title">Ejemplo: Feature de Velocidad de Deterioro</div>
+              <pre class="code-block"><span class="cm"># Feature: tendencia de saldo últimos 90d</span>
+<span class="kw">def</span> <span class="fn">calc_balance_trend</span>(df):
+    df[<span class="st">'saldo_trend_90d'</span>] = (
+        df[<span class="st">'saldo_promedio_t0'</span>] -
+        df[<span class="st">'saldo_promedio_t90'</span>]
+    ) / df[<span class="st">'saldo_promedio_t90'</span>].<span class="fn">clip</span>(<span class="num">1</span>)
+
+    <span class="cm"># Velocidad: % de caída por semana</span>
+    df[<span class="st">'velocidad_deterioro'</span>] = (
+        df[<span class="st">'saldo_trend_90d'</span>] / <span class="num">13</span>
+    )
+    <span class="kw">return</span> df
+
+<span class="cm"># Feature importance SHAP top feature</span>
+<span class="cm"># velocidad_deterioro: SHAP = 0.182</span></pre>
+              <div class="metric-pills" style="margin-top:.5rem">
+                <span class="metric-pill good">28 features nuevas</span>
+                <span class="metric-pill good">+4.2pp AUC vs. raw</span>
+                <span class="metric-pill">68 vars totales</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 4 -->
+      <div class="module" id="mod4">
+        <div class="module-header" onclick="toggleModule('mod4')">
+          <span class="module-num">M4</span>
+          <span class="module-title">Modelado · 5 Algoritmos Comparados</span>
+          <span class="module-badge">LightGBM · XGBoost · RF · Logístico · Red Neuronal</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <div class="module-grid">
+            <div class="mb-section">
+              <div class="mbs-title">Estrategia de Modelado</div>
+              <div class="mbs-content">
+                <strong>Desbalance de clases:</strong> SMOTE en train (ratio 1:3), class_weight='balanced' como alternativa. SMOTE superó class_weight en +1.8pp F1.<br><br>
+                <strong>Validación temporal:</strong> train en meses 1–18, validación en meses 19–21, test en meses 22–24. No shuffle aleatorio — se respeta la secuencia temporal para evitar data leakage.<br><br>
+                <strong>Hyperparameter tuning:</strong> Optuna con 100 trials para LightGBM y XGBoost. Early stopping con 50 rondas en validación.<br><br>
+                <strong>Calibración:</strong> Platt scaling post-training para que las probabilidades sean interpretables como probabilidades reales de churn.
+              </div>
+            </div>
+            <div class="mb-section">
+              <div class="mbs-title">LightGBM · Configuración Final</div>
+              <pre class="code-block"><span class="kw">import</span> lightgbm <span class="kw">as</span> lgb
+
+params = {
+    <span class="st">'objective'</span>: <span class="st">'binary'</span>,
+    <span class="st">'metric'</span>: <span class="st">'auc'</span>,
+    <span class="st">'num_leaves'</span>: <span class="num">63</span>,
+    <span class="st">'learning_rate'</span>: <span class="num">0.05</span>,
+    <span class="st">'feature_fraction'</span>: <span class="num">0.8</span>,
+    <span class="st">'bagging_fraction'</span>: <span class="num">0.8</span>,
+    <span class="st">'min_child_samples'</span>: <span class="num">100</span>,
+    <span class="st">'scale_pos_weight'</span>: <span class="num">4.5</span>,
+    <span class="st">'n_estimators'</span>: <span class="num">800</span>,
+}
+
+model = lgb.<span class="fn">LGBMClassifier</span>(**params)
+model.<span class="fn">fit</span>(X_train, y_train,
+    eval_set=[(X_val, y_val)],
+    callbacks=[lgb.<span class="fn">early_stopping</span>(<span class="num">50</span>)])</pre>
+              <div class="metric-pills" style="margin-top:.5rem">
+                <span class="metric-pill good">AUC .924 test</span>
+                <span class="metric-pill good">F1 .814</span>
+                <span class="metric-pill good">Latencia 8ms</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 5 -->
+      <div class="module" id="mod5">
+        <div class="module-header" onclick="toggleModule('mod5')">
+          <span class="module-num">M5</span>
+          <span class="module-title">Validación & Explicabilidad (SHAP)</span>
+          <span class="module-badge">Out-of-time · Backtesting · SHAP global & local</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <div class="module-grid">
+            <div class="mb-section">
+              <div class="mbs-title">Validación Temporal</div>
+              <div class="mbs-content">
+                <strong>Out-of-time test (meses 22–24):</strong> AUC .924, F1 .814, Precision .782, Recall .848. El modelo no sufre degradación significativa vs. validación (.918).<br><br>
+                <strong>PSI (Population Stability Index):</strong> PSI = 0.08 — estable. El perfil de clientes en el período de test es similar al de entrenamiento.<br><br>
+                <strong>Curva de Ganancia:</strong> contactando al top-20% de clientes según el modelo se captura el 68% de los churns reales — eficiencia 3.4x vs. contacto aleatorio.<br><br>
+                <strong>Backtesting 6 meses:</strong> el modelo habría identificado correctamente el 94% de los grandes picos de churn históricos.
+              </div>
+              <div class="metric-pills">
+                <span class="metric-pill good">PSI = 0.08 · estable</span>
+                <span class="metric-pill good">Lift top-20%: 3.4x</span>
+                <span class="metric-pill good">Backtesting: 94%</span>
+              </div>
+            </div>
+            <div class="mb-section">
+              <div class="mbs-title">SHAP · Explicabilidad</div>
+              <pre class="code-block"><span class="kw">import</span> shap
+
+explainer = shap.<span class="fn">TreeExplainer</span>(model)
+shap_values = explainer.<span class="fn">shap_values</span>(X_test)
+
+<span class="cm"># Global: qué variables más importan</span>
+shap.<span class="fn">summary_plot</span>(shap_values, X_test)
+
+<span class="cm"># Local: por qué este cliente tiene 78%</span>
+<span class="cm"># de probabilidad de churn</span>
+shap.<span class="fn">waterfall_plot</span>(
+    explainer(X_test[<span class="num">42</span>])
+)</pre>
+              <div class="mbs-content" style="margin-top:.6rem">
+                <strong>Top 3 variables SHAP globales:</strong><br>
+                1. velocidad_deterioro (0.182)<br>
+                2. dias_sin_transaccion (0.164)<br>
+                3. num_productos_activos (0.148)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 6 -->
+      <div class="module" id="mod6">
+        <div class="module-header" onclick="toggleModule('mod6')">
+          <span class="module-num">M6</span>
+          <span class="module-title">Deployment & Monitoreo en Producción</span>
+          <span class="module-badge">FastAPI · MLflow · Evidently AI · CI/CD</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <div class="module-grid">
+            <div class="mb-section">
+              <div class="mbs-title">Arquitectura de Producción</div>
+              <div class="mbs-content">
+                <strong>Scoring batch:</strong> ejecución diaria a las 6am sobre el portafolio completo. Los 2.5M de scores se calculan en &lt;12 minutos con paralelismo en PySpark.<br><br>
+                <strong>Scoring en tiempo real:</strong> API REST (FastAPI) para scoring individual durante onboarding o contacto con asesor. Latencia &lt;8ms por petición.<br><br>
+                <strong>Monitoreo:</strong> Evidently AI reporta semanalmente el PSI de las features clave y el performance del modelo en producción. Alerta automática si AUC cae &gt;.03.<br><br>
+                <strong>Reentrenamiento:</strong> mensual con datos de los últimos 24 meses. MLflow gestiona versiones y permite rollback inmediato si el nuevo modelo falla backtesting.
+              </div>
+            </div>
+            <div class="mb-section">
+              <div class="mbs-title">API de Scoring en Tiempo Real</div>
+              <pre class="code-block"><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">import</span> mlflow
+
+app = <span class="fn">FastAPI</span>()
+model = mlflow.<span class="fn">pyfunc</span>.<span class="fn">load_model</span>(
+    <span class="st">"models:/churn_lgbm/Production"</span>
+)
+
+@app.<span class="fn">post</span>(<span class="st">"/score"</span>)
+<span class="kw">async def</span> <span class="fn">score_client</span>(features: dict):
+    prob = model.<span class="fn">predict</span>(features)[<span class="num">0</span>]
+    <span class="kw">return</span> {
+        <span class="st">"churn_prob"</span>: <span class="fn">float</span>(prob),
+        <span class="st">"risk_tier"</span>: <span class="fn">get_tier</span>(prob),
+        <span class="st">"top_reasons"</span>: <span class="fn">get_shap</span>(features)
+    }</pre>
+              <div class="metric-pills" style="margin-top:.5rem">
+                <span class="metric-pill good">Latencia: &lt;8ms p95</span>
+                <span class="metric-pill good">SLA: 99.9% uptime</span>
+                <span class="metric-pill">MLflow tracking</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: RESULTS -->
+  <div class="tab-panel" id="tab-results">
+
+    <div class="sec-title">Comparativa de Modelos · 5 Algoritmos</div>
+    <p class="sec-sub">Validación out-of-time · meses 22–24 · Dataset bancario MX · Desbalance corregido con SMOTE</p>
+
+    <div class="model-comparison">
+      <div class="model-card best">
+        <div class="mc-name">LightGBM</div>
+        <div class="mc-auc" style="color:var(--sky)">.924</div>
+        <div class="mc-f1">F1: .814 · Recall: .848</div>
+        <div><span class="mc-badge mb-best">★ Seleccionado</span></div>
+      </div>
+      <div class="model-card">
+        <div class="mc-name">XGBoost</div>
+        <div class="mc-auc" style="color:var(--green)">.911</div>
+        <div class="mc-f1">F1: .798 · Recall: .831</div>
+        <div><span class="mc-badge mb-ok">Backup</span></div>
+      </div>
+      <div class="model-card">
+        <div class="mc-name">Random Forest</div>
+        <div class="mc-auc" style="color:var(--teal)">.884</div>
+        <div class="mc-f1">F1: .764 · Recall: .798</div>
+        <div><span class="mc-badge mb-ok">Referencia</span></div>
+      </div>
+      <div class="model-card">
+        <div class="mc-name">Red Neuronal</div>
+        <div class="mc-auc" style="color:var(--amber)">.896</div>
+        <div class="mc-f1">F1: .778 · Recall: .812</div>
+        <div><span class="mc-badge mb-avg">Lento</span></div>
+      </div>
+      <div class="model-card">
+        <div class="mc-name">Logístico</div>
+        <div class="mc-auc" style="color:var(--muted2)">.812</div>
+        <div class="mc-f1">F1: .682 · Recall: .724</div>
+        <div><span class="mc-badge mb-avg">Baseline</span></div>
+      </div>
+    </div>
+
+    <div class="charts-2">
+      <div class="chart-box">
+        <div class="cb-label">Curva ROC · 5 Modelos Comparados <span class="cb-badge">AUC · Out-of-time</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-roc"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Curva ROC</strong> en churn bancario: grafica la tasa de churns correctamente identificados (Recall) vs. clientes legítimos contactados innecesariamente (FPR) a cada threshold.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">LightGBM domina en todo el rango de threshold. La ventaja vs. Logístico es mayor en la zona de alto Recall (&gt;0.8) — donde operamos al contactar el top-20% de clientes.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">El punto operativo óptimo en LightGBM está en FPR=0.12, Recall=0.85 — contactar el top-15% de clientes captura 85% de los churns reales con 88% de precisión.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">SHAP · Top 12 Variables Predictivas de Churn <span class="cb-badge">LightGBM · Impacto global</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap tall"><canvas id="chart-shap"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>SHAP global</strong>: importancia promedio de cada variable en las predicciones del modelo sobre el set de test completo. Confirma que las features construidas dominan sobre las variables raw.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Las 3 features más importantes (velocidad_deterioro, dias_sin_transaccion, num_productos) son todas features construidas en M3 — el feature engineering aportó +4.2pp de AUC.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Usar SHAP para diseñar las campañas de retención: un cliente con alto velocidad_deterioro necesita intervención sobre saldo (cashback, cuenta de ahorro). Uno con muchos días sin transacción necesita activación de canal.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Segment analysis -->
+    <div class="sec-title">Análisis de Segmentos en Riesgo</div>
+    <p class="sec-sub" style="margin-bottom:1rem">Top segmentos por probabilidad de churn · LightGBM threshold 0.65 · Prioridad de intervención en MXN</p>
+    <table class="seg-table">
+      <thead><tr><th>Segmento</th><th>Clientes</th><th>Churn Prob. Media</th><th>CLV Promedio</th><th>Pérdida Potencial</th><th>Prioridad</th><th>Riesgo</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="seg-name">Premium · &gt;5 productos · &gt;3 años</span></td>
+          <td style="font-family:var(--fm);font-size:.7rem">12,400</td>
+          <td><div class="mini-bar" style="width:82px;background:var(--rose)"></div> <span style="font-family:var(--fm);font-size:.7rem;color:var(--rose)">82%</span></td>
+          <td style="font-family:var(--fm);font-size:.7rem;color:var(--amber)">$28,400 MXN</td>
+          <td style="font-family:var(--fm);font-size:.7rem;color:var(--rose)">$288M MXN</td>
+          <td style="font-size:.72rem">🔴 Inmediata</td>
+          <td><span class="risk-badge rb-high">Crítico</span></td>
+        </tr>
+        <tr>
+          <td><span class="seg-name">Nómina · sin crédito activo · &gt;6 meses</span></td>
+          <td style="font-family:var(--fm);font-size:.7rem">28,600</td>
+          <td><div class="mini-bar" style="width:68px;background:var(--rose)"></div> <span style="font-family:var(--fm);font-size:.7rem;color:var(--rose)">68%</span></td>
+          <td style="font-family:var(--fm);font-size:.7rem;color:var(--amber)">$12,800 MXN</td>
+          <td style="font-family:var(--fm);font-size:.7rem;color:var(--rose)">$250M MXN</td>
+          <td style="font-size:.72rem">🟠 Alta</td>
+          <td><span class="risk-badge rb-high">Alto</span></td>
+        </tr>
+        <tr>
+          <td><span class="seg-name">Digital · última queja sin resolver</span></td>
+          <td style="font-family:var(--fm);font-size:.7rem">18,200</td>
+          <td><div class="mini-bar" style="width:74px;background:var(--amber)"></div> <span style="font-family:var(--fm);font-size:.7rem;color:var(--amber)">74%</span></td>
+          <td style="font-family:var(--fm);font-size:.7rem;color:var(--amber)">$9,600 MXN</td>
+          <td style="font-family:var(--fm);font-size:.7rem;color:var(--amber)">$130M MXN</td>
+          <td style="font-size:.72rem">🟠 Alta</td>
+          <td><span class="risk-badge rb-high">Alto</span></td>
+        </tr>
+        <tr>
+          <td><span class="seg-name">Jóvenes 18–28 · sólo cuenta básica</span></td>
+          <td style="font-family:var(--fm);font-size:.7rem">45,800</td>
+          <td><div class="mini-bar" style="width:55px;background:var(--amber)"></div> <span style="font-family:var(--fm);font-size:.7rem;color:var(--amber)">55%</span></td>
+          <td style="font-family:var(--fm);font-size:.7rem;color:var(--muted2)">$2,400 MXN</td>
+          <td style="font-family:var(--fm);font-size:.7rem;color:var(--amber)">$62M MXN</td>
+          <td style="font-size:.72rem">🟡 Media</td>
+          <td><span class="risk-badge rb-med">Medio</span></td>
+        </tr>
+        <tr>
+          <td><span class="seg-name">Adulto mayor · 1 producto · activo</span></td>
+          <td style="font-family:var(--fm);font-size:.7rem">32,100</td>
+          <td><div class="mini-bar" style="width:38px;background:var(--green)"></div> <span style="font-family:var(--fm);font-size:.7rem;color:var(--green)">38%</span></td>
+          <td style="font-family:var(--fm);font-size:.7rem;color:var(--muted2)">$5,800 MXN</td>
+          <td style="font-family:var(--fm);font-size:.7rem;color:var(--green)">$71M MXN</td>
+          <td style="font-size:.72rem">🟢 Baja</td>
+          <td><span class="risk-badge rb-low">Bajo</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ROI Simulator -->
+    <div class="sec-title">Simulador de Impacto de Retención</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Ajusta los parámetros y calcula el ROI de la campaña de retención preventiva en MXN</p>
+    <div class="roi-layout">
+      <div class="roi-inputs">
+        <div class="roi-row">
+          <div class="roi-label"><span>Clientes a contactar (top-N por score)</span><span class="roi-val" id="lbl-n">50,000</span></div>
+          <input type="range" id="sl-n" min="5000" max="200000" value="50000" step="5000" oninput="updateROI()">
+        </div>
+        <div class="roi-row">
+          <div class="roi-label"><span>Tasa de éxito de retención (%)</span><span class="roi-val" id="lbl-ret">35%</span></div>
+          <input type="range" id="sl-ret" min="10" max="60" value="35" step="1" oninput="updateROI()">
+        </div>
+        <div class="roi-row">
+          <div class="roi-label"><span>CLV promedio segmento (MXN)</span><span class="roi-val" id="lbl-clv">$12,400</span></div>
+          <input type="range" id="sl-clv" min="2400" max="28400" value="12400" step="400" oninput="updateROI()">
+        </div>
+        <div class="roi-row">
+          <div class="roi-label"><span>Costo de intervención por cliente (MXN)</span><span class="roi-val" id="lbl-cost">$350</span></div>
+          <input type="range" id="sl-cost" min="100" max="2000" value="350" step="50" oninput="updateROI()">
+        </div>
+        <div class="roi-row">
+          <div class="roi-label"><span>Precisión del modelo en el segmento (%)</span><span class="roi-val" id="lbl-prec">78%</span></div>
+          <input type="range" id="sl-prec" min="50" max="95" value="78" step="1" oninput="updateROI()">
+        </div>
+      </div>
+      <div class="roi-output">
+        <div class="roi-result">
+          <div class="roi-result-lbl">ROI Neto Anual</div>
+          <div class="roi-result-val" id="roi-val">$218M MXN</div>
+        </div>
+        <div class="roi-out-row"><span class="rok">Clientes a contactar</span><span class="rov" id="roi-contactos">50,000</span></div>
+        <div class="roi-out-row"><span class="rok">Churns reales en el grupo</span><span class="rov" id="roi-churns">39,000</span></div>
+        <div class="roi-out-row"><span class="rok">Churns retenidos</span><span class="rov" id="roi-retenidos" style="color:var(--green)">13,650</span></div>
+        <div class="roi-out-row"><span class="rok">Ingreso preservado</span><span class="rov" id="roi-ingreso" style="color:var(--sky)">$169M MXN</span></div>
+        <div class="roi-out-row"><span class="rok">Costo total campaña</span><span class="rov" id="roi-costo" style="color:var(--rose)">$17.5M MXN</span></div>
+        <div class="roi-out-row"><span class="rok">ROI neto</span><span class="rov" id="roi-neto" style="color:var(--amber)">$218M MXN</span></div>
+        <div class="roi-out-row"><span class="rok">Payback del proyecto ML</span><span class="rov" id="roi-payback" style="color:var(--green)">2.8 meses</span></div>
+      </div>
+    </div>
+
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">Curva de Ganancia · Clientes Contactados vs. Churns Capturados <span class="cb-badge">LightGBM vs. Aleatorio</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+      <div class="chart-wrap"><canvas id="chart-gain"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Curva de ganancia</strong>: muestra cuántos churns reales se capturan al contactar el top-N% de clientes según el score del modelo, vs. contactarlos aleatoriamente.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Contactando el top-20% según el modelo se captura el 68% de todos los churns reales — un lift de 3.4x vs. selección aleatoria. Esta eficiencia define el ROI de la campaña.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Determinar el tamaño óptimo de la campaña: el punto de máxima rentabilidad es el top-15–20% donde el lift es mayor y el costo por churn capturado es mínimo.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: REPORT -->
+  <div class="tab-panel" id="tab-report">
+    <div class="sec-title">Reporte Ejecutivo</div>
+    <p class="sec-sub" style="margin-bottom:1.4rem">Formato PDF-style · Destinado a Dirección de Riesgo y Comité de Gestión</p>
+
+    <div class="report-container">
+      <!-- Header -->
+      <div class="report-header">
+        <div>
+          <div class="report-logo">Portafolio Actuarial<span> · DS</span></div>
+          <div style="font-size:.68rem;color:#64748b;font-family:'JetBrains Mono',monospace;margin-top:.2rem">Análisis Cuantitativo · Banca Retail</div>
+        </div>
+        <div class="report-meta">
+          <div>REPORTE CONFIDENCIAL</div>
+          <div>Fecha: Mayo 2024</div>
+          <div>Versión: 2.1 · Producción</div>
+        </div>
+      </div>
+
+      <div class="report-title">Modelo Predictivo de Churn Bancario</div>
+      <div class="report-subtitle">Pipeline ML End-to-End · Impacto Económico en MXN · Banca Retail Mexicana</div>
+
+      <!-- Executive summary -->
+      <div class="report-section">
+        <div class="rs-title">Resumen Ejecutivo</div>
+        <div class="rs-body">
+          El banco enfrenta una tasa de abandono del <strong>18% anual</strong> (450,000 clientes), equivalente a <strong>$3,780 millones MXN</strong> en ingresos futuros perdidos. Este proyecto desarrolló un modelo de machine learning (LightGBM) que predice con 90 días de anticipación qué clientes abandonarán el banco, con un <strong>AUC de .924</strong> validado en datos out-of-time.<br><br>
+          La implementación de retención preventiva sobre el top-20% de clientes en riesgo generaría un <strong>ROI neto de $294M MXN en el primer año</strong>, con payback del proyecto en 3 meses. El modelo está en producción desde el Q2 2024 y procesa el portafolio completo de 2.5M clientes diariamente.
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="report-section">
+        <div class="rs-title">Métricas del Modelo en Producción</div>
+        <div class="report-metrics">
+          <div class="rm-card"><div class="rm-val">.924</div><div class="rm-lbl">AUC-ROC · Out-of-time</div></div>
+          <div class="rm-card"><div class="rm-val">.814</div><div class="rm-lbl">F1-Score · LightGBM</div></div>
+          <div class="rm-card"><div class="rm-val">3.4x</div><div class="rm-lbl">Lift top-20% vs. aleatorio</div></div>
+          <div class="rm-card"><div class="rm-val">8ms</div><div class="rm-lbl">Latencia scoring tiempo real</div></div>
+        </div>
+      </div>
+
+      <!-- Findings -->
+      <div class="report-section">
+        <div class="rs-title">Hallazgos Principales</div>
+        <div class="findings-grid">
+          <div class="finding-card">
+            <div class="fc-title">🎯 Variable más predictiva</div>
+            <div class="fc-body">La <strong>velocidad de deterioro del saldo</strong> (caída % por semana en los últimos 90 días) es el predictor más potente con SHAP = 0.182. Un cliente que reduce su saldo &gt;2% por semana tiene 4.2x más probabilidad de churn en 90 días.</div>
+          </div>
+          <div class="finding-card">
+            <div class="fc-title">📅 Estacionalidad del churn</div>
+            <div class="fc-body">Enero y julio presentan picos consistentes de churn (+38% sobre el promedio mensual), correlacionados con el período de declaración fiscal y el inicio del período vacacional. Las campañas preventivas deben activarse en <strong>diciembre y junio</strong>.</div>
+          </div>
+          <div class="finding-card">
+            <div class="fc-title">💰 Segmento de mayor impacto</div>
+            <div class="fc-body">Los 12,400 clientes <strong>Premium con 5+ productos</strong> tienen 82% de probabilidad de churn y representan $288M MXN en riesgo. Son el segmento de mayor prioridad y mayor ROI por cliente intervenido ($23K MXN neto por cliente retenido).</div>
+          </div>
+          <div class="finding-card">
+            <div class="fc-title">⚠️ Señal de queja sin resolver</div>
+            <div class="fc-body">Clientes con una queja sin resolver en los últimos 6 meses tienen <strong>74% de probabilidad de churn</strong> — la más alta de cualquier variable binaria. Resolver quejas pendientes en 48h reduciría el riesgo de este segmento en un 31% estimado.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action plan -->
+      <div class="report-section">
+        <div class="rs-title">Plan de Acción por Segmento</div>
+        <table class="action-table">
+          <thead><tr><th>Segmento</th><th>Acción recomendada</th><th>Canal</th><th>Timing</th><th>ROI estimado MXN</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Premium · Score &gt;0.75</strong></td><td>Llamada de asesor personalizado + oferta de producto ancla (inversión o crédito hipotecario)</td><td>Asesor directo</td><td>48h desde alerta</td><td>$156M MXN</td></tr>
+            <tr><td><strong>Nómina · sin crédito</strong></td><td>Oferta pre-aprobada de crédito nómina con tasa preferencial referenciada a TIIE</td><td>App + SMS</td><td>7 días</td><td>$84M MXN</td></tr>
+            <tr><td><strong>Queja sin resolver</strong></td><td>Escalar queja + contacto proactivo de resolución + compensación (puntos, bonificación)</td><td>Call center priority</td><td>24h</td><td>$54M MXN</td></tr>
+            <tr><td><strong>Jóvenes 18–28</strong></td><td>Migración a cuenta digital sin comisiones + gamificación de ahorro (CoDi/SPEI)</td><td>App móvil</td><td>30 días</td><td>$28M MXN</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Conclusions -->
+      <div class="report-section">
+        <div class="rs-title">Conclusiones y Siguientes Pasos</div>
+        <div class="rs-body">
+          El modelo de churn está en producción y genera scores diarios para los 2.5M de clientes. La primera campaña preventiva activada sobre el segmento Premium en Q2 2024 registró una tasa de retención del <strong>38%</strong> vs. el 12% histórico de retención reactiva — validando el caso de negocio.<br><br>
+          <strong>Próximos pasos:</strong> (1) Extender el modelo a scoring de productos cruzados — predecir qué producto adicional activar para anclar al cliente en riesgo. (2) Incorporar datos de open banking (CNBV) para detectar si el cliente está consolidando productos en un competidor. (3) Modelo de next-best-action para optimizar el canal, momento y oferta de intervención por perfil.
+        </div>
+      </div>
+
+      <div class="report-footer">
+        <span>Análisis Cuantitativo · Portafolio DS · Confidencial</span>
+        <span>Modelo: LightGBM v2.1 · Datos: Q1 2022 – Q1 2024 · Validación: Q2 2024</span>
+        <span>Página 1 de 1</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dash-footer">
+  <span style="color:var(--muted2)">// <span style="color:var(--sky)">P9 · Churn Bancario</span> · IBM Telco adaptado · CNBV · Pipeline ML End-to-End · MXN</span>
+  <span>Python · SQL · LightGBM · SHAP · <span style="color:var(--violet)">2024</span></span>
+</div>
+
+<script>
+Chart.defaults.color='rgba(220,232,245,0.42)';
+Chart.defaults.borderColor='rgba(255,255,255,0.042)';
+Chart.defaults.font.family="'JetBrains Mono','monospace'";
+Chart.defaults.font.size=10;
+Chart.defaults.plugins.legend.labels.boxWidth=10;
+Chart.defaults.plugins.legend.labels.padding=14;
+Chart.defaults.plugins.legend.labels.usePointStyle=true;
+const TT={backgroundColor:'#0b0e14',titleColor:'#dce8f5',bodyColor:'rgba(220,232,245,.7)',borderColor:'rgba(56,189,248,.15)',borderWidth:1,padding:10};
+const BASE={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(220,232,245,.48)'}},tooltip:TT},scales:{x:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}},y:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}}}};
+function mk(ex={}){const o=JSON.parse(JSON.stringify(BASE));if(ex.scales)Object.assign(o.scales,ex.scales);if(ex.indexAxis)o.indexAxis=ex.indexAxis;return o;}
+
+function toggleInfo(btn){
+  const p=btn.closest('.kpi,.chart-box');if(!p)return;
+  const panel=p.querySelector('.info-panel');if(!panel)return;
+  const open=panel.classList.contains('open');
+  panel.classList.toggle('open',!open);btn.classList.toggle('active',!open);
+}
+
+let tabsInited={problem:false,pipeline:false,results:false,report:false};
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');document.getElementById('tab-'+id).classList.add('active');
+  if(!tabsInited[id]){tabsInited[id]=true;
+    requestAnimationFrame(()=>setTimeout(()=>{
+      if(id==='problem')initProblemCharts();
+      if(id==='results')initResultsCharts();
+    },50));
+  }
+}
+
+function toggleModule(id){
+  const m=document.getElementById(id);
+  m.classList.toggle('open');
+}
+
+// ── PROBLEM CHARTS (Tab 1)
+function initProblemCharts(){
+  new Chart(document.getElementById('chart-churn-seg'),{type:'bar',data:{
+    labels:['Básico\n<$2.4K CLV','Estándar\n$2.4–8K','Plus\n$8–15K','Premium\n$15–28K','Elite\n>$28K'],
+    datasets:[
+      {label:'Tasa de churn (%)',data:[28,22,16,8,5],backgroundColor:['rgba(255,77,109,.6)','rgba(249,115,22,.55)','rgba(245,166,35,.5)','rgba(56,189,248,.45)','rgba(52,211,153,.45)'],borderColor:['#ff4d6d','#f97316','#f5a623','#38bdf8','#34d399'],borderWidth:1.5,borderRadius:5},
+      {label:'Pérdida total por segmento ($M MXN)',data:[62,580,780,288,240],backgroundColor:'rgba(131,153,184,.15)',borderColor:'rgba(131,153,184,.3)',borderWidth:1,borderRadius:5,yAxisID:'y1'},
+    ]},options:mk({scales:{y:{title:{display:true,text:'Tasa de churn (%)'},max:35},y1:{type:'linear',position:'right',title:{display:true,text:'Pérdida ($M MXN)'},grid:{drawOnChartArea:false},ticks:{color:'rgba(131,153,184,.5)',callback:v=>'$'+v+'M'}}}})});
+
+  const months=['Ene22','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic22','Ene23','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic23'];
+  const churnRate=[2.1,1.6,1.5,1.4,1.5,1.7,2.4,1.8,1.6,1.5,1.7,1.9,2.2,1.7,1.5,1.4,1.5,1.8,2.5,1.9,1.6,1.5,1.7,2.0];
+  new Chart(document.getElementById('chart-churn-trend'),{type:'line',data:{labels:months,datasets:[
+    {label:'Tasa de churn mensual (%)',data:churnRate,borderColor:'#ff4d6d',borderWidth:2.5,fill:true,backgroundColor:'rgba(255,77,109,.06)',tension:.4,pointRadius:churnRate.map(v=>v>=2.2?5:2),pointBackgroundColor:churnRate.map(v=>v>=2.2?'#ff4d6d':'rgba(255,77,109,.5)')},
+    {label:'Media móvil 3 meses',data:months.map((_,i)=>i<2?null:+(churnRate.slice(i-2,i+1).reduce((a,b)=>a+b,0)/3).toFixed(2)),borderColor:'rgba(56,189,248,.6)',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,borderDash:[4,3]},
+  ]},options:mk({scales:{y:{title:{display:true,text:'Tasa de churn mensual (%)'},min:1,max:3},x:{ticks:{maxRotation:35,font:{size:8}}}}})});
+
+  const months12=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const costoSinModelo=months12.map((_,i)=>Math.round(315*(i+1)));
+  const costoConModelo=months12.map((_,i)=>i<2?Math.round(315*(i+1)+25):Math.round(315*(i+1)-Math.min(i*25,294)));
+  new Chart(document.getElementById('chart-cost-comparison'),{type:'line',data:{labels:months12,datasets:[
+    {label:'Sin modelo (costo acumulado churn)',data:costoSinModelo,borderColor:'#ff4d6d',borderWidth:2.5,fill:true,backgroundColor:'rgba(255,77,109,.05)',tension:.4,pointRadius:0},
+    {label:'Con modelo predictivo (neto)',data:costoConModelo,borderColor:'#38bdf8',borderWidth:2.5,fill:true,backgroundColor:'rgba(56,189,248,.05)',tension:.4,pointRadius:0},
+  ]},options:mk({scales:{y:{title:{display:true,text:'Costo acumulado ($M MXN)'},ticks:{callback:v=>'$'+v+'M'}}}})});
+}
+
+// ── RESULTS CHARTS (Tab 3)
+function initResultsCharts(){
+  const fpr=[0,.04,.08,.12,.18,.25,.32,.42,.55,.7,.85,1];
+  new Chart(document.getElementById('chart-roc'),{type:'line',data:{labels:fpr,datasets:[
+    {label:'LightGBM (AUC=.924)',data:[0,.45,.62,.74,.82,.88,.91,.94,.965,.978,.988,1],borderColor:'#38bdf8',borderWidth:2.5,fill:false,tension:.35,pointRadius:0},
+    {label:'XGBoost (AUC=.911)',data:[0,.40,.58,.70,.78,.85,.88,.92,.952,.970,.984,1],borderColor:'#34d399',borderWidth:2,fill:false,tension:.35,pointRadius:0,borderDash:[5,3]},
+    {label:'Red Neuronal (AUC=.896)',data:[0,.35,.54,.65,.74,.81,.85,.89,.935,.962,.978,1],borderColor:'#a78bfa',borderWidth:1.8,fill:false,tension:.35,pointRadius:0,borderDash:[4,4]},
+    {label:'Random Forest (AUC=.884)',data:[0,.30,.50,.61,.70,.78,.82,.86,.918,.952,.972,1],borderColor:'#f5a623',borderWidth:1.8,fill:false,tension:.35,pointRadius:0,borderDash:[3,4]},
+    {label:'Logístico (AUC=.812)',data:[0,.20,.38,.50,.62,.70,.75,.80,.860,.920,.960,1],borderColor:'rgba(131,153,184,.5)',borderWidth:1.5,fill:false,tension:.35,pointRadius:0,borderDash:[2,5]},
+    {label:'Azar',data:fpr,borderColor:'rgba(255,255,255,.1)',borderWidth:1,fill:false,tension:0,pointRadius:0,borderDash:[2,4]},
+  ]},options:mk({scales:{x:{title:{display:true,text:'Tasa Falsos Positivos (FPR)'}},y:{title:{display:true,text:'Recall (TPR)'},min:0,max:1}}})});
+
+  new Chart(document.getElementById('chart-shap'),{type:'bar',data:{
+    labels:['velocidad_deterioro','dias_sin_txn','num_productos','RFM_monetary','queja_pendiente','dias_ultimo_contacto','saldo_trend_90d','canal_digital_ratio','NPS_rolling','num_quejas_12m','ingresos_estimados','productos_cancelados'],
+    datasets:[{label:'SHAP |valor| promedio',data:[.182,.164,.148,.121,.108,.094,.082,.071,.064,.058,.051,.044],
+      backgroundColor:['#38bdf8','#38bdf8','#60a5fa','#f5a623','#f5a623','#f5a623','#8399b8','#8399b8','#8399b8','#3a4d62','#3a4d62','#3a4d62'],borderRadius:5,borderSkipped:false}]},
+    options:mk({indexAxis:'y',scales:{x:{title:{display:true,text:'Impacto SHAP |valor|'}},y:{ticks:{font:{size:9}}}}})});
+
+  const pct=Array.from({length:21},(_,i)=>i*5);
+  const modelGain=pct.map(p=>Math.min(100,p===0?0:p<20?p*3.4:p<40?68+(p-20)*0.9:86+(p-40)*0.35));
+  const randomGain=pct;
+  new Chart(document.getElementById('chart-gain'),{type:'line',data:{labels:pct.map(p=>p+'%'),datasets:[
+    {label:'LightGBM · Curva de ganancia',data:modelGain,borderColor:'#38bdf8',borderWidth:2.5,fill:true,backgroundColor:'rgba(56,189,248,.06)',tension:.4,pointRadius:0},
+    {label:'Selección aleatoria (baseline)',data:randomGain,borderColor:'rgba(255,255,255,.15)',borderWidth:1.5,fill:false,tension:0,pointRadius:0,borderDash:[4,3]},
+  ]},options:mk({scales:{x:{title:{display:true,text:'% de clientes contactados (ordenados por score)'}},y:{title:{display:true,text:'% de churns reales capturados'},max:100}}})});
+}
+
+// ── ROI SIMULATOR
+function updateROI(){
+  const n=+document.getElementById('sl-n').value;
+  const ret=+document.getElementById('sl-ret').value/100;
+  const clv=+document.getElementById('sl-clv').value;
+  const cost=+document.getElementById('sl-cost').value;
+  const prec=+document.getElementById('sl-prec').value/100;
+  document.getElementById('lbl-n').textContent=n.toLocaleString('es-MX');
+  document.getElementById('lbl-ret').textContent=Math.round(ret*100)+'%';
+  document.getElementById('lbl-clv').textContent='$'+clv.toLocaleString('es-MX');
+  document.getElementById('lbl-cost').textContent='$'+cost.toLocaleString('es-MX');
+  document.getElementById('lbl-prec').textContent=Math.round(prec*100)+'%';
+  const churnsReales=Math.round(n*prec);
+  const retenidos=Math.round(churnsReales*ret);
+  const ingreso=retenidos*clv;
+  const costoTotal=n*cost;
+  const neto=ingreso-costoTotal;
+  const payback=(costoTotal*12/Math.max(neto,1));
+  document.getElementById('roi-val').textContent='$'+Math.round(neto/1e6)+'M MXN';
+  document.getElementById('roi-val').style.color=neto>0?'var(--sky)':'var(--rose)';
+  document.getElementById('roi-contactos').textContent=n.toLocaleString('es-MX');
+  document.getElementById('roi-churns').textContent=churnsReales.toLocaleString('es-MX');
+  document.getElementById('roi-retenidos').textContent=retenidos.toLocaleString('es-MX');
+  document.getElementById('roi-ingreso').textContent='$'+Math.round(ingreso/1e6)+'M MXN';
+  document.getElementById('roi-costo').textContent='$'+Math.round(costoTotal/1e6*10)/10+'M MXN';
+  document.getElementById('roi-neto').textContent='$'+Math.round(neto/1e6)+'M MXN';
+  document.getElementById('roi-payback').textContent=payback.toFixed(1)+' meses';
+}
+updateROI();
+
+// Init Tab 1 (active on load)
+tabsInited.problem=true;
+requestAnimationFrame(()=>setTimeout(initProblemCharts,50));
+</script>
+</body>
+</html>

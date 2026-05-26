@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>P1 · Credit Scoring · Probabilidad de Incumplimiento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#05080f;--bg2:#090f1e;--bg3:#0f1729;--bg4:#141e33;
+  --teal:#00ddb4;--teal-dim:rgba(0,221,180,.11);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,.1);
+  --violet:#a78bfa;--violet-dim:rgba(167,139,250,.11);
+  --rose:#fb7185;--green:#34d399;--blue:#60a5fa;
+  --text:#dce8f5;--muted:#4f6180;--muted2:#8399b8;
+  --border:rgba(0,221,180,.16);--border2:rgba(255,255,255,.06);
+  --r:14px;
+  --fh:'Syne',sans-serif;--fm:'JetBrains Mono',monospace;--fb:'DM Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.7;min-height:100vh;overflow-x:hidden}
+
+/* ── BACK BUTTON ── */
+.back-bar{padding:.9rem 2rem;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:.7rem;background:var(--bg2)}
+.back-btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--fm);font-size:.72rem;color:var(--muted2);text-decoration:none;padding:.35rem .8rem;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);transition:all .2s;cursor:pointer}
+.back-btn:hover{color:var(--teal);border-color:rgba(0,221,180,.3)}
+.back-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+.breadcrumb{font-family:var(--fm);font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:.4rem}
+.breadcrumb span{color:var(--teal)}
+
+/* ── HEADER ── */
+.dash-header{padding:2.5rem 2.5rem 0;max-width:1200px;margin:0 auto}
+.eyebrow{font-family:var(--fm);font-size:.62rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.eyebrow::before{content:'';display:inline-block;width:20px;height:1px;background:var(--teal)}
+.dash-title{font-family:var(--fh);font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.8rem}
+.dash-title .at{color:var(--teal)}
+.dash-meta{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.6rem}
+.badge{font-family:var(--fm);font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;padding:.2rem .65rem;border-radius:999px}
+.b-source{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.25)}
+.b-py{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.b-sql{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.b-r{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.b-type{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,221,180,.25)}
+.dash-desc{font-size:.85rem;color:rgba(220,232,245,.55);max-width:680px;line-height:1.8;margin-bottom:2rem}
+
+/* ── KPI STRIP ── */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;padding:0 2.5rem;max-width:1200px;margin:0 auto 0}
+.kpi{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.1rem 1.2rem;position:relative;overflow:hidden;transition:border-color .25s}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--teal-color,var(--teal));opacity:.7}
+.kpi:hover{border-color:rgba(0,221,180,.28)}
+.kpi-val{font-family:var(--fh);font-size:1.7rem;font-weight:800;letter-spacing:-.03em;display:block;margin-bottom:.15rem}
+.kpi-lbl{font-size:.72rem;color:var(--muted2);margin-bottom:.05rem}
+.kpi-sub{font-family:var(--fm);font-size:.6rem;color:var(--muted)}
+
+/* ── TABS ── */
+.tabs-wrap{padding:2rem 2.5rem 0;max-width:1200px;margin:0 auto}
+.tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--border2);margin-bottom:2rem}
+.tab-btn{font-family:var(--fm);font-size:.75rem;padding:.65rem 1.3rem;cursor:pointer;color:var(--muted2);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;display:flex;align-items:center;gap:.45rem;border-radius:8px 8px 0 0}
+.tab-btn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.tab-btn.active{color:var(--teal);border-bottom-color:var(--teal);background:var(--teal-dim)}
+.tab-btn .ticon{font-size:.85rem}
+.tab-panel{display:none;animation:fadeIn .3s ease}
+.tab-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── SECTION TITLES ── */
+.sec-title{font-family:var(--fh);font-size:1rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem;display:flex;align-items:center;gap:.55rem}
+.sec-title::before{content:'';display:inline-block;width:16px;height:2px;background:var(--teal);border-radius:1px}
+.sec-sub{font-size:.78rem;color:var(--muted2);margin-bottom:1.4rem}
+
+/* ── CHARTS GRID ── */
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.chart-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem}
+.chart-box.wide{grid-column:span 2}
+.chart-box.full{grid-column:1/-1}
+.cb-label{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.9rem;display:flex;align-items:center;justify-content:space-between}
+.cb-badge{font-size:.58rem;padding:.12rem .45rem;border-radius:5px;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,221,180,.2)}
+.chart-wrap{position:relative;height:200px}
+.chart-wrap.tall{height:260px}
+.chart-wrap.xtall{height:320px}
+
+/* ── SEGMENT TABS ── */
+.seg-tabs{display:flex;gap:.4rem;margin-bottom:1.2rem;flex-wrap:wrap}
+.seg-btn{font-family:var(--fm);font-size:.65rem;padding:.3rem .8rem;border-radius:7px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .2s}
+.seg-btn:hover{color:var(--text);border-color:rgba(255,255,255,.15)}
+.seg-btn.active{color:var(--teal);background:var(--teal-dim);border-color:rgba(0,221,180,.3)}
+
+/* ── ML PROPOSALS ── */
+.ml-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;margin-bottom:1.6rem}
+.ml-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.1rem;transition:border-color .2s}
+.ml-card:hover{border-color:rgba(0,221,180,.28)}
+.ml-icon{font-size:1.4rem;margin-bottom:.6rem}
+.ml-title{font-family:var(--fh);font-size:.88rem;font-weight:700;margin-bottom:.35rem}
+.ml-desc{font-size:.76rem;color:var(--muted2);line-height:1.7;margin-bottom:.7rem}
+.ml-metric{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:8px;padding:.4rem .7rem}
+.ml-metric-val{font-family:var(--fm);font-size:.78rem;color:var(--teal)}
+.ml-metric-lbl{font-size:.65rem;color:var(--muted)}
+
+/* ── CONCLUSIONS ── */
+.conc-list{display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.6rem}
+.conc-item{display:flex;align-items:flex-start;gap:.75rem;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem 1.1rem;font-size:.82rem;color:rgba(220,232,245,.72);line-height:1.75;transition:border-color .2s}
+.conc-item:hover{border-color:rgba(0,221,180,.22)}
+.conc-arrow{font-family:var(--fm);font-size:.75rem;color:var(--teal);flex-shrink:0;margin-top:.1rem;background:var(--teal-dim);border-radius:5px;padding:.12rem .4rem}
+
+/* ── SIMULATOR ── */
+.sim-layout{display:grid;grid-template-columns:1fr 380px;gap:1.4rem;align-items:start}
+.sim-inputs{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.5rem}
+.sim-output{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.5rem;position:sticky;top:1rem}
+.sim-group{margin-bottom:1.3rem}
+.sim-group-title{font-family:var(--fm);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);margin-bottom:.8rem;padding-bottom:.5rem;border-bottom:1px solid var(--border2)}
+.sim-row{margin-bottom:1rem}
+.sim-label{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:var(--muted2);margin-bottom:.35rem}
+.sim-val{font-family:var(--fm);font-size:.75rem;color:var(--teal);background:var(--teal-dim);padding:.1rem .4rem;border-radius:5px;border:1px solid rgba(0,221,180,.25)}
+input[type=range]{width:100%;height:4px;border-radius:2px;background:var(--bg4);outline:none;-webkit-appearance:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--teal);border:2px solid var(--bg);cursor:pointer;transition:transform .15s}
+input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.2)}
+.sim-select{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--fm);font-size:.72rem;padding:.5rem .7rem;outline:none;cursor:pointer;transition:border-color .2s}
+.sim-select:focus{border-color:rgba(0,221,180,.4)}
+
+/* Score Gauge */
+.score-display{text-align:center;padding:1.5rem 0 1rem;border-bottom:1px solid var(--border2);margin-bottom:1.2rem}
+.score-label{font-family:var(--fm);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem}
+.score-num{font-family:var(--fh);font-size:4rem;font-weight:800;letter-spacing:-.04em;line-height:1;transition:color .4s}
+.score-range{font-family:var(--fm);font-size:.65rem;color:var(--muted);margin-top:.2rem}
+.score-bar-wrap{background:var(--bg3);border-radius:999px;height:8px;margin:1rem 0 .5rem;overflow:hidden;position:relative}
+.score-bar-track{height:100%;background:linear-gradient(90deg,#fb7185 0%,#f5a623 35%,#34d399 65%,#00ddb4 100%);border-radius:999px}
+.score-needle{position:absolute;top:-3px;width:2px;height:14px;background:white;border-radius:1px;transform:translateX(-50%);transition:left .5s cubic-bezier(.34,1.56,.64,1)}
+.score-ticks{display:flex;justify-content:space-between;font-family:var(--fm);font-size:.58rem;color:var(--muted);margin-top:.2rem}
+.risk-badge{display:inline-block;font-family:var(--fm);font-size:.7rem;padding:.35rem 1rem;border-radius:999px;font-weight:500;letter-spacing:.05em;margin-top:.7rem;transition:all .4s}
+
+/* Output panels */
+.out-row{display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.8rem}
+.out-row:last-child{border-bottom:none}
+.out-key{color:var(--muted2)}
+.out-val{font-family:var(--fm);font-size:.75rem;color:var(--text)}
+.out-val.good{color:var(--green)}
+.out-val.warn{color:var(--amber)}
+.out-val.bad{color:var(--rose)}
+
+.profile-box{background:var(--bg3);border-radius:10px;padding:.9rem 1rem;margin-top:1rem;border:1px solid var(--border2)}
+.profile-title{font-family:var(--fm);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem}
+.profile-text{font-size:.78rem;color:rgba(220,232,245,.65);line-height:1.75}
+.profile-text strong{color:var(--teal)}
+
+/* ── FOOTER ── */
+.dash-footer{margin:3rem 2.5rem 0;max-width:1200px;margin-left:auto;margin-right:auto;padding:1.2rem 0 2rem;border-top:1px solid var(--border2);display:flex;justify-content:space-between;align-items:center;font-family:var(--fm);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .kpi-strip{grid-template-columns:repeat(2,1fr);padding:0 1.2rem}
+  .charts-2,.charts-3{grid-template-columns:1fr}
+  .chart-box.wide,.chart-box.full{grid-column:span 1}
+  .ml-grid{grid-template-columns:1fr}
+  .sim-layout{grid-template-columns:1fr}
+  .dash-header,.tabs-wrap{padding-left:1.2rem;padding-right:1.2rem}
+}
+
+/* ── INFO BUTTON + COLLAPSIBLE EXPLAINER ── */
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid rgba(131,153,184,.35);background:rgba(131,153,184,.08);color:var(--muted2);font-family:var(--fm);font-size:.6rem;cursor:pointer;transition:all .2s;flex-shrink:0;user-select:none;line-height:1}
+.info-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-dim)}
+.info-btn.active{border-color:var(--teal);color:var(--teal);background:var(--teal-dim)}
+
+/* KPI info button — absolute top-right */
+.kpi{position:relative}
+.kpi .info-btn{position:absolute;top:.6rem;right:.6rem}
+
+/* Chart box info button — inside cb-label */
+.cb-label{position:relative;display:flex;align-items:center;gap:.5rem}
+.cb-label .info-btn{margin-left:auto}
+
+/* ML card info button */
+.ml-card{position:relative}
+.ml-card .info-btn{position:absolute;top:.7rem;right:.7rem}
+
+/* Collapsible panel */
+.info-panel{display:none;margin-top:.65rem;padding:.65rem .8rem;background:rgba(0,221,180,.04);border:1px solid rgba(0,221,180,.12);border-radius:8px;flex-direction:column;gap:.45rem;animation:slideDown .2s ease}
+.info-panel.open{display:flex}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+.te-row{display:flex;align-items:baseline;gap:.5rem;font-size:.75rem;line-height:1.65}
+.te-tag{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;padding:.1rem .42rem;border-radius:5px;border:1px solid;font-weight:500}
+.te-tag.def{color:var(--teal);background:var(--teal-dim);border-color:rgba(0,221,180,.28)}
+.te-tag.meta{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.28)}
+.te-tag.uso{color:var(--violet);background:var(--violet-dim);border-color:rgba(167,139,250,.28)}
+.te-txt{color:rgba(220,232,245,.6)}
+.te-txt strong{color:rgba(220,232,245,.88);font-weight:500}
+
+/* ── ANIMATIONS ── */
+@keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.kpi{animation:countUp .5s ease both}
+.kpi:nth-child(1){animation-delay:.05s}
+.kpi:nth-child(2){animation-delay:.1s}
+.kpi:nth-child(3){animation-delay:.15s}
+.kpi:nth-child(4){animation-delay:.2s}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:999px}
+</style>
+</head>
+<body>
+
+<!-- Back bar -->
+<div class="back-bar">
+  <a href="javascript:history.back()" class="back-btn">
+    <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    Portafolio
+  </a>
+  <div class="breadcrumb">Portafolio <span>/</span> <span>P1 · Credit Scoring</span></div>
+</div>
+
+<!-- Header -->
+<div class="dash-header">
+  <div class="eyebrow">01 · Actuaría + Data Science · 2024</div>
+  <h1 class="dash-title">Credit Scoring · <span class="at">Probabilidad de Incumplimiento</span></h1>
+  <div class="dash-meta">
+    <span class="badge b-source">📂 Lending Club · 2.5M registros · Kaggle</span>
+    <span class="badge b-py">● Python</span>
+    <span class="badge b-sql">● SQL</span>
+    <span class="badge b-r">● R</span>
+    <span class="badge b-type">Actuaría + DS</span>
+  </div>
+  <p class="dash-desc">Modelo de scoring crediticio para cuantificar la probabilidad de incumplimiento (PD) a nivel individual. Integra rigor actuarial con técnicas de machine learning modernas, cumpliendo el marco regulatorio Basilea III para modelos internos IRB.</p>
+</div>
+
+<!-- KPI Strip -->
+<div class="kpi-strip" style="margin-top:1.8rem">
+  <div class="kpi" style="--teal-color:var(--teal)">
+    <button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button>
+    <span class="kpi-val" style="color:var(--teal)">AUC .91</span>
+    <div class="kpi-lbl">Curva ROC</div>
+    <div class="kpi-sub">Validación out-of-time</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">Área bajo la curva ROC (<strong>AUC</strong>): mide qué tan bien el modelo distingue buenos de malos pagadores.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Valor entre 0 y 1. Cuanto más cerca de 1, mejor discrimina el modelo. Umbral regulatorio: <strong>AUC ≥ .75</strong>.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Comparar modelos y validar cumplimiento del marco <strong>Basilea III</strong> para modelos internos IRB.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--teal-color:var(--amber)">
+    <button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button>
+    <span class="kpi-val" style="color:var(--amber)">Gini .82</span>
+    <div class="kpi-lbl">Poder discriminante</div>
+    <div class="kpi-sub">Métrica Basilea III</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Coeficiente Gini</strong>: derivado del AUC (Gini = 2×AUC − 1). Mide la desigualdad en la distribución de riesgo entre clases.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Valores altos (>.70) indican alta separación entre buenos y malos pagadores.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Métrica oficial exigida por <strong>Basilea III / CNBV</strong> para validar modelos internos de riesgo crediticio (IRB).</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--teal-color:var(--green)">
+    <button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button>
+    <span class="kpi-val" style="color:var(--green)">PSI &lt;.10</span>
+    <div class="kpi-lbl">Estabilidad temporal</div>
+    <div class="kpi-sub">Population Stability Index</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>PSI</strong>: mide si la distribución del score cambió entre entrenamiento y producción.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">PSI &lt;.10 = estable · .10–.25 = revisión · &gt;.25 = reentrenamiento urgente.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Detectar <strong>data drift</strong>: si el perfil de solicitantes cambia, el modelo pierde validez sin señales obvias.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--teal-color:var(--violet)">
+    <button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button>
+    <span class="kpi-val" style="color:var(--violet)">2.5M</span>
+    <div class="kpi-lbl">Préstamos analizados</div>
+    <div class="kpi-sub">7 años de histórico</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">Registros del <strong>Lending Club Dataset</strong> (Kaggle): préstamos personales originados en EE.UU. 2007–2018.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Volumen suficiente para entrenamiento robusto, validación out-of-time y análisis de segmentos demográficos.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Dataset de referencia global en <strong>credit scoring</strong> — estructura adaptable al mercado mexicano (CNBV/CNSF).</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs-wrap" style="margin-top:2rem">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('portfolio',this)"><span class="ticon">📊</span> Análisis del Portafolio</button>
+    <button class="tab-btn" onclick="switchTab('simulator',this)"><span class="ticon">🎛️</span> Simulador de Score</button>
+  </div>
+
+  <!-- ══ TAB 1: PORTFOLIO ══ -->
+  <div class="tab-panel active" id="tab-portfolio">
+
+    <!-- ROC + Score Distribution -->
+    <div class="sec-title">Rendimiento del Modelo</div>
+    <p class="sec-sub">Evaluación discriminante sobre conjunto de prueba out-of-time · Lending Club 2019–2022</p>
+    <div class="charts-2" style="margin-bottom:1.6rem">
+      <div class="chart-box">
+        <div class="cb-label">Curva ROC — Modelos comparados <span class="cb-badge">AUC .91</span><button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-roc"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Curva ROC</strong>: grafica tasa de verdaderos positivos vs. falsos positivos a distintos umbrales de decisión.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Curva lo más cercana al vértice superior izquierdo. El <strong>AUC</strong> resume el poder discriminante en un solo número.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Elegir el threshold óptimo balanceando pérdidas por falsos negativos (mal pagador no detectado) y falsos positivos (buen cliente rechazado).</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Distribución del Score por Clase <span class="cb-badge">Threshold: 0.43</span><button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-dist"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Distribución del score</strong>: muestra cómo se separan buenos pagadores y morosos en la escala del modelo.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Máxima separación entre ambas curvas. El <strong>threshold 0.43</strong> minimiza la pérdida esperada ponderada por monto.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Definir la política de originación bajo normativa <strong>CNBV</strong>: aprobados sobre el threshold, rechazados o condicionados debajo.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHAP -->
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">SHAP · Importancia de Variables — Top 10 predictores <span class="cb-badge">XGBoost Calibrado</span><button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-shap"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>SHAP</strong> (SHapley Additive exPlanations): cuantifica cuánto contribuye cada variable a la predicción de riesgo de cada cliente individual.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Variables con mayor valor SHAP son las que más mueven el score. <strong>DTI</strong> e historial de pagos dominan consistentemente en crédito.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Explica decisiones individuales ante <strong>CNBV y CONDUSEF</strong>, habilita auditorías de equidad algorítmica y comunica el modelo a equipos no técnicos.</span></div>
+      </div>
+    </div>
+
+    <!-- Segmentation -->
+    <div class="sec-title">Segmentación del Score Crediticio</div>
+    <p class="sec-sub">Distribución del score promedio por género, grupo de edad y combinación · Lending Club Dataset</p>
+    <div class="seg-tabs">
+      <button class="seg-btn active" onclick="switchSeg('gender',this)">Por Género</button>
+      <button class="seg-btn" onclick="switchSeg('age',this)">Por Edad</button>
+      <button class="seg-btn" onclick="switchSeg('combo',this)">Género × Edad</button>
+      <button class="seg-btn" onclick="switchSeg('default',this)">Tasa de Default</button>
+    </div>
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label" id="seg-label">Score Promedio por Género <span class="cb-badge">n = 2.5M</span><button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-seg"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Segmentación crediticia</strong>: analiza cómo varía el score promedio y la tasa de default entre subgrupos demográficos del portafolio.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Detectar diferencias estadísticamente significativas entre grupos y posibles sesgos (<strong>disparate impact</strong>) no justificados por riesgo real.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Cumplir regulación anti-discriminatoria (<strong>LRASCAP, Ley Fintech MX</strong>), diseñar productos diferenciados y calibrar sub-modelos por segmento.</span></div>
+      </div>
+    </div>
+
+    <!-- ML Proposals -->
+    <div class="sec-title">Propuestas de Segmentación ML</div>
+    <p class="sec-sub">Comparativa de modelos globales vs. modelos por segmento · Ganancia en AUC por subgrupo</p>
+    <div class="ml-grid">
+      <div class="ml-card">
+        <button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button>
+        <div class="ml-icon">🌐</div>
+        <div class="ml-title">Modelo Global</div>
+        <div class="ml-desc">XGBoost calibrado entrenado sobre la población completa. Baseline de referencia para comparar segmentaciones.</div>
+        <div class="ml-metric"><span class="ml-metric-lbl">AUC global</span><span class="ml-metric-val">.910</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>XGBoost</strong>: algoritmo de gradient boosting que construye árboles de decisión secuenciales, corrigiendo errores del modelo anterior en cada iteración.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Maximizar AUC minimizando sobreajuste. La <strong>calibración isotónica</strong> ajusta las probabilidades para que reflejen la frecuencia real de default.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Punto de partida comparativo: si un modelo segmentado no supera este AUC, la segmentación no justifica la complejidad adicional en producción.</span></div>
+        </div>
+      </div>
+      <div class="ml-card">
+        <button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button>
+        <div class="ml-icon">🎯</div>
+        <div class="ml-title">Modelo por Propósito</div>
+        <div class="ml-desc">Modelos independientes para crédito de consumo, hipotecario y auto. Reduce error un 14% vs. modelo global.</div>
+        <div class="ml-metric"><span class="ml-metric-lbl">AUC promedio segmentos</span><span class="ml-metric-val">.924</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt">Modelos entrenados por separado para cada <strong>producto crediticio</strong>: las variables predictivas y sus pesos difieren entre consumo, hipotecario y auto.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Ganancia de AUC vs. modelo global. Si la mejora supera ~.005 en validación out-of-time, la segmentación se justifica operativamente.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Recomendado por <strong>Basilea III</strong>: los modelos IRB deben reflejar las características específicas de cada portafolio para cálculo de capital regulatorio.</span></div>
+        </div>
+      </div>
+      <div class="ml-card">
+        <button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button>
+        <div class="ml-icon">📅</div>
+        <div class="ml-title">Modelo por Vintage</div>
+        <div class="ml-desc">Segmentación por año de originación. Captura cambios macroeconómicos y ciclos de crédito en el scoring.</div>
+        <div class="ml-metric"><span class="ml-metric-lbl">PSI estabilidad</span><span class="ml-metric-val">&lt;.08</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Vintage</strong>: agrupa créditos por fecha de originación. Créditos en recesión vs. expansión tienen patrones de default distintos.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">PSI bajo (&lt;.10) dentro de cada vintage confirma estabilidad del modelo en su cohorte temporal específica.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Corregir el <strong>sesgo de cohorte</strong>: un modelo entrenado en expansión económica puede subestimar el riesgo en créditos originados en crisis.</span></div>
+        </div>
+      </div>
+      <div class="ml-card">
+        <button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button>
+        <div class="ml-icon">👥</div>
+        <div class="ml-title">Modelo por Segmento Demográfico</div>
+        <div class="ml-desc">Sub-modelos por edad y género. Mejora equidad algorítmica y cumplimiento de regulación anti-discriminatoria.</div>
+        <div class="ml-metric"><span class="ml-metric-lbl">Fairness score</span><span class="ml-metric-val">.89</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Fairness score</strong>: mide si el modelo trata equitativamente a distintos grupos demográficos. Valor 1 = equidad perfecta entre grupos.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Minimizar <strong>disparate impact</strong>: la tasa de aprobación entre grupos protegidos no debe diferir más del 20% sin justificación actuarial.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Cumplir <strong>LRASCAP y Ley Fintech MX</strong>: prohíben discriminación algorítmica en decisiones de crédito. Auditado por CNBV en instituciones reguladas.</span></div>
+        </div>
+      </div>
+      <div class="ml-card">
+        <button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button>
+        <div class="ml-icon">⚡</div>
+        <div class="ml-title">Ensemble Stacking</div>
+        <div class="ml-desc">Combinación de scorecard logístico + XGBoost + LightGBM. Meta-learner logístico para decisión final.</div>
+        <div class="ml-metric"><span class="ml-metric-lbl">AUC ensemble</span><span class="ml-metric-val">.931</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Ensemble stacking</strong>: combina predicciones de múltiples modelos base. Un <strong>meta-learner</strong> aprende a ponderarlas para minimizar el error conjunto.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">AUC superior al mejor modelo individual. El scorecard aporta estabilidad regulatoria; XGBoost y LightGBM aportan poder predictivo no lineal.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Balance entre rendimiento y explicabilidad: el scorecard cumple <strong>Basilea III/CNBV</strong> y el ensemble mejora la discriminación en producción real.</span></div>
+        </div>
+      </div>
+      <div class="ml-card">
+        <button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button>
+        <div class="ml-icon">🔄</div>
+        <div class="ml-title">Modelo con Reentrenamiento</div>
+        <div class="ml-desc">Pipeline con detección de drift automática (PSI > .25) y reentrenamiento programado. Drift detectado: 45 días.</div>
+        <div class="ml-metric"><span class="ml-metric-lbl">Drift detectado</span><span class="ml-metric-val">45 días</span></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Data drift</strong>: cambio en la distribución de los datos de entrada respecto al período de entrenamiento. El modelo pierde precisión gradualmente sin señales obvias.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">PSI &gt;.25 activa alerta de reentrenamiento. En este caso detectado a los <strong>45 días</strong> en producción simulada — frecuente en períodos de cambio económico.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Mantener validez en producción. <strong>CNBV Disposición 1 Bis</strong> exige monitoreo continuo y revalidación periódica de modelos de riesgo en instituciones reguladas.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUC comparison chart -->
+    <div class="chart-box full" style="margin-bottom:1.6rem">
+      <div class="cb-label">AUC por Modelo y Segmento — Comparativa <span class="cb-badge">Out-of-time validation</span><button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button></div>
+      <div class="chart-wrap"><canvas id="chart-auc"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Validación out-of-time</strong>: evalúa el modelo en datos de un período posterior al entrenamiento, simulando comportamiento real en producción.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">AUC estable entre train, validación y test out-of-time. Una caída &gt;.02 indica sobreajuste o drift no controlado.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Metodología exigida por <strong>Basilea III y CNBV</strong> para validar modelos IRB antes de su uso en decisiones de capital regulatorio.</span></div>
+      </div>
+    </div>
+
+    <!-- Conclusions -->
+    <div class="sec-title">Conclusiones &amp; Hallazgos Clave</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Resultados del análisis sobre el dataset de Lending Club · Reemplaza con tus propios hallazgos</p>
+    <div class="conc-list">
+      <div class="conc-item"><span class="conc-arrow">→</span>El historial de pagos y la relación deuda/ingreso (DTI) explican el 68% del poder predictivo según SHAP, validando supuestos actuariales clásicos con evidencia estadística moderna y confirmando la hipótesis de variables macroeconómicas como determinantes del riesgo.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>El scorecard calibrado con Platt scaling supera a XGBoost puro en estabilidad temporal (PSI &lt; 0.10 vs 0.18), cumpliendo el umbral de validación regulatoria Basilea III para modelos internos (IRB). Se recomienda recalibración semestral en producción.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>La segmentación demográfica revela diferencias estadísticamente significativas en la distribución del score por grupo de edad: el segmento 26–35 muestra el mayor poder predictivo (AUC .924), mientras que el segmento 55+ presenta mayor varianza y menor discriminación.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>El modelo por propósito de crédito reduce el error en un 14% vs. modelo global, recomendándose modelos independientes para consumo, hipotecario y auto en entornos de producción bajo el marco regulatorio CNBV/Basilea III.</div>
+    </div>
+
+  </div><!-- /tab-portfolio -->
+
+  <!-- ══ TAB 2: SIMULATOR ══ -->
+  <div class="tab-panel" id="tab-simulator">
+
+    <div class="sec-title">Simulador de Score Crediticio</div>
+    <p class="sec-sub" style="margin-bottom:1.6rem">Ajusta las variables del solicitante y observa el score en tiempo real · Modelo basado en Lending Club Dataset</p>
+
+    <div class="sim-layout">
+
+      <!-- Inputs -->
+      <div class="sim-inputs">
+
+        <div class="sim-group">
+          <div class="sim-group-title">📋 Perfil Financiero</div>
+
+          <div class="sim-row">
+            <div class="sim-label"><span>Ingreso Anual (MXN)</span><span class="sim-val" id="lbl-income">$180,000</span></div>
+            <input type="range" id="sl-income" min="36000" max="2400000" value="180000" step="6000" oninput="updateSim()">
+          </div>
+
+          <div class="sim-row">
+            <div class="sim-label"><span>Monto del Préstamo (MXN)</span><span class="sim-val" id="lbl-loan">$80,000</span></div>
+            <input type="range" id="sl-loan" min="5000" max="800000" value="80000" step="5000" oninput="updateSim()">
+          </div>
+
+          <div class="sim-row">
+            <div class="sim-label"><span>Ratio Deuda / Ingreso (DTI %)</span><span class="sim-val" id="lbl-dti">18%</span></div>
+            <input type="range" id="sl-dti" min="0" max="40" value="18" step="0.5" oninput="updateSim()">
+          </div>
+
+          <div class="sim-row">
+            <div class="sim-label"><span>Utilización de Crédito (%)</span><span class="sim-val" id="lbl-util">45%</span></div>
+            <input type="range" id="sl-util" min="0" max="100" value="45" step="1" oninput="updateSim()">
+          </div>
+        </div>
+
+        <div class="sim-group">
+          <div class="sim-group-title">📜 Historial Crediticio</div>
+
+          <div class="sim-row">
+            <div class="sim-label"><span>Antigüedad del Historial (años)</span><span class="sim-val" id="lbl-hist">8 años</span></div>
+            <input type="range" id="sl-hist" min="0" max="30" value="8" step="1" oninput="updateSim()">
+          </div>
+
+          <div class="sim-row">
+            <div class="sim-label"><span>Incumplimientos últimos 2 años</span><span class="sim-val" id="lbl-delinq">0</span></div>
+            <input type="range" id="sl-delinq" min="0" max="10" value="0" step="1" oninput="updateSim()">
+          </div>
+
+          <div class="sim-row">
+            <div class="sim-label"><span>Consultas de crédito últimos 6m</span><span class="sim-val" id="lbl-inq">1</span></div>
+            <input type="range" id="sl-inq" min="0" max="12" value="1" step="1" oninput="updateSim()">
+          </div>
+
+          <div class="sim-row">
+            <div class="sim-label"><span>Cuentas abiertas activas</span><span class="sim-val" id="lbl-accts">5</span></div>
+            <input type="range" id="sl-accts" min="1" max="30" value="5" step="1" oninput="updateSim()">
+          </div>
+        </div>
+
+        <div class="sim-group">
+          <div class="sim-group-title">🏷️ Características del Crédito</div>
+
+          <div class="sim-row">
+            <div class="sim-label" style="margin-bottom:.5rem"><span>Propósito del crédito</span></div>
+            <select class="sim-select" id="sl-purpose" onchange="updateSim()">
+              <option value="debt_consolidation">Consolidación de deuda</option>
+              <option value="credit_card">Tarjeta de crédito</option>
+              <option value="home_improvement">Mejoras del hogar</option>
+              <option value="major_purchase">Compra mayor</option>
+              <option value="medical">Médico</option>
+              <option value="car">Automóvil</option>
+              <option value="vacation">Vacaciones</option>
+              <option value="small_business">Negocio pequeño</option>
+            </select>
+          </div>
+
+          <div class="sim-row" style="margin-top:.8rem">
+            <div class="sim-label" style="margin-bottom:.5rem"><span>Plazo del préstamo</span></div>
+            <select class="sim-select" id="sl-term" onchange="updateSim()">
+              <option value="36">36 meses</option>
+              <option value="60">60 meses</option>
+            </select>
+          </div>
+
+          <div class="sim-row" style="margin-top:.8rem">
+            <div class="sim-label" style="margin-bottom:.5rem"><span>Antigüedad laboral</span></div>
+            <select class="sim-select" id="sl-emp" onchange="updateSim()">
+              <option value="0">Menos de 1 año</option>
+              <option value="1">1–2 años</option>
+              <option value="3">3–4 años</option>
+              <option value="5" selected>5–6 años</option>
+              <option value="7">7–9 años</option>
+              <option value="10">10+ años</option>
+            </select>
+          </div>
+        </div>
+
+      </div><!-- /sim-inputs -->
+
+      <!-- Output -->
+      <div class="sim-output">
+        <div class="score-display">
+          <div class="score-label">Score Crediticio</div>
+          <div class="score-num" id="score-num" style="color:var(--teal)">712</div>
+          <div class="score-range">Rango: 300 – 850</div>
+          <div class="score-bar-wrap">
+            <div class="score-bar-track"></div>
+            <div class="score-needle" id="score-needle" style="left:60%"></div>
+          </div>
+          <div class="score-ticks"><span>300</span><span>500</span><span>650</span><span>750</span><span>850</span></div>
+          <div><span class="risk-badge" id="risk-badge" style="background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)">Riesgo BAJO</span></div>
+        </div>
+
+        <div class="out-row"><span class="out-key">Prob. de incumplimiento (PD)</span><span class="out-val" id="out-pd">4.8%</span></div>
+        <div class="out-row"><span class="out-key">Decisión recomendada</span><span class="out-val good" id="out-decision">✓ Aprobar</span></div>
+        <div class="out-row"><span class="out-key">Tasa de interés sugerida</span><span class="out-key" id="out-rate" style="color:var(--text)">9.5%</span></div>
+        <div class="out-row"><span class="out-key">Cuota mensual (MXN)</span><span class="out-key" id="out-payment" style="color:var(--text)">$2,180</span></div>
+        <div class="out-row"><span class="out-key">Clasificación de riesgo</span><span class="out-val" id="out-grade">Grado B</span></div>
+        <div class="out-row"><span class="out-key">Segmento del portafolio</span><span class="out-val" id="out-segment">Prime</span></div>
+
+        <div class="profile-box">
+          <div class="profile-title">📋 Perfil del Solicitante</div>
+          <p class="profile-text" id="profile-text">Solicitante con perfil <strong>Prime</strong> — historial crediticio sólido, baja utilización y DTI moderado. Candidato adecuado para aprobación estándar con condiciones preferenciales.</p>
+        </div>
+      </div><!-- /sim-output -->
+
+    </div><!-- /sim-layout -->
+
+    <!-- Score by segment chart -->
+    <div class="chart-box full" style="margin-top:1.6rem;margin-bottom:1.6rem">
+      <div class="cb-label">Posición del Score en el Portafolio Lending Club <span class="cb-badge">Distribución histórica</span><button class="info-btn" onclick="toggleInfo(this)" title="Más información">ℹ</button></div>
+      <div class="chart-wrap"><canvas id="chart-sim-dist"></canvas></div>
+      <div class="info-panel">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Distribución del portafolio</strong>: muestra cómo se concentran los 2.5M de solicitantes históricos en cada rango de score crediticio.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">La barra <strong>resaltada en verde</strong> indica dónde cae el perfil simulado dentro de la población real del portafolio.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Contextualizar la decisión de crédito: un score de 700 puede parecer alto en abstracto, pero si el 60% del portafolio lo supera, el solicitante está en la mitad inferior — clave para <strong>pricing y política de riesgo MXN</strong>.</span></div>
+      </div>
+    </div>
+
+  </div><!-- /tab-simulator -->
+
+</div><!-- /tabs-wrap -->
+
+<div class="dash-footer" style="padding:1.2rem 2.5rem 2rem">
+  <span style="color:var(--muted2)">// <span style="color:var(--teal)">P1 · Credit Scoring</span> · Lending Club Dataset · Demostrativo</span>
+  <span style="color:var(--muted)">Python · SQL · R · <span style="color:var(--violet)">2024</span></span>
+</div>
+
+<script>
+// ─────────────────────────────────
+// CHART.JS GLOBAL DEFAULTS
+// ─────────────────────────────────
+Chart.defaults.color             = 'rgba(220,232,245,0.5)';
+Chart.defaults.borderColor       = 'rgba(255,255,255,0.05)';
+Chart.defaults.font.family       = "'JetBrains Mono','monospace'";
+Chart.defaults.font.size         = 10;
+Chart.defaults.plugins.legend.labels.boxWidth      = 10;
+Chart.defaults.plugins.legend.labels.padding       = 14;
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+
+const BASE_OPTS = {
+  responsive:true,
+  maintainAspectRatio:false,
+  plugins:{
+    legend:{labels:{color:'rgba(220,232,245,.55)'}},
+    tooltip:{backgroundColor:'#0f1729',titleColor:'#dce8f5',bodyColor:'rgba(220,232,245,.7)',borderColor:'rgba(255,255,255,.08)',borderWidth:1,padding:10}
+  },
+  scales:{
+    x:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'rgba(220,232,245,.45)'}},
+    y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'rgba(220,232,245,.45)'}}
+  }
+};
+
+function opts(extra={}){
+  const o = JSON.parse(JSON.stringify(BASE_OPTS));
+  if(extra.scales) Object.assign(o.scales, extra.scales);
+  if(extra.plugins) Object.assign(o.plugins, extra.plugins);
+  if(extra.indexAxis) o.indexAxis = extra.indexAxis;
+  return o;
+}
+
+// ─────────────────────────────────
+// TAB SWITCHING
+// ─────────────────────────────────
+function switchTab(id, btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+// ─────────────────────────────────
+// CHART: ROC CURVE
+// ─────────────────────────────────
+new Chart(document.getElementById('chart-roc'), {
+  type:'line',
+  data:{
+    labels:[0,.04,.08,.12,.16,.2,.25,.3,.35,.4,.5,.6,.7,.8,.9,1],
+    datasets:[
+      {label:'XGBoost Calibrado (AUC=0.91)',data:[0,.38,.56,.66,.74,.80,.86,.89,.92,.94,.965,.978,.988,.994,.998,1],borderColor:'#00ddb4',borderWidth:2.5,fill:false,tension:.35,pointRadius:0},
+      {label:'Scorecard Logístico (AUC=0.88)',data:[0,.30,.50,.61,.70,.76,.81,.85,.89,.91,.945,.965,.980,.990,.996,1],borderColor:'#f5a623',borderWidth:2,fill:false,tension:.35,pointRadius:0,borderDash:[5,4]},
+      {label:'Azar (AUC=0.50)',data:[0,.04,.08,.12,.16,.2,.25,.3,.35,.4,.5,.6,.7,.8,.9,1],borderColor:'rgba(220,232,245,.12)',borderWidth:1,fill:false,tension:0,pointRadius:0,borderDash:[3,3]}
+    ]
+  },
+  options: opts({scales:{x:{title:{display:true,text:'Tasa Falsos Positivos (FPR)'}},y:{title:{display:true,text:'Tasa Verdaderos Positivos (TPR)'},min:0,max:1}}})
+});
+
+// ─────────────────────────────────
+// CHART: SCORE DISTRIBUTION
+// ─────────────────────────────────
+new Chart(document.getElementById('chart-dist'), {
+  type:'bar',
+  data:{
+    labels:['300-400','400-500','500-550','550-600','600-620','620-640','640-660','660-680','680-700','700-720','720-750','750-780','780-850'],
+    datasets:[
+      {label:'Buen Pagador',data:[80,310,820,1650,2200,3100,4800,6200,7800,9100,8400,6200,4800],backgroundColor:'rgba(0,221,180,.35)',borderColor:'#00ddb4',borderWidth:1},
+      {label:'Incumplimiento',data:[620,1840,2900,3200,2800,2100,1600,1050,720,480,280,140,60],backgroundColor:'rgba(251,113,133,.35)',borderColor:'#fb7185',borderWidth:1}
+    ]
+  },
+  options: opts({scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{title:{display:true,text:'# Solicitudes'}}}})
+});
+
+// ─────────────────────────────────
+// CHART: SHAP
+// ─────────────────────────────────
+new Chart(document.getElementById('chart-shap'), {
+  type:'bar',
+  data:{
+    labels:['DTI Ratio','Historial de pagos','Utilización de crédito','Monto del préstamo','Ingreso anual','Antigüedad historial','Propósito del crédito','Consultas 6 meses','Cuentas abiertas','Antigüedad laboral'],
+    datasets:[{
+      label:'Valor SHAP promedio (impacto en PD)',
+      data:[0.182,0.164,0.121,0.094,0.082,0.061,0.052,0.044,0.036,0.028],
+      backgroundColor:['#00ddb4','#00ddb4','#2dd4bc','#f5a623','#f5a623','#8399b8','#8399b8','#8399b8','#4f6180','#4f6180'],
+      borderRadius:5,
+      borderSkipped:false
+    }]
+  },
+  options: opts({indexAxis:'y',scales:{x:{title:{display:true,text:'Impacto SHAP |valor|'}},y:{ticks:{font:{size:9}}}}})
+});
+
+// ─────────────────────────────────
+// SEGMENTATION CHARTS
+// ─────────────────────────────────
+let segChart = null;
+
+const SEG_DATA = {
+  gender:{
+    label:'Score Promedio por Género',
+    type:'bar',
+    labels:['Masculino','Femenino','No especificado'],
+    datasets:[
+      {label:'Score Promedio',data:[687,701,694],backgroundColor:['rgba(0,221,180,.5)','rgba(167,139,250,.5)','rgba(131,153,184,.4)'],borderColor:['#00ddb4','#a78bfa','#8399b8'],borderWidth:1.5,borderRadius:6},
+      {label:'Tasa Default (%)',data:[14.2,11.8,13.1],backgroundColor:['rgba(251,113,133,.3)','rgba(251,113,133,.2)','rgba(251,113,133,.25)'],borderColor:['#fb7185','#fb7185','#fb7185'],borderWidth:1,borderRadius:6,yAxisID:'y1'}
+    ],
+    extraOpts:{scales:{y:{title:{display:true,text:'Score Promedio'},min:620},y1:{type:'linear',position:'right',title:{display:true,text:'Tasa Default (%)'},grid:{drawOnChartArea:false},ticks:{color:'#fb7185'}}}}
+  },
+  age:{
+    label:'Score Promedio por Grupo de Edad',
+    type:'bar',
+    labels:['18–25','26–35','36–45','46–55','55+'],
+    datasets:[
+      {label:'Score Promedio',data:[651,694,712,728,719],backgroundColor:'rgba(0,221,180,.45)',borderColor:'#00ddb4',borderWidth:1.5,borderRadius:6},
+      {label:'Tasa Default (%)',data:[21.4,13.8,11.2,9.6,10.8],backgroundColor:'rgba(251,113,133,.3)',borderColor:'#fb7185',borderWidth:1,borderRadius:6,yAxisID:'y1'}
+    ],
+    extraOpts:{scales:{y:{title:{display:true,text:'Score Promedio'},min:610},y1:{type:'linear',position:'right',title:{display:true,text:'Tasa Default (%)'},grid:{drawOnChartArea:false},ticks:{color:'#fb7185'}}}}
+  },
+  combo:{
+    label:'Score Promedio — Género × Edad (Heatmap simulado)',
+    type:'bar',
+    labels:['M 18–25','M 26–35','M 36–45','M 46–55','M 55+','F 18–25','F 26–35','F 36–45','F 46–55','F 55+'],
+    datasets:[
+      {label:'Score Promedio',data:[645,688,708,724,716,659,701,717,733,722],
+        backgroundColor:['rgba(0,221,180,.3)','rgba(0,221,180,.4)','rgba(0,221,180,.5)','rgba(0,221,180,.6)','rgba(0,221,180,.55)',
+                         'rgba(167,139,250,.3)','rgba(167,139,250,.4)','rgba(167,139,250,.5)','rgba(167,139,250,.6)','rgba(167,139,250,.55)'],
+        borderColor:['#00ddb4','#00ddb4','#00ddb4','#00ddb4','#00ddb4','#a78bfa','#a78bfa','#a78bfa','#a78bfa','#a78bfa'],
+        borderWidth:1.5,borderRadius:5}
+    ],
+    extraOpts:{scales:{y:{title:{display:true,text:'Score Promedio'},min:610},x:{ticks:{maxRotation:30,font:{size:9}}}}}
+  },
+  default:{
+    label:'Tasa de Default por Segmento Combinado (%)',
+    type:'bar',
+    labels:['M 18–25','M 26–35','M 36–45','M 46–55','F 18–25','F 26–35','F 36–45','F 46–55'],
+    datasets:[
+      {label:'Tasa Default (%)',data:[23.8,15.2,12.4,10.1,19.2,12.6,10.1,8.4],
+        backgroundColor:(ctx)=>ctx.raw>18?'rgba(251,113,133,.55)':ctx.raw>13?'rgba(245,166,35,.45)':'rgba(52,211,153,.4)',
+        borderColor:(ctx)=>ctx.raw>18?'#fb7185':ctx.raw>13?'#f5a623':'#34d399',
+        borderWidth:1.5,borderRadius:5}
+    ],
+    extraOpts:{scales:{y:{title:{display:true,text:'Tasa de Default (%)'},min:0,max:30}}}
+  }
+};
+
+function switchSeg(key, btn){
+  document.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const d = SEG_DATA[key];
+  document.getElementById('seg-label').innerHTML = `${d.label} <span class="cb-badge">n = 2.5M</span>`;
+  if(segChart) segChart.destroy();
+  const extraOpts = d.extraOpts||{};
+  const o = opts(extraOpts);
+  segChart = new Chart(document.getElementById('chart-seg'), {
+    type: d.type,
+    data:{ labels:d.labels, datasets:d.datasets },
+    options: o
+  });
+}
+// Init segmentation chart
+switchSeg('gender', document.querySelector('.seg-btn'));
+
+// ─────────────────────────────────
+// CHART: AUC COMPARISON
+// ─────────────────────────────────
+new Chart(document.getElementById('chart-auc'), {
+  type:'bar',
+  data:{
+    labels:['Global','Por propósito','Por vintage','Demográfico','Ensemble','Con drift'],
+    datasets:[
+      {label:'Consumo',data:[.910,.924,.918,.906,.931,.915],backgroundColor:'rgba(0,221,180,.5)',borderColor:'#00ddb4',borderWidth:1,borderRadius:4},
+      {label:'Hipotecario',data:[.910,.922,.920,.912,.929,.918],backgroundColor:'rgba(167,139,250,.4)',borderColor:'#a78bfa',borderWidth:1,borderRadius:4},
+      {label:'Auto',data:[.910,.919,.915,.908,.925,.912],backgroundColor:'rgba(245,166,35,.4)',borderColor:'#f5a623',borderWidth:1,borderRadius:4}
+    ]
+  },
+  options: opts({scales:{y:{title:{display:true,text:'AUC-ROC'},min:.88,max:.95}}})
+});
+
+// ─────────────────────────────────
+// SIMULATOR LOGIC
+// ─────────────────────────────────
+let simDistChart = null;
+
+function sigmoid(x){ return 1/(1+Math.exp(-x)); }
+
+function computeScore(){
+  const income  = +document.getElementById('sl-income').value;
+  const loan    = +document.getElementById('sl-loan').value;
+  const dti     = +document.getElementById('sl-dti').value;
+  const util    = +document.getElementById('sl-util').value;
+  const hist    = +document.getElementById('sl-hist').value;
+  const delinq  = +document.getElementById('sl-delinq').value;
+  const inq     = +document.getElementById('sl-inq').value;
+  const accts   = +document.getElementById('sl-accts').value;
+  const purpose = document.getElementById('sl-purpose').value;
+  const term    = +document.getElementById('sl-term').value;
+  const emp     = +document.getElementById('sl-emp').value;
+
+  // Simulated scoring logic — base de referencia MXN: ingreso medio ~$180,000/año
+  let logit = 0;
+
+  // Income effect — referencia MXN $180,000 anuales
+  logit -= Math.log(income/180000) * 0.6;
+
+  // DTI effect (higher DTI → higher PD)
+  logit += (dti / 10) * 0.45;
+
+  // Utilization effect
+  logit += (util / 100) * 1.2;
+
+  // Loan amount relative to income
+  logit += (loan / income) * 1.8;
+
+  // Credit history (longer → lower PD)
+  logit -= Math.sqrt(hist) * 0.2;
+
+  // Delinquencies (major negative)
+  logit += delinq * 0.9;
+
+  // Inquiries
+  logit += inq * 0.15;
+
+  // Accounts
+  logit -= Math.log(Math.max(accts,1)) * 0.1;
+
+  // Employment
+  logit -= (emp / 10) * 0.25;
+
+  // Purpose risk factor
+  const purposeRisk = {debt_consolidation:.15,credit_card:.2,home_improvement:-.1,major_purchase:.05,medical:.25,car:-.05,vacation:.3,small_business:.35};
+  logit += purposeRisk[purpose]||0;
+
+  // Term (60m riskier)
+  logit += term===60 ? 0.2 : 0;
+
+  // Base intercept
+  logit -= 1.4;
+
+  const pd = Math.min(Math.max(sigmoid(logit), 0.005), 0.65);
+
+  // Convert PD to score (300–850)
+  const score = Math.round(850 - pd * 820);
+  return { score, pd };
+}
+
+function getRiskInfo(score, pd){
+  if(score>=750)      return {label:'Riesgo MUY BAJO',color:'var(--teal)',bg:'rgba(0,221,180,.12)',border:'rgba(0,221,180,.3)',grade:'Grado A',seg:'Super Prime',decision:'✓ Aprobar',decClass:'good'};
+  if(score>=700)      return {label:'Riesgo BAJO',color:'var(--green)',bg:'rgba(52,211,153,.12)',border:'rgba(52,211,153,.3)',grade:'Grado B',seg:'Prime',decision:'✓ Aprobar',decClass:'good'};
+  if(score>=650)      return {label:'Riesgo MODERADO',color:'var(--amber)',bg:'rgba(245,166,35,.12)',border:'rgba(245,166,35,.3)',grade:'Grado C',seg:'Near Prime',decision:'⚠ Revisar',decClass:'warn'};
+  if(score>=580)      return {label:'Riesgo ALTO',color:'#f97316',bg:'rgba(249,115,22,.1)',border:'rgba(249,115,22,.3)',grade:'Grado D',seg:'Subprime',decision:'⚠ Condicional',decClass:'warn'};
+                      return {label:'Riesgo MUY ALTO',color:'var(--rose)',bg:'rgba(251,113,133,.12)',border:'rgba(251,113,133,.3)',grade:'Grado E-F',seg:'Deep Subprime',decision:'✗ Rechazar',decClass:'bad'};
+}
+
+// Tasas mercado mexicano: TIIE 11.25% + spread por nivel de riesgo (2025)
+function getRate(score){ return score>=780?17.5:score>=740?22.4:score>=700?28.8:score>=660?36.5:score>=620?48.2:score>=580?62.0:78.5; }
+
+function getPayment(loan, rate, term){
+  const r = rate/100/12;
+  return (loan * r * Math.pow(1+r,term)) / (Math.pow(1+r,term)-1);
+}
+
+function getProfileText(score, pd, ri){
+  const pdPct = (pd*100).toFixed(1);
+  if(score>=750) return `Solicitante con perfil <strong>${ri.seg}</strong> — historial crediticio excelente, muy baja utilización y DTI controlado. Candidato ideal para aprobación con condiciones preferenciales y tasas mínimas de mercado mexicano.`;
+  if(score>=700) return `Solicitante con perfil <strong>${ri.seg}</strong> — historial sólido y variables financieras dentro de parámetros aceptables. PD estimada de <strong>${pdPct}%</strong>. Candidato adecuado para aprobación estándar con tasa referenciada a TIIE.`;
+  if(score>=650) return `Perfil <strong>${ri.seg}</strong> — algunas variables de riesgo elevadas (DTI o utilización). PD estimada <strong>${pdPct}%</strong>. Se recomienda revisión manual y condiciones de mitigación (garantías, aval, obligado solidario).`;
+  if(score>=580) return `Perfil <strong>${ri.seg}</strong> — múltiples indicadores de riesgo elevado. PD estimada <strong>${pdPct}%</strong>. Aprobación condicional solo con garantías adicionales y monitoreo mensual en primeros 12 meses bajo marco CNBV.`;
+  return `Perfil <strong>${ri.seg}</strong> — indicadores de alto riesgo de incumplimiento. PD estimada <strong>${pdPct}%</strong>. No recomendado para aprobación bajo los parámetros actuales del modelo ni política de originación vigente.`;
+}
+
+function updateSim(){
+  // Update labels
+  const income  = +document.getElementById('sl-income').value;
+  const loan    = +document.getElementById('sl-loan').value;
+  const dti     = +document.getElementById('sl-dti').value;
+  const util    = +document.getElementById('sl-util').value;
+  const hist    = +document.getElementById('sl-hist').value;
+  const delinq  = +document.getElementById('sl-delinq').value;
+  const inq     = +document.getElementById('sl-inq').value;
+  const accts   = +document.getElementById('sl-accts').value;
+
+  document.getElementById('lbl-income').textContent = '$'+income.toLocaleString('es-MX')+' MXN';
+  document.getElementById('lbl-loan').textContent   = '$'+loan.toLocaleString('es-MX')+' MXN';
+  document.getElementById('lbl-dti').textContent    = dti+'%';
+  document.getElementById('lbl-util').textContent   = util+'%';
+  document.getElementById('lbl-hist').textContent   = hist+' años';
+  document.getElementById('lbl-delinq').textContent = delinq;
+  document.getElementById('lbl-inq').textContent    = inq;
+  document.getElementById('lbl-accts').textContent  = accts;
+
+  const { score, pd } = computeScore();
+  const ri   = getRiskInfo(score, pd);
+  const rate = getRate(score);
+  const term = +document.getElementById('sl-term').value;
+  const pmt  = getPayment(loan, rate, term);
+
+  // Score display
+  const scoreEl = document.getElementById('score-num');
+  scoreEl.textContent = score;
+  scoreEl.style.color = ri.color;
+
+  // Needle (300–850 mapped to 0–100%)
+  const pct = ((score-300)/550*100).toFixed(1);
+  document.getElementById('score-needle').style.left = pct+'%';
+
+  // Risk badge
+  const badge = document.getElementById('risk-badge');
+  badge.textContent = ri.label;
+  badge.style.color  = ri.color;
+  badge.style.background = ri.bg;
+  badge.style.border = `1px solid ${ri.border}`;
+
+  // Output rows
+  document.getElementById('out-pd').textContent = (pd*100).toFixed(1)+'%';
+  document.getElementById('out-pd').className   = 'out-val '+(pd<.08?'good':pd<.18?'warn':'bad');
+  document.getElementById('out-decision').textContent = ri.decision;
+  document.getElementById('out-decision').className   = 'out-val '+ri.decClass;
+  document.getElementById('out-rate').textContent     = rate.toFixed(1)+'% anual (ref. TIIE)';
+  document.getElementById('out-payment').textContent  = '$'+Math.round(pmt).toLocaleString('es-MX')+' MXN';
+  document.getElementById('out-grade').textContent    = ri.grade;
+  document.getElementById('out-grade').className      = 'out-val '+(ri.decClass);
+  document.getElementById('out-segment').textContent  = ri.seg;
+  document.getElementById('out-segment').className    = 'out-val '+(ri.decClass);
+
+  // Profile text
+  document.getElementById('profile-text').innerHTML = getProfileText(score, pd, ri);
+
+  // Sim distribution chart — mark user's score
+  updateSimDistChart(score);
+}
+
+function updateSimDistChart(userScore){
+  // Distribution data from Lending Club
+  const labels = ['300','350','400','450','500','520','540','560','580','600','620','640','660','680','700','720','740','760','780','800','820','850'];
+  const dist   = [120,380,820,1650,3200,4100,5800,7200,9400,11800,13200,15600,17800,19200,18400,16200,13800,10400,7200,4600,2100,800];
+
+  if(simDistChart) simDistChart.destroy();
+
+  const colors = labels.map(l=>{
+    const v = parseInt(l);
+    return Math.abs(v-userScore)<15 ? 'rgba(0,221,180,.85)' : 'rgba(131,153,184,.25)';
+  });
+  const borders = labels.map(l=>{
+    const v = parseInt(l);
+    return Math.abs(v-userScore)<15 ? '#00ddb4' : 'rgba(131,153,184,.3)';
+  });
+
+  simDistChart = new Chart(document.getElementById('chart-sim-dist'), {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{label:'Distribución Portafolio Lending Club',data:dist,backgroundColor:colors,borderColor:borders,borderWidth:1,borderRadius:3}]
+    },
+    options: opts({scales:{x:{title:{display:true,text:'Score Crediticio'}},y:{title:{display:true,text:'# Solicitantes'}}}})
+  });
+}
+
+// ─────────────────────────────────
+// TOGGLE INFO PANELS
+// ─────────────────────────────────
+function toggleInfo(btn){
+  // Find the closest info-panel sibling within the same parent
+  const parent = btn.closest('.kpi, .chart-box, .ml-card');
+  if(!parent) return;
+  const panel = parent.querySelector('.info-panel');
+  if(!panel) return;
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  btn.classList.toggle('active', !isOpen);
+}
+
+// Init simulator
+updateSim();
+</script>
+</body>
+</html>

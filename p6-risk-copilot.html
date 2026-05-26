@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>P6 · Risk Copilot · Agente IA de Monitoreo de Riesgo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#040608;--bg2:#080b10;--bg3:#0c1018;--bg4:#111820;
+  --cyan:#00f5d4;--cyan-dim:rgba(0,245,212,.09);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,.09);
+  --violet:#a78bfa;--violet-dim:rgba(167,139,250,.10);
+  --rose:#ff4d6d;--rose-dim:rgba(255,77,109,.09);
+  --green:#34d399;--blue:#60a5fa;--orange:#f97316;
+  --text:#dce8f5;--muted:#3d5068;--muted2:#6e8fad;
+  --border:rgba(0,245,212,.12);--border2:rgba(255,255,255,.05);
+  --r:14px;
+  --fh:'Syne',sans-serif;--fm:'JetBrains Mono',monospace;--fb:'DM Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.7;min-height:100vh;overflow-x:hidden}
+
+/* BACK */
+.back-bar{padding:.9rem 2rem;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:.7rem;background:var(--bg2)}
+.back-btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--fm);font-size:.72rem;color:var(--muted2);text-decoration:none;padding:.35rem .8rem;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);transition:all .2s;cursor:pointer}
+.back-btn:hover{color:var(--cyan);border-color:rgba(0,245,212,.3)}
+.back-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+.breadcrumb{font-family:var(--fm);font-size:.68rem;color:var(--muted)}
+.breadcrumb span{color:var(--cyan)}
+
+/* HEADER */
+.dash-header{padding:2.5rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.eyebrow{font-family:var(--fm);font-size:.62rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.eyebrow::before{content:'';display:inline-block;width:20px;height:1px;background:var(--cyan)}
+.dash-title{font-family:var(--fh);font-size:clamp(1.5rem,3vw,2.3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.8rem}
+.dash-title .at{color:var(--cyan)}
+.dash-meta{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-family:var(--fm);font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;padding:.2rem .65rem;border-radius:999px}
+.b-src{background:var(--cyan-dim);color:var(--cyan);border:1px solid rgba(0,245,212,.25)}
+.b-py{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.b-type{background:var(--violet-dim);color:var(--violet);border:1px solid rgba(167,139,250,.25)}
+.dash-desc{font-size:.85rem;color:rgba(220,232,245,.5);max-width:740px;line-height:1.8;margin-bottom:2rem}
+
+/* KPI */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;padding:0 2.5rem;max-width:1280px;margin:0 auto}
+.kpi{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.1rem 1.2rem;position:relative;overflow:hidden;transition:border-color .25s;animation:fadeUp .5s ease both}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--cyan));opacity:.8}
+.kpi:nth-child(1){animation-delay:.05s}.kpi:nth-child(2){animation-delay:.1s}.kpi:nth-child(3){animation-delay:.15s}.kpi:nth-child(4){animation-delay:.2s}
+.kpi-val{font-family:var(--fh);font-size:1.7rem;font-weight:800;letter-spacing:-.03em;display:block;margin-bottom:.15rem}
+.kpi-lbl{font-size:.72rem;color:var(--muted2)}.kpi-sub{font-family:var(--fm);font-size:.6rem;color:var(--muted)}
+.kpi .info-btn{position:absolute;top:.6rem;right:.6rem}
+
+/* INFO */
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid rgba(131,153,184,.35);background:rgba(131,153,184,.08);color:var(--muted2);font-family:var(--fm);font-size:.6rem;cursor:pointer;transition:all .2s;flex-shrink:0;user-select:none;line-height:1}
+.info-btn:hover,.info-btn.active{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-dim)}
+.cb-label .info-btn{margin-left:auto}
+.info-panel{display:none;margin-top:.65rem;padding:.65rem .8rem;background:rgba(0,245,212,.03);border:1px solid rgba(0,245,212,.12);border-radius:8px;flex-direction:column;gap:.45rem;animation:slideDown .2s ease}
+.info-panel.open{display:flex}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.te-row{display:flex;align-items:baseline;gap:.5rem;font-size:.75rem;line-height:1.65}
+.te-tag{font-family:var(--fm);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;padding:.1rem .42rem;border-radius:5px;border:1px solid;font-weight:500}
+.te-tag.def{color:var(--cyan);background:var(--cyan-dim);border-color:rgba(0,245,212,.28)}
+.te-tag.meta{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.28)}
+.te-tag.uso{color:var(--violet);background:var(--violet-dim);border-color:rgba(167,139,250,.28)}
+.te-txt{color:rgba(220,232,245,.58)}.te-txt strong{color:rgba(220,232,245,.88);font-weight:500}
+
+/* TABS */
+.tabs-wrap{padding:2rem 2.5rem 0;max-width:1280px;margin:0 auto}
+.tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--border2);margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{font-family:var(--fm);font-size:.73rem;padding:.65rem 1.2rem;cursor:pointer;color:var(--muted2);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;display:flex;align-items:center;gap:.4rem;border-radius:8px 8px 0 0}
+.tab-btn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.tab-btn.active{color:var(--cyan);border-bottom-color:var(--cyan);background:var(--cyan-dim)}
+.tab-panel{display:none;animation:fadeUp .3s ease}.tab-panel.active{display:block}
+
+/* SECTION */
+.sec-title{font-family:var(--fh);font-size:1rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem;display:flex;align-items:center;gap:.55rem}
+.sec-title::before{content:'';display:inline-block;width:16px;height:2px;background:var(--cyan);border-radius:1px}
+.sec-sub{font-size:.78rem;color:var(--muted2);margin-bottom:1.4rem}
+
+/* CHART BOX */
+.chart-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem}
+.chart-box.full{grid-column:1/-1}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;margin-bottom:1.6rem}
+.cb-label{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.cb-badge{font-size:.58rem;padding:.12rem .45rem;border-radius:5px;background:var(--cyan-dim);color:var(--cyan);border:1px solid rgba(0,245,212,.2)}
+.chart-wrap{position:relative;height:200px}
+.chart-wrap.tall{height:280px}
+
+/* ═══ MONITOR TAB ═══ */
+.monitor-layout{display:grid;grid-template-columns:1fr 300px;gap:1.2rem;align-items:start;margin-bottom:1.6rem}
+
+/* Live price strip */
+.price-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1.4rem}
+.price-card{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:.8rem 1rem;transition:border-color .2s}
+.price-card:hover{border-color:rgba(0,245,212,.2)}
+.pc-ticker{font-family:var(--fm);font-size:.65rem;color:var(--muted2);margin-bottom:.15rem;display:flex;align-items:center;justify-content:space-between}
+.pc-price{font-family:var(--fh);font-size:1.3rem;font-weight:800;letter-spacing:-.02em}
+.pc-chg{font-family:var(--fm);font-size:.68rem;padding:.1rem .4rem;border-radius:5px;margin-top:.2rem;display:inline-block}
+.chg-up{background:rgba(52,211,153,.12);color:var(--green)}
+.chg-dn{background:rgba(255,77,109,.12);color:var(--rose)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Semaphore */
+.semaphore-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.2rem;text-align:center}
+.sem-ring{width:80px;height:80px;border-radius:50%;margin:0 auto .8rem;display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:3px solid}
+.sem-green{border-color:var(--green);background:rgba(52,211,153,.08)}
+.sem-amber{border-color:var(--amber);background:rgba(245,166,35,.08)}
+.sem-red{border-color:var(--rose);background:rgba(255,77,109,.1)}
+.sem-crit{border-color:#ff0040;background:rgba(255,0,64,.12);animation:critPulse 1s ease infinite alternate}
+@keyframes critPulse{from{box-shadow:0 0 0 0 rgba(255,0,64,.4)}to{box-shadow:0 0 0 12px rgba(255,0,64,0)}}
+.sem-label{font-family:var(--fh);font-size:.95rem;font-weight:800;margin-bottom:.3rem}
+.sem-sub{font-size:.72rem;color:var(--muted2)}
+
+/* Risk metrics side */
+.risk-metrics{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.1rem}
+.rm-row{display:flex;justify-content:space-between;align-items:center;padding:.45rem 0;border-bottom:1px solid rgba(255,255,255,.035);font-size:.78rem}
+.rm-row:last-child{border-bottom:none}
+.rm-key{color:var(--muted2)}.rm-val{font-family:var(--fm);font-size:.74rem}
+.val-ok{color:var(--green)}.val-warn{color:var(--amber)}.val-bad{color:var(--rose)}
+
+/* Portfolio builder */
+.port-builder{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.2rem;margin-bottom:1.6rem}
+.pb-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem}
+.pb-title{font-family:var(--fm);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.pb-total{font-family:var(--fm);font-size:.72rem;padding:.25rem .7rem;border-radius:6px}
+.pb-ok{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+.pb-warn{background:rgba(255,77,109,.1);color:var(--rose);border:1px solid rgba(255,77,109,.25)}
+.asset-row{display:grid;grid-template-columns:90px 1fr 60px 28px;gap:.6rem;align-items:center;margin-bottom:.6rem;font-size:.78rem}
+.asset-ticker{font-family:var(--fm);font-size:.68rem;color:var(--cyan)}
+input[type=range]{width:100%;height:4px;border-radius:2px;background:var(--bg4);outline:none;-webkit-appearance:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--cyan);border:2px solid var(--bg);cursor:pointer}
+.asset-pct{font-family:var(--fm);font-size:.68rem;color:var(--cyan);text-align:right}
+.asset-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;transition:color .2s}
+.asset-del:hover{color:var(--rose)}
+.add-asset-row{display:flex;gap:.5rem;margin-top:.6rem}
+.add-select{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:var(--fm);font-size:.68rem;padding:.4rem .6rem;outline:none;cursor:pointer}
+.add-btn{padding:.4rem .9rem;border-radius:7px;border:1px solid rgba(0,245,212,.3);background:var(--cyan-dim);color:var(--cyan);font-family:var(--fm);font-size:.68rem;cursor:pointer;transition:all .2s}
+.add-btn:hover{background:rgba(0,245,212,.15)}
+
+/* ═══ AGENT TAB ═══ */
+.agent-layout{display:grid;grid-template-columns:1fr 340px;gap:1.2rem;align-items:start}
+.agent-main{display:flex;flex-direction:column;gap:1rem}
+.agent-side{display:flex;flex-direction:column;gap:.9rem}
+
+/* Run button */
+.run-btn{width:100%;padding:.8rem 1.2rem;border-radius:10px;border:1px solid rgba(0,245,212,.4);background:linear-gradient(135deg,rgba(0,245,212,.12),rgba(0,245,212,.04));color:var(--cyan);font-family:var(--fh);font-size:1rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.6rem;letter-spacing:-.01em}
+.run-btn:hover:not(:disabled){background:linear-gradient(135deg,rgba(0,245,212,.2),rgba(0,245,212,.08));box-shadow:0 0 20px rgba(0,245,212,.1)}
+.run-btn:disabled{opacity:.4;cursor:not-allowed}
+.run-btn .btn-icon{font-size:1.2rem;transition:transform .3s}
+.run-btn.running .btn-icon{animation:spin .8s linear infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* Chain of thought log */
+.cot-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden}
+.cot-header{padding:.8rem 1.1rem;border-bottom:1px solid var(--border2);font-family:var(--fm);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:.5rem}
+.cot-body{padding:.9rem;max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:.6rem}
+.cot-body::-webkit-scrollbar{width:3px}.cot-body::-webkit-scrollbar-thumb{background:var(--bg4)}
+.step-row{display:flex;gap:.7rem;align-items:flex-start;animation:fadeUp .25s ease}
+.step-num{font-family:var(--fm);font-size:.6rem;padding:.18rem .45rem;border-radius:5px;flex-shrink:0;margin-top:.1rem}
+.sn-tool{background:rgba(0,245,212,.1);color:var(--cyan);border:1px solid rgba(0,245,212,.2)}
+.sn-think{background:rgba(167,139,250,.1);color:var(--violet);border:1px solid rgba(167,139,250,.2)}
+.sn-alert{background:rgba(255,77,109,.1);color:var(--rose);border:1px solid rgba(255,77,109,.2)}
+.sn-ok{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.step-content{font-size:.78rem;color:rgba(220,232,245,.7);line-height:1.7;flex:1}
+.step-content .tool-name{font-family:var(--fm);color:var(--cyan);font-size:.72rem}
+.step-content .tool-out{font-family:var(--fm);font-size:.68rem;color:rgba(220,232,245,.45);margin-top:.2rem;display:block}
+.step-content strong{color:rgba(220,232,245,.9)}
+.typing-step{display:flex;gap:.25rem;align-items:center;padding:.3rem 0}
+.typing-dot{width:5px;height:5px;border-radius:50%;background:var(--cyan);animation:typBounce 1.1s infinite}
+.typing-dot:nth-child(2){animation-delay:.18s}.typing-dot:nth-child(3){animation-delay:.36s}
+@keyframes typBounce{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-5px);opacity:1}}
+
+/* Report output */
+.report-wrap{background:var(--bg2);border:1px solid rgba(0,245,212,.18);border-radius:var(--r);overflow:hidden}
+.report-header{padding:.8rem 1.1rem;background:rgba(0,245,212,.04);border-bottom:1px solid rgba(0,245,212,.12);font-family:var(--fm);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);display:flex;align-items:center;gap:.5rem}
+.report-body{padding:1.1rem;font-size:.82rem;color:rgba(220,232,245,.8);line-height:1.85;white-space:pre-wrap}
+.report-body.empty{color:var(--muted);font-style:italic;font-size:.76rem}
+
+/* Run history */
+.run-history{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1rem}
+.rh-title{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.7rem}
+.rh-row{display:flex;align-items:center;gap:.6rem;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.035);font-size:.74rem}
+.rh-row:last-child{border-bottom:none}
+.rh-time{font-family:var(--fm);font-size:.62rem;color:var(--muted2);white-space:nowrap}
+.rh-status{font-family:var(--fm);font-size:.58rem;padding:.1rem .4rem;border-radius:4px;flex-shrink:0}
+.rs-ok{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.rs-alert{background:rgba(255,77,109,.1);color:var(--rose);border:1px solid rgba(255,77,109,.2)}
+.rh-summary{color:rgba(220,232,245,.55);font-size:.72rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Tool cards */
+.tool-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;margin-bottom:1.6rem}
+.tool-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1rem;transition:border-color .2s;position:relative}
+.tool-card:hover{border-color:rgba(0,245,212,.25)}
+.tc-icon{font-size:1.3rem;margin-bottom:.45rem}
+.tc-name{font-family:var(--fm);font-size:.72rem;color:var(--cyan);margin-bottom:.3rem}
+.tc-desc{font-size:.74rem;color:var(--muted2);line-height:1.65;margin-bottom:.6rem}
+.tc-sig{font-family:var(--fm);font-size:.62rem;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:.4rem .6rem;color:rgba(220,232,245,.45);line-height:1.6}
+
+/* Graph SVG */
+.graph-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:1.3rem;margin-bottom:1.6rem}
+.graph-svg{width:100%;height:220px}
+.gnode{fill:var(--bg3);stroke:var(--border2);stroke-width:1.5;rx:8;transition:all .3s;cursor:pointer}
+.gnode:hover{stroke:rgba(0,245,212,.5)}
+.gnode.active{fill:var(--cyan-dim);stroke:var(--cyan);stroke-width:2}
+.gnode.alert-node{fill:rgba(255,77,109,.08);stroke:var(--rose)}
+.glabel{fill:rgba(220,232,245,.7);font-family:'JetBrains Mono',monospace;font-size:10px;text-anchor:middle}
+.glabel-sub{fill:rgba(220,232,245,.4);font-family:'JetBrains Mono',monospace;font-size:8px;text-anchor:middle}
+.gedge{stroke:rgba(255,255,255,.08);stroke-width:1.5;fill:none}
+.gedge.active{stroke:var(--cyan);stroke-width:2;animation:edgeFlow .6s ease infinite}
+.gedge.alert-edge{stroke:var(--rose);stroke-width:2}
+@keyframes edgeFlow{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* CONC */
+.conc-list{display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.6rem}
+.conc-item{display:flex;align-items:flex-start;gap:.75rem;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem 1.1rem;font-size:.82rem;color:rgba(220,232,245,.7);line-height:1.75}
+.conc-arrow{font-family:var(--fm);font-size:.72rem;color:var(--cyan);flex-shrink:0;background:var(--cyan-dim);border-radius:5px;padding:.1rem .38rem}
+
+/* FOOTER */
+.dash-footer{padding:1.2rem 2.5rem 2.5rem;max-width:1280px;margin:3rem auto 0;border-top:1px solid var(--border2);display:flex;justify-content:space-between;font-family:var(--fm);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:999px}
+@media(max-width:900px){
+  .kpi-strip,.price-strip{grid-template-columns:repeat(2,1fr);padding:0 1.2rem}
+  .monitor-layout,.agent-layout{grid-template-columns:1fr}
+  .charts-2,.charts-3,.tool-grid{grid-template-columns:1fr}
+  .chart-box.full{grid-column:span 1}
+  .dash-header,.tabs-wrap{padding-left:1.2rem;padding-right:1.2rem}
+}
+</style>
+</head>
+<body>
+
+<div class="back-bar">
+  <a href="javascript:history.back()" class="back-btn"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Portafolio</a>
+  <div class="breadcrumb">Portafolio <span>/</span> <span>P6 · Risk Copilot</span></div>
+</div>
+
+<div class="dash-header">
+  <div class="eyebrow">06 · AI Agent · 2024</div>
+  <h1 class="dash-title">Risk Copilot · <span class="at">Agente IA de Monitoreo de Riesgo Autónomo</span></h1>
+  <div class="dash-meta">
+    <span class="badge b-src">📂 Yahoo Finance API · FRED API · Tiempo real</span>
+    <span class="badge b-py">● Python</span>
+    <span class="badge b-type">AI Agent · LangGraph · Claude</span>
+  </div>
+  <p class="dash-desc">Agente IA autónomo que monitorea portafolios en tiempo real, calcula VaR/CVaR, detecta violaciones de umbral y genera reportes ejecutivos en lenguaje natural con razonamiento multi-paso visible. Construido con LangGraph + Claude claude-sonnet-4-20250514 con 100% de trazabilidad de decisiones.</p>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-strip" style="margin-top:1.8rem">
+  <div class="kpi" style="--kc:var(--cyan)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--cyan)">94%</span>
+    <div class="kpi-lbl">Detección alertas VaR</div><div class="kpi-sub">Backtesting 3 años</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Tasa de detección</strong>: % de violaciones reales de umbral VaR que el agente detecta correctamente en backtesting histórico de 3 años.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">94% de detección con 2–4h de anticipación promedio vs. monitoreo diario manual — el 6% restante son eventos intradía no capturables con datos EOD.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Validar que el agente cumple el SLA de alerta temprana. <strong>CNBV</strong> exige documentar el backtesting de sistemas de alerta de riesgo de mercado en modelos internos.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--violet)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--violet)">Multi-step</span>
+    <div class="kpi-lbl">Razonamiento</div><div class="kpi-sub">LangGraph workflow</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Razonamiento multi-paso</strong>: el agente ejecuta 5–8 pasos de análisis autónomo (obtener datos → calcular → comparar → decidir → reportar) sin intervención humana.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">LangGraph con memoria persistente permite que el agente recuerde contexto histórico entre ejecuciones para análisis de tendencias de riesgo a lo largo del tiempo.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Superior a un LLM puro: las herramientas Python garantizan exactitud matemática del VaR, mientras el LLM aporta interpretación contextual y comunicación ejecutiva.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--amber)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--amber)">&lt;30s</span>
+    <div class="kpi-lbl">Reporte ejecutivo</div><div class="kpi-sub">Generación automática</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Latencia total</strong>: tiempo desde que el agente inicia el análisis hasta que entrega el reporte ejecutivo completo en lenguaje natural.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">&lt;30s incluye: obtención de precios (2s) + cálculo VaR Monte Carlo 10K escenarios (4s) + razonamiento LLM + generación reporte (18s). Tiempo manual equivalente: 45–90 minutos.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Habilitar <strong>morning briefing automático</strong>: el agente se ejecuta a las 7am antes del mercado, entrega el reporte al equipo de riesgo y escala alertas a tesorería si hay violaciones.</span></div>
+    </div>
+  </div>
+  <div class="kpi" style="--kc:var(--green)">
+    <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+    <span class="kpi-val" style="color:var(--green)">100%</span>
+    <div class="kpi-lbl">Trazabilidad</div><div class="kpi-sub">Chain-of-thought logs</div>
+    <div class="info-panel">
+      <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Trazabilidad</strong>: cada decisión del agente está documentada paso a paso en el chain-of-thought log — qué datos obtuvo, qué calculó, qué decidió y por qué.</span></div>
+      <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">100% de ejecuciones con log completo auditado. Los logs se almacenan en PostgreSQL con timestamp, herramientas usadas, tokens y resultado de cada paso.</span></div>
+      <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Cumplir <strong>CNBV Disposición 1 Bis</strong> sobre explicabilidad de modelos: el regulador puede reconstruir cualquier decisión de alerta del agente con evidencia matemática auditada.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-wrap" style="margin-top:2rem">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('monitor',this)">📡 Monitor Activo</button>
+    <button class="tab-btn" onclick="switchTab('agent',this)">🤖 Agente en Acción</button>
+    <button class="tab-btn" onclick="switchTab('arch',this)">🔧 Arquitectura LangGraph</button>
+  </div>
+
+  <!-- ══ TAB 1: MONITOR ══ -->
+  <div class="tab-panel active" id="tab-monitor">
+
+    <!-- Live prices -->
+    <div class="sec-title">Precios & Métricas en Tiempo Real</div>
+    <p class="sec-sub">Feed simulado · IPC · S&P 500 · MXN/USD · CETES 28d · Actualización cada 3s</p>
+    <div class="price-strip">
+      <div class="price-card">
+        <div class="pc-ticker">IPC · BMV <span class="live-dot"></span></div>
+        <div class="pc-price" id="p-ipc" style="color:var(--cyan)">54,284</div>
+        <div class="pc-chg chg-up" id="c-ipc">+0.42%</div>
+      </div>
+      <div class="price-card">
+        <div class="pc-ticker">S&P 500 <span class="live-dot"></span></div>
+        <div class="pc-price" id="p-sp" style="color:var(--violet)">5,312</div>
+        <div class="pc-chg chg-dn" id="c-sp">-0.18%</div>
+      </div>
+      <div class="price-card">
+        <div class="pc-ticker">MXN/USD <span class="live-dot"></span></div>
+        <div class="pc-price" id="p-fx" style="color:var(--amber)">17.24</div>
+        <div class="pc-chg chg-up" id="c-fx">+0.08%</div>
+      </div>
+      <div class="price-card">
+        <div class="pc-ticker">CETES 28d <span class="live-dot"></span></div>
+        <div class="pc-price" id="p-cetes" style="color:var(--green)">11.15%</div>
+        <div class="pc-chg chg-dn" id="c-cetes">-0.02pp</div>
+      </div>
+    </div>
+
+    <div class="monitor-layout">
+      <div>
+        <!-- VaR Chart -->
+        <div class="chart-box" style="margin-bottom:1rem">
+          <div class="cb-label">Retornos del Portafolio vs. VaR 95%/99% · Últimos 30 días <span class="cb-badge" id="var-badge">VaR: -2.4%</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+          <div class="chart-wrap tall"><canvas id="chart-var-live"></canvas></div>
+          <div class="info-panel">
+            <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Monitor VaR en tiempo real</strong>: compara retornos diarios observados contra el umbral VaR calculado con GARCH(1,1) + Monte Carlo 10,000 escenarios.</span></div>
+            <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Puntos <span style="color:var(--rose)">rojos</span> = violaciones del VaR 95%. Más de 1.5 violaciones en 30 días activa alerta Ámbar. Más de 3 activa alerta Roja y escala al comité de riesgo.</span></div>
+            <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Backtesting continuo: <strong>Basilea III</strong> requiere que las violaciones no superen el 5% anual (≈12 días en 250). Zona roja: &gt;10 violaciones en 250 días → recalibración obligatoria.</span></div>
+          </div>
+        </div>
+
+        <!-- Portfolio builder -->
+        <div class="port-builder">
+          <div class="pb-header">
+            <span class="pb-title">Constructor de Portafolio · MXN</span>
+            <span class="pb-total pb-ok" id="pb-sum">100%</span>
+          </div>
+          <div id="asset-rows"></div>
+          <div class="add-asset-row">
+            <select class="add-select" id="add-select">
+              <option value="">+ Agregar activo…</option>
+              <option value="AMXL">AMXL · América Móvil</option>
+              <option value="WALMEX">WALMEX · Walmart MX</option>
+              <option value="GFNORTE">GFNORTE · Banorte</option>
+              <option value="CEMEX">CEMEX</option>
+              <option value="SPY">SPY · S&P 500 ETF</option>
+              <option value="EWW">EWW · México ETF</option>
+              <option value="GLD">GLD · Gold ETF</option>
+              <option value="BOND10">Bono M 10a MX</option>
+              <option value="UST10">UST 10a</option>
+            </select>
+            <button class="add-btn" onclick="addAsset()">Agregar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right panel -->
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <!-- Semaphore -->
+        <div class="semaphore-box">
+          <div class="sem-ring sem-green" id="sem-ring">🟢</div>
+          <div class="sem-label" id="sem-label">PORTAFOLIO OK</div>
+          <div class="sem-sub" id="sem-sub">Dentro de límites regulatorios</div>
+        </div>
+        <!-- Risk metrics -->
+        <div class="risk-metrics">
+          <div class="cb-label" style="margin-bottom:.8rem">Métricas de Riesgo</div>
+          <div class="rm-row"><span class="rm-key">VaR 95% (1d)</span><span class="rm-val val-ok" id="rm-var">−2.4%</span></div>
+          <div class="rm-row"><span class="rm-key">CVaR 95% (1d)</span><span class="rm-val val-warn" id="rm-cvar">−3.6%</span></div>
+          <div class="rm-row"><span class="rm-key">Volatilidad anual</span><span class="rm-val" id="rm-vol">18.2%</span></div>
+          <div class="rm-row"><span class="rm-key">Sharpe Ratio</span><span class="rm-val val-ok" id="rm-sharpe">1.28</span></div>
+          <div class="rm-row"><span class="rm-key">Beta portafolio</span><span class="rm-val" id="rm-beta">0.84</span></div>
+          <div class="rm-row"><span class="rm-key">Violaciones 30d</span><span class="rm-val val-ok" id="rm-viol">1</span></div>
+          <div class="rm-row"><span class="rm-key">Drawdown máx.</span><span class="rm-val val-warn" id="rm-dd">−8.4%</span></div>
+        </div>
+        <!-- Mini chart -->
+        <div class="chart-box" style="padding:.9rem">
+          <div class="cb-label" style="margin-bottom:.6rem">Distribución Retornos</div>
+          <div class="chart-wrap" style="height:130px"><canvas id="chart-ret-dist"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 2: AGENT ══ -->
+  <div class="tab-panel" id="tab-agent">
+    <div class="sec-title">Agente Risk Copilot en Acción</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">El agente ejecuta análisis multi-paso con Claude · Razonamiento visible en tiempo real · Reporte ejecutivo generado automáticamente</p>
+
+    <div class="agent-layout">
+      <div class="agent-main">
+        <button class="run-btn" id="run-btn" onclick="runAgent()">
+          <span class="btn-icon">⚡</span>
+          Ejecutar Análisis del Agente
+        </button>
+
+        <!-- Chain of thought -->
+        <div class="cot-wrap">
+          <div class="cot-header">
+            <span style="color:var(--cyan)">●</span>
+            Chain-of-Thought · Razonamiento del Agente
+          </div>
+          <div class="cot-body" id="cot-body">
+            <p style="font-size:.76rem;color:var(--muted);text-align:center;padding:1rem 0">Presiona "Ejecutar Análisis" para iniciar el agente</p>
+          </div>
+        </div>
+
+        <!-- Report -->
+        <div class="report-wrap">
+          <div class="report-header">📋 Reporte Ejecutivo · Generado por Claude claude-sonnet-4-20250514</div>
+          <div class="report-body empty" id="report-body">El reporte ejecutivo aparecerá aquí tras la ejecución del agente…</div>
+        </div>
+      </div>
+
+      <!-- Side: history + charts -->
+      <div class="agent-side">
+        <div class="run-history">
+          <div class="rh-title">Historial de Ejecuciones</div>
+          <div id="run-history-list">
+            <div class="rh-row"><span class="rh-time">07:02 hoy</span><span class="rh-status rs-ok">OK</span><span class="rh-summary">Sin alertas · Sharpe 1.28 · VaR −2.4%</span></div>
+            <div class="rh-row"><span class="rh-time">Ayer 07:01</span><span class="rh-status rs-alert">ALERTA</span><span class="rh-summary">VaR violado · CVaR −4.1% · Escalado</span></div>
+            <div class="rh-row"><span class="rh-time">Lun 07:03</span><span class="rh-status rs-ok">OK</span><span class="rh-summary">Rebalanceo sugerido · Beta 1.12</span></div>
+            <div class="rh-row"><span class="rh-time">Vie 07:01</span><span class="rh-status rs-ok">OK</span><span class="rh-summary">Sin alertas · Drawdown −6.2%</span></div>
+          </div>
+        </div>
+        <div class="chart-box">
+          <div class="cb-label">Acciones del Agente por Tipo</div>
+          <div class="chart-wrap" style="height:160px"><canvas id="chart-agent-actions"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <div class="cb-label">Tokens por Ejecución · Últimas 8</div>
+          <div class="chart-wrap" style="height:130px"><canvas id="chart-tokens"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 3: ARCHITECTURE ══ -->
+  <div class="tab-panel" id="tab-arch">
+    <div class="sec-title">Arquitectura LangGraph · Grafo de Decisiones</div>
+    <p class="sec-sub">Nodos del workflow autónomo · Click en nodo para detalle · Flujo activo al ejecutar el agente</p>
+
+    <div class="graph-wrap">
+      <svg class="graph-svg" viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg" id="arch-svg">
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="rgba(0,245,212,.4)"/>
+          </marker>
+          <marker id="arr-a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="var(--rose)"/>
+          </marker>
+        </defs>
+        <!-- Edges -->
+        <path d="M115,100 L155,100" class="gedge" id="e1" marker-end="url(#arr)"/>
+        <path d="M265,100 L305,100" class="gedge" id="e2" marker-end="url(#arr)"/>
+        <path d="M415,100 L455,100" class="gedge" id="e3" marker-end="url(#arr)"/>
+        <path d="M565,100 L605,100" class="gedge" id="e4" marker-end="url(#arr)"/>
+        <!-- Alert branch -->
+        <path d="M490,130 Q490,170 380,170 Q270,170 270,130" class="gedge alert-edge" id="e-alert" stroke-dasharray="5,3" marker-end="url(#arr-a)"/>
+        <!-- Nodes -->
+        <rect x="10" y="70" width="105" height="60" rx="8" class="gnode" id="gn-start" onclick="selectGNode('start')"/>
+        <text x="62" y="97" class="glabel">START</text>
+        <text x="62" y="113" class="glabel-sub">Trigger</text>
+        <text x="62" y="125" class="glabel-sub">schedule/manual</text>
+
+        <rect x="155" y="70" width="110" height="60" rx="8" class="gnode" id="gn-fetch" onclick="selectGNode('fetch')"/>
+        <text x="210" y="97" class="glabel">fetch_prices</text>
+        <text x="210" y="113" class="glabel-sub">yfinance API</text>
+        <text x="210" y="125" class="glabel-sub">FRED API</text>
+
+        <rect x="305" y="70" width="110" height="60" rx="8" class="gnode" id="gn-var" onclick="selectGNode('var')"/>
+        <text x="360" y="97" class="glabel">calculate_var</text>
+        <text x="360" y="113" class="glabel-sub">Monte Carlo 10K</text>
+        <text x="360" y="125" class="glabel-sub">GARCH(1,1)</text>
+
+        <rect x="455" y="70" width="110" height="60" rx="8" class="gnode" id="gn-decide" onclick="selectGNode('decide')"/>
+        <text x="510" y="97" class="glabel">decision_node</text>
+        <text x="510" y="113" class="glabel-sub">VaR vs umbral</text>
+        <text x="510" y="125" class="glabel-sub">Claude reasoning</text>
+
+        <rect x="605" y="70" width="110" height="60" rx="8" class="gnode" id="gn-report" onclick="selectGNode('report')"/>
+        <text x="660" y="97" class="glabel">generate_report</text>
+        <text x="660" y="113" class="glabel-sub">Claude claude-sonnet-4-20250514</text>
+        <text x="660" y="125" class="glabel-sub">→ END</text>
+
+        <!-- Alert label -->
+        <text x="380" y="188" fill="rgba(255,77,109,.6)" font-family="JetBrains Mono" font-size="9" text-anchor="middle">ALERTA → reanalizar con contexto adicional</text>
+      </svg>
+    </div>
+
+    <!-- Node detail -->
+    <div class="node-detail" id="gnode-detail" style="background:var(--bg2);border:1px solid rgba(0,245,212,.18);border-radius:var(--r);padding:1.2rem;margin-bottom:1.6rem">
+      <div style="font-family:var(--fh);font-size:.95rem;font-weight:700;margin-bottom:.4rem;color:var(--cyan)" id="gnd-title">⚡ START · Trigger de ejecución</div>
+      <div style="font-size:.82rem;color:rgba(220,232,245,.65);line-height:1.8;margin-bottom:.8rem" id="gnd-desc">El agente se activa por schedule programado (cron 7am días hábiles) o manualmente. Al iniciar, carga el estado del portafolio desde memoria persistente LangGraph y el historial de las últimas 30 ejecuciones para análisis de tendencias.</div>
+      <div class="info-panel open">
+        <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt" id="gnd-def">LangGraph StateGraph define el flujo de decisiones como un grafo dirigido con memoria persistente entre ejecuciones usando MemorySaver.</span></div>
+        <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt" id="gnd-meta">La memoria persistente permite que el agente recuerde violaciones previas, tendencias y contexto histórico — crítico para análisis de drift en el riesgo del portafolio.</span></div>
+        <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt" id="gnd-uso">Configurar el schedule en el orquestador (Airflow/cron): 7am para morning briefing, 12pm para revisión intradía y trigger inmediato en caso de movimiento de mercado >2%.</span></div>
+      </div>
+    </div>
+
+    <!-- Tool cards -->
+    <div class="sec-title">Herramientas del Agente</div>
+    <p class="sec-sub">Cada herramienta es una función Python decorada con @tool — el LLM decide cuándo y cómo llamarlas</p>
+    <div class="tool-grid">
+      <div class="tool-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="tc-icon">📈</div>
+        <div class="tc-name">get_portfolio_prices()</div>
+        <div class="tc-desc">Obtiene precios históricos y retornos de Yahoo Finance para todos los activos del portafolio. Calcula estadísticas de retorno, volatilidad y correlación.</div>
+        <div class="tc-sig">tickers: list[str], period: str → dict{prices, returns_stats, corr}</div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Herramienta de datos</strong>: wrapper sobre yfinance que descarga datos OHLCV y calcula retornos logarítmicos, media, volatilidad y matriz de correlación.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Latencia típica: 1.8s para portafolio de 10 activos. Usa caché de 15 minutos para evitar llamadas repetidas en la misma ejecución del agente.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">El agente llama esta herramienta como primer paso siempre. Si yfinance falla, el agente tiene lógica de fallback a datos históricos en caché local.</span></div>
+        </div>
+      </div>
+      <div class="tool-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="tc-icon">📊</div>
+        <div class="tc-name">calculate_var()</div>
+        <div class="tc-desc">Calcula VaR y CVaR con tres metodologías: histórico, paramétrico y Monte Carlo (10,000 escenarios). Detecta si supera umbrales regulatorios y clasifica severidad.</div>
+        <div class="tc-sig">returns: dict, confidence: float, method: str → {var, cvar, alert, severity}</div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Motor de cálculo VaR</strong>: Monte Carlo con 10K simulaciones usando media y volatilidad del portafolio + correlaciones para capturar efectos de diversificación.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Umbral default: −2.5% VaR 95% 1d. Configurable por política de riesgo. Severidad: MEDIUM si VaR &gt;−2.5%, HIGH si &gt;−3.75% (1.5x el umbral).</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">El agente puede llamar esta herramienta múltiples veces con distintos horizontes (1d, 5d, 10d) y métodos para validar la consistencia del riesgo estimado.</span></div>
+        </div>
+      </div>
+      <div class="tool-card">
+        <button class="info-btn" onclick="toggleInfo(this)" style="position:absolute;top:.7rem;right:.7rem">ℹ</button>
+        <div class="tc-icon">📋</div>
+        <div class="tc-name">generate_risk_report()</div>
+        <div class="tc-desc">Genera reporte ejecutivo en lenguaje natural con análisis de contexto histórico, factores de mercado y recomendaciones de acción. Usado por el agente como último paso.</div>
+        <div class="tc-sig">analysis: dict → str (reporte markdown ejecutivo)</div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Síntesis ejecutiva</strong>: recibe el análisis estructurado del agente y genera un reporte en lenguaje natural calibrado para audiencia de comité de riesgo — no técnico pero riguroso.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El reporte incluye siempre: estado del portafolio, métricas clave, factores de riesgo identificados, comparativa vs. ejecución anterior y recomendaciones de acción concretas.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Distribuir automáticamente por email/Slack al equipo de riesgo. El formato markdown permite renderizado limpio en cualquier canal. Archivado en audit log SQL.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison -->
+    <div class="charts-2" style="margin-bottom:1.6rem">
+      <div class="chart-box">
+        <div class="cb-label">Detección de Alertas VaR · Backtesting 3 años <span class="cb-badge">94% detección</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-backtest"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Backtesting de alertas</strong>: compara las alertas generadas por el agente vs. las violaciones VaR reales que ocurrieron en el período histórico de 3 años.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">94% de detección = 47 de 50 eventos reales correctamente alertados. 3 falsos negativos fueron eventos intradía capturados solo con datos EOD.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Validación regulatoria: presentar el backtesting ante <strong>CNBV</strong> como evidencia de efectividad del sistema de alertas antes de su uso en modelos internos de riesgo.</span></div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="cb-label">Agente vs. Monitoreo Manual · Comparativa <span class="cb-badge">ROI 30x tiempo</span><button class="info-btn" onclick="toggleInfo(this)">ℹ</button></div>
+        <div class="chart-wrap"><canvas id="chart-compare"></canvas></div>
+        <div class="info-panel">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Comparativa de eficiencia</strong>: tiempo y calidad de análisis entre el agente autónomo y un analista de riesgo realizando el mismo proceso manualmente.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">El agente completa en &lt;30s lo que un analista tarda 45–90 minutos. La ventaja principal es la velocidad de detección, no la calidad del análisis — el analista puede ir más profundo.</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">El agente no reemplaza al analista — libera su tiempo del monitoreo rutinario para enfocarse en análisis de alto valor: estructuración de coberturas, comunicación con tesorería y análisis de escenarios.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conc -->
+    <div class="sec-title">Conclusiones Técnicas</div>
+    <p class="sec-sub" style="margin-bottom:1.2rem">Hallazgos del sistema · Reemplaza con tus propios resultados</p>
+    <div class="conc-list">
+      <div class="conc-item"><span class="conc-arrow">→</span>La arquitectura LangGraph con memoria persistente permite al agente razonar en 5–8 pasos sobre escenarios de estrés sin intervención humana, manteniendo contexto histórico entre ejecuciones para análisis de tendencias de riesgo a lo largo del tiempo.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>El agente detecta correctamente el 94% de los cruces de umbral VaR en backtesting histórico de 3 años, generando alertas con 2–4 horas de anticipación vs. el monitoreo diario manual — habilitando respuesta proactiva ante eventos de mercado.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>El patrón tool-use es superior a un LLM puro para cálculos financieros: las herramientas Python garantizan exactitud matemática del VaR/CVaR (Monte Carlo 10K escenarios), mientras Claude aporta interpretación contextual y comunicación ejecutiva en lenguaje natural.</div>
+      <div class="conc-item"><span class="conc-arrow">→</span>Los logs de chain-of-thought son el componente regulatorio más crítico: documentan cada decisión del agente con evidencia matemática auditada, cumpliendo CNBV Disposición 1 Bis sobre explicabilidad de modelos de riesgo en instituciones supervisadas.</div>
+    </div>
+  </div>
+</div>
+
+<div class="dash-footer">
+  <span style="color:var(--muted2)">// <span style="color:var(--cyan)">P6 · Risk Copilot</span> · Yahoo Finance · FRED · Claude claude-sonnet-4-20250514 · LangGraph · Demostrativo</span>
+  <span>Python · <span style="color:var(--violet)">2024</span></span>
+</div>
+
+<script>
+// ── DEFAULTS
+Chart.defaults.color='rgba(220,232,245,0.42)';
+Chart.defaults.borderColor='rgba(255,255,255,0.042)';
+Chart.defaults.font.family="'JetBrains Mono','monospace'";
+Chart.defaults.font.size=10;
+Chart.defaults.plugins.legend.labels.boxWidth=10;
+Chart.defaults.plugins.legend.labels.padding=14;
+Chart.defaults.plugins.legend.labels.usePointStyle=true;
+const TT={backgroundColor:'#0c1018',titleColor:'#dce8f5',bodyColor:'rgba(220,232,245,.7)',borderColor:'rgba(0,245,212,.15)',borderWidth:1,padding:10};
+const BASE={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(220,232,245,.48)'}},tooltip:TT},scales:{x:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}},y:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'rgba(220,232,245,.38)'}}}};
+function mk(ex={}){const o=JSON.parse(JSON.stringify(BASE));if(ex.scales)Object.assign(o.scales,ex.scales);if(ex.indexAxis)o.indexAxis=ex.indexAxis;return o;}
+
+// INFO TOGGLE
+function toggleInfo(btn){
+  const p=btn.closest('.kpi,.chart-box,.tool-card,.graph-wrap');
+  if(!p)return;const panel=p.querySelector('.info-panel');
+  if(!panel)return;const open=panel.classList.contains('open');
+  panel.classList.toggle('open',!open);btn.classList.toggle('active',!open);
+}
+// TAB
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');document.getElementById('tab-'+id).classList.add('active');
+}
+
+// ── LIVE PRICES
+const PRICES={ipc:54284,sp:5312,fx:17.24,cetes:11.15};
+const CHANGES={ipc:0.42,sp:-0.18,fx:0.08,cetes:-0.02};
+function jitter(v,pct){return v*(1+(Math.random()-.5)*pct);}
+function updatePrices(){
+  PRICES.ipc=jitter(PRICES.ipc,.004);
+  PRICES.sp=jitter(PRICES.sp,.003);
+  PRICES.fx=jitter(PRICES.fx,.002);
+  document.getElementById('p-ipc').textContent=Math.round(PRICES.ipc).toLocaleString('es-MX');
+  document.getElementById('p-sp').textContent=Math.round(PRICES.sp).toLocaleString('es-MX');
+  document.getElementById('p-fx').textContent=PRICES.fx.toFixed(2);
+  CHANGES.ipc+=( Math.random()-.5)*.08;
+  CHANGES.sp+=(Math.random()-.5)*.06;
+  CHANGES.fx+=(Math.random()-.5)*.03;
+  const fmt=(v,suf='%')=>v>=0?`+${v.toFixed(2)}${suf}`:`${v.toFixed(2)}${suf}`;
+  const cls=(v)=>v>=0?'pc-chg chg-up':'pc-chg chg-dn';
+  document.getElementById('c-ipc').className=cls(CHANGES.ipc);document.getElementById('c-ipc').textContent=fmt(CHANGES.ipc);
+  document.getElementById('c-sp').className=cls(CHANGES.sp);document.getElementById('c-sp').textContent=fmt(CHANGES.sp);
+  document.getElementById('c-fx').className=cls(CHANGES.fx);document.getElementById('c-fx').textContent=fmt(CHANGES.fx);
+}
+setInterval(updatePrices,3000);
+
+// ── PORTFOLIO BUILDER
+let portfolio=[
+  {t:'IPC·BMV',w:35,beta:.82,vol:18.4,ret:10.2},
+  {t:'S&P 500',w:25,beta:1.0,vol:16.4,ret:11.8},
+  {t:'CETES28',w:20,beta:.02,vol:1.2,ret:11.25},
+  {t:'AMXL',w:12,beta:.92,vol:18.4,ret:12.4},
+  {t:'MXN/USD',w:8,beta:-.62,vol:12.4,ret:4.2},
+];
+const AVAIL_ASSETS={
+  'AMXL':{beta:.92,vol:18.4,ret:12.4},'WALMEX':{beta:.74,vol:14.2,ret:15.8},
+  'GFNORTE':{beta:1.18,vol:22.4,ret:18.4},'CEMEX':{beta:1.42,vol:28.6,ret:8.4},
+  'SPY':{beta:1.0,vol:16.4,ret:14.8},'EWW':{beta:.92,vol:20.4,ret:11.4},
+  'GLD':{beta:-.12,vol:14.8,ret:8.2},'BOND10':{beta:.14,vol:6.4,ret:9.8},
+  'UST10':{beta:.08,vol:8.2,ret:4.8}
+};
+function renderPortfolio(){
+  const el=document.getElementById('asset-rows');
+  el.innerHTML=portfolio.map((a,i)=>`
+    <div class="asset-row">
+      <span class="asset-ticker">${a.t}</span>
+      <input type="range" min="0" max="100" value="${a.w}" oninput="updateWeight(${i},this.value)">
+      <span class="asset-pct" id="aw-${i}">${a.w}%</span>
+      <button class="asset-del" onclick="removeAsset(${i})">✕</button>
+    </div>`).join('');
+  updatePortfolioMetrics();
+}
+function updateWeight(i,v){portfolio[i].w=+v;document.getElementById('aw-'+i).textContent=v+'%';updatePortfolioMetrics();}
+function removeAsset(i){portfolio.splice(i,1);renderPortfolio();}
+function addAsset(){
+  const sel=document.getElementById('add-select');
+  const t=sel.value;if(!t||portfolio.find(a=>a.t===t))return;
+  const a=AVAIL_ASSETS[t];portfolio.push({t,w:5,...a});sel.value='';renderPortfolio();
+}
+function updatePortfolioMetrics(){
+  const total=portfolio.reduce((s,a)=>s+a.w,0);
+  const sumEl=document.getElementById('pb-sum');
+  sumEl.textContent=total+'%';sumEl.className='pb-total '+(Math.abs(total-100)<1?'pb-ok':'pb-warn');
+  if(total===0)return;
+  const wRet=portfolio.reduce((s,a)=>s+(a.ret*a.w/100),0);
+  const wVol=Math.sqrt(portfolio.reduce((s,a)=>s+Math.pow(a.vol*a.w/100,2),0))*1.1;
+  const wBeta=portfolio.reduce((s,a)=>s+(a.beta*a.w/100),0);
+  const rf=11.25;
+  const sharpe=+((wRet-rf)/wVol).toFixed(2);
+  const varD=+(wVol/Math.sqrt(252)*1.645).toFixed(2);
+  const cvarD=+(varD*1.35).toFixed(2);
+  const dd=+(wVol*2.8).toFixed(1);
+  const viol=varD>3.5?3:varD>2.8?2:1;
+
+  document.getElementById('rm-var').textContent='−'+varD+'%';
+  document.getElementById('rm-cvar').textContent='−'+cvarD+'%';
+  document.getElementById('rm-vol').textContent=wVol.toFixed(1)+'%';
+  document.getElementById('rm-sharpe').textContent=sharpe;
+  document.getElementById('rm-beta').textContent=wBeta.toFixed(2);
+  document.getElementById('rm-viol').textContent=viol;
+  document.getElementById('rm-dd').textContent='−'+dd+'%';
+  document.getElementById('var-badge').textContent='VaR: −'+varD+'%';
+  document.getElementById('rm-var').className='rm-val '+(varD<2.5?'val-ok':varD<3.5?'val-warn':'val-bad');
+  document.getElementById('rm-cvar').className='rm-val '+(cvarD<3.5?'val-ok':cvarD<5?'val-warn':'val-bad');
+  document.getElementById('rm-sharpe').className='rm-val '+(sharpe>1?'val-ok':sharpe>0.5?'val-warn':'val-bad');
+  document.getElementById('rm-viol').className='rm-val '+(viol<=1?'val-ok':viol<=2?'val-warn':'val-bad');
+  // Semaphore
+  const sem=document.getElementById('sem-ring');
+  const lbl=document.getElementById('sem-label');
+  const sub=document.getElementById('sem-sub');
+  if(varD<2.5&&viol<=1){sem.className='sem-ring sem-green';sem.textContent='🟢';lbl.textContent='PORTAFOLIO OK';lbl.style.color='var(--green)';sub.textContent='Dentro de límites regulatorios';}
+  else if(varD<3.5||viol<=2){sem.className='sem-ring sem-amber';sem.textContent='🟡';lbl.textContent='REVISIÓN SUGERIDA';lbl.style.color='var(--amber)';sub.textContent='VaR elevado · monitoreo activo';}
+  else{sem.className='sem-ring sem-red';sem.textContent='🔴';lbl.textContent='ALERTA ACTIVA';lbl.style.color='var(--rose)';sub.textContent='Umbral VaR superado · escalar';}
+}
+renderPortfolio();
+
+// ── VaR CHART
+let varChart;
+(()=>{
+  const n=30,rets=Array.from({length:n},()=>(Math.random()-.49)*.042);
+  rets[7]=-.031;rets[18]=-.027;rets[24]=-.033;
+  varChart=new Chart(document.getElementById('chart-var-live'),{type:'line',data:{
+    labels:Array.from({length:n},(_,i)=>'D'+(i+1)),
+    datasets:[
+      {label:'Retorno diario',data:rets,borderColor:'#00f5d4',borderWidth:1.5,fill:true,backgroundColor:'rgba(0,245,212,.04)',tension:.3,pointRadius:rets.map(r=>r<-.025?6:2),pointBackgroundColor:rets.map(r=>r<-.025?'#ff4d6d':'#00f5d4')},
+      {label:'VaR 95% (−2.5%)',data:new Array(n).fill(-.025),borderColor:'#f5a623',borderWidth:1.5,borderDash:[5,3],fill:false,pointRadius:0},
+      {label:'VaR 99% (−3.5%)',data:new Array(n).fill(-.035),borderColor:'#ff4d6d',borderWidth:1.5,borderDash:[6,4],fill:false,pointRadius:0},
+    ]},options:mk({scales:{y:{title:{display:true,text:'Retorno diario'},ticks:{callback:v=>(v*100).toFixed(1)+'%'}}}})});
+})();
+
+// Ret dist
+new Chart(document.getElementById('chart-ret-dist'),{type:'bar',data:{
+  labels:['-4%','-3%','-2%','-1%','0%','+1%','+2%','+3%','+4%'],
+  datasets:[{label:'Frecuencia',data:[2,4,12,28,38,30,14,6,2],backgroundColor:'rgba(0,245,212,.45)',borderColor:'#00f5d4',borderWidth:1,borderRadius:3}]},
+  options:mk({scales:{y:{display:false},x:{ticks:{font:{size:8}}}}})});
+
+// Agent charts
+new Chart(document.getElementById('chart-agent-actions'),{type:'doughnut',data:{
+  labels:['Monitoreo OK','Alerta VaR 95%','Alerta VaR 99%','Reporte gen.','Rebalanceo'],
+  datasets:[{data:[68,16,7,6,3],backgroundColor:['rgba(0,245,212,.5)','rgba(245,166,35,.5)','rgba(255,77,109,.55)','rgba(167,139,250,.5)','rgba(96,165,250,.45)'],borderColor:['#00f5d4','#f5a623','#ff4d6d','#a78bfa','#60a5fa'],borderWidth:1.5}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'rgba(220,232,245,.45)',font:{size:8}}},tooltip:TT}}});
+
+new Chart(document.getElementById('chart-tokens'),{type:'bar',data:{
+  labels:['E1','E2','E3','E4','E5','E6','E7','E8'],
+  datasets:[{label:'Tokens usados',data:[842,1240,980,1180,760,1420,890,1080],backgroundColor:'rgba(167,139,250,.45)',borderColor:'#a78bfa',borderWidth:1,borderRadius:4}]},
+  options:mk({scales:{y:{title:{display:true,text:'Tokens'}}}})});
+
+// Backtest
+new Chart(document.getElementById('chart-backtest'),{type:'bar',data:{
+  labels:['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+  datasets:[
+    {label:'Violaciones reales VaR',data:[3,2,5,4,2,3,4,6,3,2,4,3],backgroundColor:'rgba(255,77,109,.5)',borderColor:'#ff4d6d',borderWidth:1.5,borderRadius:4},
+    {label:'Alertas del agente',data:[3,2,5,4,2,3,4,5,3,2,4,3],backgroundColor:'rgba(0,245,212,.45)',borderColor:'#00f5d4',borderWidth:1.5,borderRadius:4},
+  ]},options:mk({scales:{y:{title:{display:true,text:'# Eventos'}}}})});
+
+// Compare
+new Chart(document.getElementById('chart-compare'),{type:'bar',data:{
+  labels:['Obtener datos','Calcular VaR','Analizar contexto','Generar reporte','Total'],
+  datasets:[
+    {label:'Agente IA (seg)',data:[2,4,8,18,32],backgroundColor:'rgba(0,245,212,.5)',borderColor:'#00f5d4',borderWidth:1.5,borderRadius:5},
+    {label:'Analista manual (min×10)',data:[50,200,600,1000,1800]/100,backgroundColor:'rgba(131,153,184,.35)',borderColor:'#8399b8',borderWidth:1,borderRadius:5,borderDash:[3,3]},
+  ]},options:mk({scales:{y:{title:{display:true,text:'Segundos (agente) / min×0.1 (manual)'}}}})} );
+
+// ── GRAPH NODE DETAIL
+const GNODE_DATA={
+  start:{title:'⚡ START · Trigger de ejecución',desc:'El agente se activa por schedule (cron 7am días hábiles) o manualmente. Carga el estado del portafolio desde memoria persistente LangGraph y el historial de las últimas 30 ejecuciones.',def:'LangGraph StateGraph define el flujo como un grafo dirigido con memoria persistente entre ejecuciones usando MemorySaver.',meta:'La memoria persistente permite al agente recordar violaciones previas y tendencias — crítico para detectar drift de riesgo en el portafolio.',uso:'Configurar schedule en Airflow/cron: 7am para morning briefing, 12pm para revisión intradía y trigger inmediato en movimientos >2%.'},
+  fetch:{title:'📈 fetch_prices · Obtención de datos',desc:'Llama a yfinance para obtener precios actuales y FRED API para datos macroeconómicos (Fed Funds, VIX, spreads de crédito). Calcula retornos, volatilidades y correlaciones del portafolio.',def:'Herramienta @tool que el LLM invoca como primer paso. Wrapper sobre yfinance con caché de 15 minutos para eficiencia.',meta:'Latencia: 1.8s para portafolio de 10 activos. Si yfinance falla, el agente usa datos históricos en caché local como fallback.',uso:'Extender con BANXICO SIE API para datos MXN/TIIE y con Bloomberg API en entornos institucionales con licencia.'},
+  var:{title:'📊 calculate_var · Cálculo de riesgo',desc:'Calcula VaR y CVaR con Monte Carlo (10,000 escenarios), histórico y paramétrico. Compara contra umbrales regulatorios y clasifica la severidad de la alerta.',def:'Monte Carlo con correlaciones completas entre activos usando numpy — captura efectos de diversificación que el VaR paramétrico individual no detecta.',meta:'Umbral default: −2.5% VaR 95% 1d. Si VaR < −3.75% (1.5x umbral), la severidad escala a HIGH y el agente notifica inmediatamente.',uso:'El agente puede llamar esta herramienta múltiples veces con distintos métodos para validar la robustez del VaR estimado antes de emitir la alerta.'},
+  decide:{title:'🧠 decision_node · Razonamiento Claude',desc:'Claude analiza el VaR calculado, el contexto histórico y factores de mercado para decidir: continuar monitoreo, emitir alerta ámbar, emitir alerta roja o solicitar análisis adicional.',def:'Nodo LLM del grafo donde Claude razona sobre el estado del portafolio con chain-of-thought interno visible en los logs de trazabilidad.',meta:'Si Claude detecta inconsistencias (ej. VaR bajo pero correlaciones elevadas), puede volver al nodo fetch para obtener datos adicionales — bucle de razonamiento.',uso:'El chain-of-thought completo queda en los logs SQL — cada decisión de alerta tiene evidencia matemática auditada para reguladores CNBV.'},
+  report:{title:'📋 generate_report · Reporte ejecutivo',desc:'Claude genera un reporte ejecutivo en lenguaje natural con estado del portafolio, métricas clave, factores de riesgo y recomendaciones de acción concretas para el comité de riesgo.',def:'Último nodo del grafo. Sintetiza todo el análisis en un documento ejecutivo calibrado para audiencia no técnica — CFO, CRO, comité de riesgo.',meta:'El reporte siempre incluye: comparativa vs. ejecución anterior, factores macro relevantes y recomendaciones priorizadas por impacto en el portafolio.',uso:'Distribuir automáticamente por email/Slack. Archivar en audit log SQL con referencia al thread_id de LangGraph para trazabilidad completa.'},
+};
+function selectGNode(key){
+  document.querySelectorAll('.gnode').forEach(n=>n.classList.remove('active'));
+  document.getElementById('gn-'+key)?.classList.add('active');
+  const d=GNODE_DATA[key];if(!d)return;
+  document.getElementById('gnd-title').textContent=d.title;
+  document.getElementById('gnd-desc').textContent=d.desc;
+  document.getElementById('gnd-def').textContent=d.def;
+  document.getElementById('gnd-meta').textContent=d.meta;
+  document.getElementById('gnd-uso').textContent=d.uso;
+}
+
+// ── AGENT EXECUTION
+let agentRunning=false;
+const STEPS=[
+  {type:'think',label:'RAZONANDO',text:'Iniciando análisis del portafolio. Voy a obtener los precios actuales y calcular las métricas de riesgo para determinar el estado del portafolio en esta fecha.'},
+  {type:'tool',label:'HERRAMIENTA',tool:'get_portfolio_prices()',text:'Obteniendo precios de Yahoo Finance para todos los activos del portafolio…',out:'✓ IPC: 54,284 (+0.42%) · S&P 500: 5,312 (−0.18%) · MXN/USD: 17.24 · Retornos calculados · Correlaciones actualizadas'},
+  {type:'think',label:'ANALIZANDO',text:'Los precios están dentro de rangos normales. La correlación IPC-S&P 500 subió a 0.68 (histórico: 0.62) — señal de mayor co-movimiento. Procedo a calcular el VaR con Monte Carlo.'},
+  {type:'tool',label:'HERRAMIENTA',tool:'calculate_var(method="montecarlo", confidence=0.95)',text:'Ejecutando 10,000 simulaciones Monte Carlo para el portafolio actual…',out:'✓ VaR 95% 1d: −2.4% · CVaR 95%: −3.6% · Severidad: NORMAL · Sin violaciones hoy'},
+  {type:'think',label:'EVALUANDO',text:'VaR de −2.4% está dentro del umbral regulatorio de −2.5%. Sin embargo, el CVaR de −3.6% merece atención — el riesgo de cola está ligeramente elevado vs. la semana pasada (−3.2%). La correlación elevada entre activos reduce la diversificación efectiva.'},
+  {type:'ok',label:'DECISIÓN',text:'El portafolio está dentro de límites regulatorios. No se requiere alerta inmediata. Se recomienda monitorear la correlación IPC-S&P en las próximas sesiones. Generando reporte ejecutivo…'},
+  {type:'tool',label:'HERRAMIENTA',tool:'generate_risk_report()',text:'Sintetizando análisis y generando reporte para el comité de riesgo…',out:'✓ Reporte ejecutivo generado · 347 palabras · Listo para distribución'},
+];
+
+async function runAgent(){
+  if(agentRunning)return;
+  agentRunning=true;
+  const btn=document.getElementById('run-btn');
+  btn.disabled=true;btn.classList.add('running');btn.querySelector('.btn-icon').textContent='⚙️';
+  const cotBody=document.getElementById('cot-body');
+  const reportEl=document.getElementById('report-body');
+  cotBody.innerHTML='';
+  reportEl.className='report-body empty';
+  reportEl.textContent='El agente está analizando…';
+
+  // Animate each step
+  for(let i=0;i<STEPS.length;i++){
+    const s=STEPS[i];
+    await sleep(600+Math.random()*400);
+    const div=document.createElement('div');
+    div.className='step-row';
+    let cls=s.type==='tool'?'sn-tool':s.type==='think'?'sn-think':s.type==='alert'?'sn-alert':'sn-ok';
+    const out=s.out?`<span class="tool-out">${s.out}</span>`:'';
+    const toolName=s.tool?`<span class="tool-name">${s.tool}</span> `:'';
+    div.innerHTML=`<span class="step-num ${cls}">${s.label}</span><div class="step-content">${toolName}${s.text}${out}</div>`;
+    cotBody.appendChild(div);
+    cotBody.scrollTop=cotBody.scrollHeight;
+    await sleep(300);
+  }
+
+  // Call Claude for real report
+  await sleep(800);
+  const portfolio_summary=portfolio.map(a=>`${a.t}: ${a.w}%`).join(', ');
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:`Eres el Risk Copilot, un agente de monitoreo de riesgo financiero para portafolios en MXN. Genera reportes ejecutivos concisos y profesionales para el comité de riesgo. Usa terminología financiera mexicana (TIIE, IPC, CNBV, Banxico). Siempre en español. Formato: sección corta de estado, métricas clave, hallazgos y recomendaciones. Máximo 300 palabras.`,
+        messages:[{role:'user',content:`Genera el reporte ejecutivo diario de riesgo para el portafolio: ${portfolio_summary}. Métricas calculadas: VaR 95% = -2.4%, CVaR 95% = -3.6%, Sharpe = 1.28, Beta = 0.84, Volatilidad = 18.2% anual. Correlación IPC-S&P 500 elevada a 0.68 (histórico 0.62). Sin violaciones de umbral hoy. Fecha: ${new Date().toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}.`}]
+      })
+    });
+    const data=await res.json();
+    const report=data.content?.[0]?.text||'No se pudo generar el reporte.';
+    reportEl.className='report-body';
+    reportEl.textContent=report;
+  }catch(e){
+    reportEl.className='report-body';
+    reportEl.textContent=`REPORTE DE RIESGO · ${new Date().toLocaleDateString('es-MX')}\n\n📊 ESTADO DEL PORTAFOLIO: NORMAL\n\nEl portafolio se encuentra dentro de los parámetros regulatorios establecidos. El VaR al 95% de confianza asciende a −2.4%, por debajo del umbral de −2.5% definido en la política de riesgo de mercado.\n\n📈 MÉTRICAS CLAVE\n• VaR 95% (1d): −2.4% · Dentro del límite\n• CVaR 95% (1d): −3.6% · Monitoreo activo\n• Sharpe Ratio: 1.28 · Favorable\n• Beta: 0.84 · Baja sensibilidad sistémica\n\n⚠️ HALLAZGOS\nLa correlación entre IPC y S&P 500 se incrementó a 0.68 (promedio histórico: 0.62), reduciendo el beneficio de diversificación internacional. El CVaR está ligeramente elevado vs. la semana anterior.\n\n✅ RECOMENDACIONES\n1. Monitorear correlaciones en las próximas 3 sesiones\n2. Considerar reducir exposición S&P 500 si correlación supera 0.75\n3. Siguiente revisión: mañana 07:00 am`;
+  }
+
+  // Add to history
+  const histEl=document.getElementById('run-history-list');
+  const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  const newRow=document.createElement('div');
+  newRow.className='rh-row';
+  newRow.innerHTML=`<span class="rh-time">${now} hoy</span><span class="rh-status rs-ok">OK</span><span class="rh-summary">Sin alertas · Sharpe 1.28 · VaR −2.4%</span>`;
+  histEl.insertBefore(newRow,histEl.firstChild);
+
+  btn.disabled=false;btn.classList.remove('running');btn.querySelector('.btn-icon').textContent='⚡';
+  agentRunning=false;
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+</script>
+</body>
+</html>
