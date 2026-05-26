@@ -349,7 +349,7 @@ footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--border2);fo
 
   <div class="avatar-wrap">
     <div class="avatar" id="avatar-container">
-      <img src="assets/foto.jpg" alt="Foto de perfil"
+      <img src="assets/amnd.jpeg" alt="Foto de perfil"
         id="avatar-img"
         style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block"
         onerror="this.style.display='none';document.getElementById('avatar-fallback').style.display='flex'"/>
@@ -441,7 +441,6 @@ footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--border2);fo
       </div>
     </div>
   </div>
-
 </aside>
 
 <!-- ══ PORTFOLIO VIEW ══ -->
@@ -615,26 +614,24 @@ footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--border2);fo
     </table>
   </section>
 
-
   <footer>
     <span style="color:var(--muted2)">// <span style="color:var(--teal)">Alejandro Manuel Nieto Delgado</span> · Actuario · Data Science · Analytics · BI · AI Agents</span>
     <span style="color:var(--muted)">GitHub Pages · sin costo · <span style="color:var(--violet)">2025</span></span>
   </footer>
 </main>
 
-<!-- ══ PROJECT DASHBOARD VIEW ══ -->
-<div id="project-view">
-  <div id="dash-content"></div>
-</div>
+<!-- ══ PROJECT DASHBOARD VIEW (Ya no se usa porque redirigimos a archivos externos, pero se mantiene por compatibilidad) ══ -->
+<div id="project-view" style="display:none"></div>
 
 <script>
 // ─────────────────────────────────────────────
-// PROJECT DATA
+// PROJECT DATA (con propiedad 'file' para redirigir)
 // ─────────────────────────────────────────────
 const PROJECTS = [
   // ── P1 Credit Scoring ──────────────────────
   {
     id:'p1',num:'01',icon:'🏦',isAI:false,
+    file:'p1-credit-scoring.html',   // <-- redirige a archivo independiente
     title:'Credit Scoring · Probabilidad de Incumplimiento',
     type:'Actuaría + DS',typeClass:'tmix',
     source:'Lending Club · 2.5M registros · Kaggle',
@@ -650,84 +647,13 @@ const PROJECTS = [
       {num:'02',title:'Modelado',desc:'Python: scorecard logístico + XGBoost con calibración isotónica (Platt scaling)'},
       {num:'03',title:'Validación regulatoria',desc:'R: métricas KS, Gini, AUC-ROC, PSI y backtesting bajo framework Basilea III'},
     ],
-    code:{
-      python:`import pandas as pd
-from xgboost import XGBClassifier
-from sklearn.calibration import CalibratedClassifierCV
-import shap, optuna
-
-# Feature engineering — ratio deuda/ingreso
-df['dti_ratio']    = df['loan_amnt'] / df['annual_inc'].clip(lower=1)
-df['payment_hist'] = (df['delinq_2yrs'] == 0).astype(int)
-
-# XGBoost con calibración isotónica
-def objective(trial):
-    params = {
-        'n_estimators'     : trial.suggest_int('n_estimators', 200, 600),
-        'max_depth'        : trial.suggest_int('max_depth', 4, 8),
-        'learning_rate'    : trial.suggest_float('lr', 0.01, 0.1),
-        'scale_pos_weight' : 12
-    }
-    model = XGBClassifier(**params, eval_metric='auc')
-    return cross_val_score(model, X_train, y_train, cv=5, scoring='roc_auc').mean()
-
-study = optuna.create_study(direction='maximize')
-study.optimize(objective, n_trials=60)
-
-# Explicabilidad SHAP
-explainer  = shap.TreeExplainer(best_model)
-shap_vals  = explainer.shap_values(X_test)`,
-      sql:`-- WoE encoding por decil de score
-WITH base AS (
-  SELECT loan_id,
-    ROUND(loan_amnt::numeric / NULLIF(annual_inc,0), 4) AS dti_ratio,
-    CASE
-      WHEN delinq_2yrs = 0 THEN 'clean'
-      WHEN delinq_2yrs <= 2 THEN 'minor'
-      ELSE 'severe'
-    END AS delinquency_band,
-    CASE WHEN loan_status = 'Charged Off' THEN 1 ELSE 0 END AS default_flag
-  FROM lending_club_raw
-  WHERE loan_status IN ('Fully Paid','Charged Off')
-),
-woe_calc AS (
-  SELECT delinquency_band,
-    LN(pct_good / NULLIF(pct_bad,0)) AS woe,
-    (pct_good - pct_bad) * LN(pct_good / NULLIF(pct_bad,0)) AS iv
-  FROM (
-    SELECT delinquency_band,
-      COUNT(*) FILTER (WHERE default_flag=0)::numeric /
-        SUM(COUNT(*)) OVER () AS pct_good,
-      COUNT(*) FILTER (WHERE default_flag=1)::numeric /
-        SUM(COUNT(*)) OVER () AS pct_bad
-    FROM base GROUP BY 1
-  ) t
-)
-SELECT * FROM woe_calc ORDER BY iv DESC;`,
-      r:`library(scorecard)
-library(ggplot2)
-
-# Binning óptimo automático por IV
-bins <- woebin(dt_train, y = "default_flag",
-               method = "tree")
-
-# KS, Gini y AUC
-perf  <- perf_eva(pred = pred_score, label = y_test,
-                  type = c("ks","roc","lift"))
-cat("KS:", round(perf$KS, 3),
-    "Gini:", round(perf$Gini, 3),
-    "AUC:", round(perf$AUC, 3))`
-    },
-    conclusions:[
-      'El modelo XGBoost calibrado alcanzó AUC .91 y Gini .82 en validación temporal out-of-time, superando el scorecard logístico puro en +3pp — manteniendo interpretabilidad regulatoria mediante SHAP por decil de score para cumplimiento Basilea III / CNBV.',
-      'El PSI < .10 a los 6 meses confirma estabilidad del modelo en producción simulada. La variable más predictiva (SHAP .182) fue el ratio DTI, seguida por historial de pagos — consistente con teoría crediticia y regulación CNBV.',
-      'El pipeline SQL de WoE encoding redujo el tiempo de feature engineering de 2 días a 40 minutos al estandarizar la lógica de binning y cálculo de IV directamente en base de datos antes de pasar a Python.',
-      'R (scorecard + pROC) demostró ser el lenguaje más eficiente para reportes regulatorios: genera automáticamente las métricas de validación (KS, Gini, curva ROC) en el formato requerido por el comité de riesgo crediticio.',
-    ]
+    code:{/* ... */},
+    conclusions:[ /* ... */ ]
   },
   // ── P2 Portfolio VaR ────────────────────────
   {
     id:'p2',num:'02',icon:'📈',isAI:false,
+    file:'p2-portfolio-var.html',
     title:'Optimización de Portafolios & VaR · IPC & S&P 500 en MXN',
     type:'Finanzas Cuant.',typeClass:'tfin',
     source:'Yahoo Finance API · Banxico SIE · 10 años',
@@ -738,60 +664,14 @@ cat("KS:", round(perf$KS, 3),
       {val:'1.34',lbl:'Sharpe Ratio óptimo',sub:'Frontera de Markowitz'},
       {val:'GARCH(1,1)',lbl:'Volatilidad dinámica',sub:'Pronóstico 30 días'},
     ],
-    steps:[
-      {num:'01',title:'Descarga & limpieza',desc:'Python yfinance + Banxico SIE API: precios ajustados IPC, S&P500, CETES, tipo de cambio — 10 años diarios'},
-      {num:'02',title:'Optimización Markowitz',desc:'Python scipy: frontera eficiente con restricciones de pesos, máximo Sharpe y mínima varianza global'},
-      {num:'03',title:'VaR & cobertura cambiaria',desc:'R: VaR histórico, paramétrico y Monte Carlo (10K simulaciones) con cobertura forward MXN/USD'},
-    ],
-    code:{
-      python:`import yfinance as yf
-import numpy as np
-from scipy.optimize import minimize
-
-# Descarga de activos IPC + S&P 500 en MXN
-tickers = ['AMXL.MX','WALMEX.MX','CEMEXCPO.MX',
-           '^GSPC','MXN=X']
-data = yf.download(tickers, period='10y')['Adj Close']
-returns = data.pct_change().dropna()
-
-# Optimización Markowitz — máximo Sharpe
-def neg_sharpe(w, ret, cov, rf=0.1075):
-    port_ret = np.sum(ret.mean() * w) * 252
-    port_vol = np.sqrt(w @ cov @ w * 252)
-    return -(port_ret - rf) / port_vol
-
-constraints = ({'type':'eq','fun':lambda w: np.sum(w)-1})
-bounds = [(0.02, 0.35)] * len(tickers)
-result = minimize(neg_sharpe, x0=np.ones(len(tickers))/len(tickers),
-    args=(returns, returns.cov()), method='SLSQP',
-    bounds=bounds, constraints=constraints)`,
-      r:`library(PerformanceAnalytics)
-library(PortfolioAnalytics)
-library(rugarch)
-
-# VaR historico, parametrico y CVaR
-VaR_hist <- VaR(returns_port, p=0.95, method='historical')
-VaR_param <- VaR(returns_port, p=0.95, method='gaussian')
-CVaR <- ES(returns_port, p=0.95, method='historical')
-
-# GARCH(1,1) para volatilidad dinamica
-spec <- ugarchspec(
-  variance.model = list(model='sGARCH', garchOrder=c(1,1)),
-  mean.model     = list(armaOrder=c(1,0)))
-fit  <- ugarchfit(spec, returns_port)
-# Forecast 30 dias
-fc   <- ugarchforecast(fit, n.ahead=30)`,
-    },
-    conclusions:[
-      'La optimización de Markowitz con restricciones de peso mínimo (2%) generó un portafolio con Sharpe 1.34 — 28% superior al portafolio equi-ponderado. La restricción de peso mínimo evita soluciones de esquina no implementables en la práctica institucional.',
-      'La cobertura cambiaria forward MXN/USD redujo el VaR 95% del portafolio en 22% sin sacrificar retorno esperado — resultado crítico para fondos de pensiones con pasivos en MXN pero exposición a activos en USD (S&P 500).',
-      'GARCH(1,1) superó la volatilidad histórica constante en backtesting: captura el efecto de clustering de volatilidad en períodos de estrés (pandemia 2020, alza de tasas Fed 2022) con 35% menos violaciones de VaR.',
-      'La integración Python (optimización) + R (métricas de riesgo) + SQL (almacenamiento y reproducibilidad) replicó exactamente el flujo de trabajo de una mesa de riesgo de mercado institucional bajo estándares CONSAR/CNSF.',
-    ]
+    steps:[ /* ... */ ],
+    code:{ /* ... */ },
+    conclusions:[ /* ... */ ]
   },
   // ── P3 Fraude ───────────────────────────────
   {
     id:'p3',num:'03',icon:'🔍',isAI:false,
+    file:'p3-fraud-detection.html',
     title:'Detección de Fraude en Tiempo Real · Riesgo Operacional',
     type:'Riesgo Operacional',typeClass:'trisk',
     source:'IEEE-CIS Fraud · 590K transacciones · Kaggle',
@@ -802,72 +682,14 @@ fc   <- ugarchforecast(fit, n.ahead=30)`,
       {val:'3.5%',lbl:'Tasa de fraude',sub:'IEEE-CIS Dataset'},
       {val:'590K',lbl:'Transacciones',sub:'IEEE-CIS · Kaggle'},
     ],
-    steps:[
-      {num:'01',title:'Feature engineering avanzado',desc:'Python: 400+ variables → selección por importancia SHAP, encoding de dispositivo/IP, ventanas temporales de comportamiento'},
-      {num:'02',title:'Modelado con desbalance',desc:'Python LightGBM + SMOTE: clase minoritaria 3.5% → técnicas de oversampling + class_weight para maximizar Recall sin colapso de Precision'},
-      {num:'03',title:'Detección en tiempo real',desc:'SQL: reglas de alerta + score del modelo combinados en pipeline de decisión con latencia <50ms por transacción'},
-    ],
-    code:{
-      python:`import lightgbm as lgb
-from imblearn.over_sampling import SMOTE
-import shap
-
-# Ventanas de comportamiento temporal
-df['txn_count_1h']  = df.groupby('card_id')['TransactionID'] \
-    .transform(lambda x: x.rolling('1h', on=df['TransactionDT']).count())
-df['amt_mean_24h']  = df.groupby('card_id')['TransactionAmt'] \
-    .transform(lambda x: x.rolling('24h').mean())
-df['amt_zscore']    = (df['TransactionAmt'] - df['amt_mean_24h']) \
-    / df.groupby('card_id')['TransactionAmt'].transform('std').clip(0.1)
-
-# LightGBM con SMOTE
-X_res, y_res = SMOTE(sampling_strategy=0.15,
-    random_state=42).fit_resample(X_train, y_train)
-
-model = lgb.LGBMClassifier(
-    n_estimators=500, learning_rate=0.05,
-    scale_pos_weight=8, subsample=0.8,
-    colsample_bytree=0.7)
-model.fit(X_res, y_res, eval_set=[(X_val, y_val)],
-    callbacks=[lgb.early_stopping(30)])`,
-      sql:`-- Pipeline de decision en tiempo real
-WITH txn_features AS (
-  SELECT t.transaction_id, t.card_id,
-    t.transaction_amt,
-    t.fraud_score,                 -- score del modelo ML
-    -- Reglas de negocio complementarias
-    COUNT(*) OVER (
-      PARTITION BY t.card_id
-      ORDER BY t.transaction_dt
-      RANGE BETWEEN INTERVAL '1 hour' PRECEDING AND CURRENT ROW
-    ) AS txn_count_1h,
-    AVG(t.transaction_amt) OVER (
-      PARTITION BY t.card_id
-      ORDER BY t.transaction_dt
-      ROWS BETWEEN 30 PRECEDING AND 1 PRECEDING
-    ) AS amt_mean_30txn
-  FROM transactions t
-  WHERE t.transaction_dt >= NOW() - INTERVAL '5 minutes'
-)
-SELECT transaction_id,
-  CASE
-    WHEN fraud_score >= 0.85 THEN 'BLOQUEO_AUTO'
-    WHEN fraud_score >= 0.60 AND txn_count_1h > 5 THEN 'REVISION_MANUAL'
-    WHEN transaction_amt > amt_mean_30txn * 4 THEN 'ALERTA_MONTO'
-    ELSE 'APROBADO'
-  END AS decision
-FROM txn_features;`
-    },
-    conclusions:[
-      'LightGBM con SMOTE alcanzó F1 .89 y AUC .96 en el dataset IEEE-CIS — clave fue la combinación de variables de comportamiento temporal (z-score de monto, frecuencia 1h) con features de dispositivo: las variables más predictivas no estaban en los datos transaccionales sino en los metadatos de sesión.',
-      'El pipeline SQL de decisión en tiempo real combina el score del modelo con reglas de negocio complementarias: el modelo sólo captura patrones estadísticos, pero reglas como "monto > 4x promedio histórico" capturan fraudes atípicos que el modelo no vio en entrenamiento.',
-      'El umbral de decisión se calibró en 0.60 (no en 0.50) para maximizar Recall en el segmento de alto monto: un falso negativo (fraude no detectado) en transacciones >$50K MXN tiene un costo 20x mayor que un falso positivo (bloqueo de transacción legítima).',
-      'La latencia <50ms del pipeline SQL hace el sistema viable en producción real: la combinación de índices parciales en fraud_score y particionamiento por card_id permite evaluar 10,000 transacciones/segundo en un cluster PostgreSQL estándar.',
-    ]
+    steps:[ /* ... */ ],
+    code:{ /* ... */ },
+    conclusions:[ /* ... */ ]
   },
   // ── P4 Mortalidad ───────────────────────────
   {
     id:'p4',num:'04',icon:'📊',isAI:false,
+    file:'p4-mortality-tables.html',
     title:'Tablas de Mortalidad Dinámicas & Calculadora de Primas',
     type:'Actuaría · Vida',typeClass:'tact',
     source:'INEGI API · Human Mortality Database · Tablas CNSF',
@@ -878,66 +700,14 @@ FROM txn_features;`
       {val:'−1.3%/año',lbl:'Mejora mortalidad',sub:'Proyectada hasta 2040'},
       {val:'60 años',lbl:'Serie histórica',sub:'INEGI + HMD · 1960–2022'},
     ],
-    steps:[
-      {num:'01',title:'Construcción de tablas',desc:'R: tasas de mortalidad qx por edad y sexo desde INEGI API + HMD · ajuste Makeham-Gompertz · comparación vs. tablas CNSF vigentes'},
-      {num:'02',title:'Proyección Lee-Carter',desc:'R: descomposición SVD de la matriz ln(μx,t) → κt con ARIMA(0,1,0) → proyección de mejoras de mortalidad a 2040 con intervalos de confianza'},
-      {num:'03',title:'Calculadora de primas',desc:'Python: primas netas y comerciales para vida entera, temporal y dotal — reservas matemáticas con tablas dinámicas + cálculo de VPN de flujos'},
-    ],
-    code:{
-      python:`import numpy as np
-import pandas as pd
-
-def calcular_prima_neta(qx_tabla, edad_emision,
-                         suma_asegurada, plazo, tasa_int=0.04):
-    """Prima neta para seguro temporal n años."""
-    n = plazo
-    i = tasa_int
-    v = 1 / (1 + i)
-    # Probabilidades de sobrevivencia
-    lx = np.ones(n + 1)
-    for t in range(1, n + 1):
-        edad = edad_emision + t - 1
-        lx[t] = lx[t-1] * (1 - qx_tabla.get(edad, 0))
-    # Valor presente del beneficio de fallecimiento
-    APV_death = sum(
-        lx[t-1] * qx_tabla.get(edad_emision+t-1,0) * v**t
-        for t in range(1, n+1)
-    ) * suma_asegurada
-    # Valor presente de las primas (anualidad)
-    ax_n = sum(lx[t] * v**t for t in range(n))
-    return APV_death / ax_n if ax_n > 0 else 0
-
-prima = calcular_prima_neta(qx_dinamicas, edad=35,
-    suma_asegurada=1_000_000, plazo=20)`,
-      r:`library(demography)
-library(StMoMo)
-
-# Modelo Lee-Carter con datos INEGI + HMD
-mx_data <- hmd.mx("MEX", username=HMD_USER, password=HMD_PASS)
-lca     <- lca(mx_data, series="male", years=1960:2022,
-               ages=20:90, interpolate=TRUE)
-
-# Proyeccion con intervalos de confianza 80% y 95%
-lca_fc  <- forecast(lca, h=18, jumpchoice="fit")
-
-# kt proyectado: tendencia ARIMA(0,1,0)
-# Mejora de mortalidad proyectada: -1.3% anual promedio
-plot(lca_fc, main="Lee-Carter: proyeccion mortalidad MX 2022-2040")
-
-# Comparacion vs tablas CNSF vigentes
-diferencia_qx <- (qx_lca - qx_cnsf) / qx_cnsf * 100
-# Subestimacion: +8% en edades 55-70 sexo masculino`,
-    },
-    conclusions:[
-      'Las tablas dinámicas Lee-Carter revelan que la CNSF subestima la mejora de mortalidad en +8% para hombres de 55–70 años — implica que las primas actuales de seguros de vida y pensiones usan tablas que sobrecargan al asegurado. La proyección a 2040 con ARIMA(0,1,0) captura la tendencia secular de mejora.',
-      'La calculadora de primas con tablas dinámicas produce primas netas entre 4–12% menores que las calculadas con tablas CNSF estáticas para productos de largo plazo (dotales 20 años, rentas vitalicias) — diferencia material para pricing competitivo en el mercado asegurador mexicano.',
-      'El modelo Lee-Carter en R (demography + StMoMo) se ejecuta en <3 minutos sobre 60 años de datos INEGI + HMD, haciendo viable la actualización trimestral de las tablas como insumo directo para el área actuarial de una aseguradora mediana.',
-      'La integración Python (calculadora de primas) + R (tablas dinámicas) + SQL (almacenamiento y versionado de tablas) replica el workflow actuarial estándar: R para el análisis demográfico, Python para la valoración de productos y SQL para el registro regulatorio ante CNSF.',
-    ]
+    steps:[ /* ... */ ],
+    code:{ /* ... */ },
+    conclusions:[ /* ... */ ]
   },
   // ── P5 RAG ──────────────────────────────────
   {
     id:'p5',num:'05',icon:'📚',isAI:true,
+    file:'p5-rag-regulatorio.html',
     title:'RAG Regulatorio · Asistente IA sobre Normativa CNSF & Basilea',
     type:'IA Generativa · RAG',typeClass:'tai',
     source:'200+ circulares CNSF · BIS · CNBV · IFRS · FATF/GAFI',
@@ -948,74 +718,14 @@ diferencia_qx <- (qx_lca - qx_cnsf) / qx_cnsf * 100
       {val:'200+',lbl:'Documentos indexados',sub:'Corpus CNSF completo'},
       {val:'98%',lbl:'Respuestas con fuente',sub:'Trazabilidad total'},
     ],
-    steps:[
-      {num:'01',title:'Corpus regulatorio',desc:'Python: scraping + chunking semántico por artículo/circular de 200+ documentos CNSF, BIS Basilea III, CNBV, IFRS 17, FATF/GAFI'},
-      {num:'02',title:'RAG con ChromaDB',desc:'Python: embeddings text-embedding-3-small → ChromaDB → reranking MMR → Claude API para generación con citación de fuente'},
-      {num:'03',title:'Interfaz & evaluación',desc:'Python: chat con historial, citación de artículos, evaluación MRR@5 y RAGAS para comparar estrategias de chunking'},
-    ],
-    code:{
-      python:`from langchain_anthropic import ChatAnthropic
-from langchain_community.vectorstores import Chroma
-from langchain_openai import OpenAIEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-# Chunking semantico por articulo normativo
-def chunk_regulatory_doc(text, doc_type="circular_cnsf"):
-    """Divide por articulo/seccion respetando estructura legal."""
-    patterns = {
-        'circular_cnsf': r'(?=Artículo\s+\d+)',
-        'basilea':        r'(?=\d+\.\d+\s)',
-        'ifrs':           r'(?=Párrafo\s+\d+)',
-    }
-    splitter = RecursiveCharacterTextSplitter(
-        separators=[patterns.get(doc_type, r'\n\n')],
-        chunk_size=800, chunk_overlap=80,
-        is_separator_regex=True)
-    return splitter.split_text(text)
-
-# Pipeline RAG con MMR reranking
-retriever = vectorstore.as_retriever(
-    search_type="mmr",
-    search_kwargs={"k": 6, "fetch_k": 20, "lambda_mult": 0.7})
-
-llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0)
-chain = RetrievalQAWithSourcesChain.from_chain_type(
-    llm=llm, retriever=retriever, return_source_documents=True)`,
-      sql:`-- Registro de consultas y evaluacion de calidad RAG
-CREATE TABLE rag_consultas (
-    consulta_id    SERIAL PRIMARY KEY,
-    pregunta       TEXT NOT NULL,
-    respuesta      TEXT,
-    fuentes        JSONB,          -- circulares/articulos citados
-    tokens_usados  INTEGER,
-    latencia_ms    INTEGER,
-    mrr_score      NUMERIC(4,3),   -- evaluacion automatica
-    feedback_user  SMALLINT,       -- 1-5 estrellas
-    created_at     TIMESTAMPTZ DEFAULT NOW()
-);
-
--- MRR@5 promedio por corpus (evaluacion semanal)
-SELECT
-    fuente->>'corpus' AS corpus,
-    COUNT(*) AS consultas,
-    AVG(mrr_score) AS mrr_promedio,
-    AVG(latencia_ms) AS latencia_media_ms,
-    AVG(tokens_usados) AS tokens_promedio
-FROM rag_consultas,
-    jsonb_array_elements(fuentes) AS fuente
-WHERE created_at >= NOW() - INTERVAL '7 days'
-GROUP BY 1 ORDER BY mrr_promedio DESC;`
-    },
-    conclusions:[
-      'El chunking semántico por artículo superó al chunking fijo en +31% de MRR@5 en el corpus CNSF — la estructura legal (artículo = unidad semántica completa) es fundamentalmente incompatible con el chunking por tokens: un artículo partido pierde el contexto regulatorio que define la obligación.',
-      'El sistema redujo el tiempo de consulta regulatoria de 4 horas (búsqueda manual en PDFs) a 8 minutos incluyendo generación de respuesta con citación de fuente. El 98% de respuestas incluyen referencia exacta al artículo y circular — requisito no negociable en contexto regulatorio.',
-      'El reranking MMR (Maximal Marginal Relevance) fue crítico para consultas que cruzan múltiples normativas: sin MMR, los 6 chunks recuperados eran todos del mismo documento (alta similitud semántica) perdiendo el contraste regulatorio entre CNSF y Basilea III.',
-      'La evaluación con RAGAS confirmó que claude-sonnet-4-6 supera a modelos alternativos en faithfulness (0.94 vs 0.87) para este corpus — la capacidad de seguir instrucciones de citación exacta y no alucinar referencias regulatorias es el criterio decisivo en aplicaciones de cumplimiento.',
-    ]
+    steps:[ /* ... */ ],
+    code:{ /* ... */ },
+    conclusions:[ /* ... */ ]
   },
   // ── P6 Risk Copilot ─────────────────────────
   {
     id:'p6',num:'06',icon:'🤖',isAI:true,
+    file:'p6-risk-copilot.html',
     title:'Risk Copilot · Agente IA de Monitoreo de Riesgo Autónomo',
     type:'Agente IA · LangGraph',typeClass:'tai',
     source:'Yahoo Finance API · FRED API · Tiempo real',
@@ -1026,75 +736,14 @@ GROUP BY 1 ORDER BY mrr_promedio DESC;`
       {val:'<30s',lbl:'Reporte ejecutivo',sub:'Generación automática'},
       {val:'100%',lbl:'Trazabilidad',sub:'Chain-of-thought logs'},
     ],
-    steps:[
-      {num:'01',title:'Arquitectura LangGraph',desc:'Python: grafo de agente con nodos Monitor → Análisis → Alerta → Reporte. Estado persistente entre pasos con memory checkpoint'},
-      {num:'02',title:'Herramientas del agente',desc:'Python: tools para Yahoo Finance (precios real-time), FRED (tasas), calculadora VaR/CVaR, generador de reportes LaTeX/Markdown'},
-      {num:'03',title:'Monitoreo autónomo',desc:'Python: agente corre cada 15 min, detecta violaciones VaR, analiza contexto macro y genera reporte ejecutivo con recomendaciones'},
-    ],
-    code:{
-      python:`from langgraph.graph import StateGraph, END
-from langchain_anthropic import ChatAnthropic
-from langchain_core.tools import tool
-import yfinance as yf
-
-@tool
-def get_portfolio_var(tickers: list, confidence: float = 0.95) -> dict:
-    """Calcula VaR historico del portafolio en tiempo real."""
-    data    = yf.download(tickers, period='1y')['Adj Close']
-    returns = data.pct_change().dropna()
-    weights = np.ones(len(tickers)) / len(tickers)
-    port_ret = returns @ weights
-    var = np.percentile(port_ret, (1 - confidence) * 100)
-    cvar = port_ret[port_ret <= var].mean()
-    return {"VaR_95": round(var, 4), "CVaR_95": round(cvar, 4),
-            "fecha": str(pd.Timestamp.now().date())}
-
-@tool
-def get_macro_context(indicators: list) -> dict:
-    """Obtiene indicadores macro de FRED para contextualizar el riesgo."""
-    import fredapi
-    fred = fredapi.Fred(api_key=FRED_KEY)
-    return {ind: float(fred.get_series(ind).iloc[-1]) for ind in indicators}
-
-# Grafo del agente: Monitor → Analiza → Alerta → Reporta
-llm   = ChatAnthropic(model="claude-sonnet-4-6", temperature=0)
-agent = create_react_agent(llm, [get_portfolio_var,
-    get_macro_context, generate_report])`,
-      sql:`-- Registro de alertas y acciones del agente
-CREATE TABLE risk_agent_log (
-    log_id         SERIAL PRIMARY KEY,
-    run_timestamp  TIMESTAMPTZ DEFAULT NOW(),
-    action_type    VARCHAR(30),   -- MONITOR/ALERTA/REPORTE
-    var_95         NUMERIC(8,4),
-    cvar_95        NUMERIC(8,4),
-    violacion_var  BOOLEAN,
-    contexto_macro JSONB,
-    razonamiento   TEXT,          -- chain-of-thought del agente
-    reporte_url    TEXT,
-    tokens_usados  INTEGER
-);
-
--- Dashboard de performance del agente (ultimo mes)
-SELECT
-    DATE_TRUNC('day', run_timestamp) AS fecha,
-    COUNT(*) AS runs,
-    SUM(violacion_var::int) AS alertas_var,
-    AVG(tokens_usados) AS tokens_avg,
-    MAX(cvar_95) AS peor_cvar_dia
-FROM risk_agent_log
-WHERE run_timestamp >= NOW() - INTERVAL '30 days'
-GROUP BY 1 ORDER BY 1 DESC;`
-    },
-    conclusions:[
-      'El agente LangGraph detectó el 94% de violaciones de VaR en backtesting de 3 años sobre el portafolio demo — el 6% restante corresponde a eventos de cisne negro donde el VaR histórico de 1 año no contenía el escenario de estrés, no a fallas del agente.',
-      'La arquitectura multi-step (Monitor → Análisis → Alerta → Reporte) es superior a un LLM simple: el nodo de Análisis agrega contexto macro (Fed, TIIE, VIX) antes de generar la alerta, reduciendo falsas alarmas en 40% vs. alertas solo por umbral numérico.',
-      'El chain-of-thought completo queda registrado en SQL para auditoría: cada decisión del agente es reproducible y explicable, requisito crítico para uso en entornos regulados (CNBV, CNSF) donde la caja negra es inaceptable en decisiones de riesgo.',
-      'El reporte ejecutivo en <30 segundos vs. 2–4 horas de un analista humano no reemplaza al analista — lo libera para análisis estratégico. El agente maneja el monitoreo rutinario; el analista interviene cuando el agente escala una alerta de nivel crítico.',
-    ]
+    steps:[ /* ... */ ],
+    code:{ /* ... */ },
+    conclusions:[ /* ... */ ]
   },
   // ── P7 Sintético ────────────────────────────
   {
     id:'p7',num:'07',icon:'🧬',isAI:true,
+    file:'p7-synthetic-data.html',
     title:'El Gemelo Digital · Datos Sintéticos para Privacidad Financiera',
     type:'Datos Sintéticos · IA',typeClass:'tai',
     source:'Lending Club Dataset · SDV/CTGAN · 2.5M registros',
@@ -1105,79 +754,14 @@ GROUP BY 1 ORDER BY 1 DESC;`
       {val:'~0%',lbl:'Riesgo reidentificación',sub:'Membership inference'},
       {val:'1M+',lbl:'Registros generados',sub:'Crédito · Lending Club'},
     ],
-    steps:[
-      {num:'01',title:'Modelado con CTGAN',desc:'Python SDV: CTGAN entrenado sobre 2.5M registros Lending Club — captura distribuciones marginales, correlaciones y distribuciones condicionales por segmento de riesgo'},
-      {num:'02',title:'Evaluación de calidad',desc:'Python: SDMetrics para fidelidad estadística (TVComplement, KSComplement) + entrenamiento de modelos downstream para evaluar utilidad predictiva'},
-      {num:'03',title:'Privacidad & LFPDPPP',desc:'Python: membership inference attack para medir riesgo de reidentificación + evaluación de cumplimiento con Ley Federal de Protección de Datos Personales'},
-    ],
-    code:{
-      python:`from sdv.tabular import CTGAN
-from sdv.evaluation import evaluate
-from sdv.metrics.tabular import BinaryAdaBoostClassifier
-
-# Entrenamiento CTGAN sobre datos reales
-model = CTGAN(
-    epochs=300,
-    batch_size=500,
-    generator_dim=(256, 256),
-    discriminator_dim=(256, 256),
-    log_frequency=True,
-    verbose=True
-)
-model.fit(df_real)
-
-# Generacion de 1M de registros sinteticos
-df_synthetic = model.sample(num_rows=1_000_000)
-
-# Evaluacion de fidelidad estadistica
-report = evaluate(df_synthetic, df_real,
-    metrics=['KSComplement','TVComplement',
-             'CorrelationSimilarity','BoundaryAdherence'])
-
-# Evaluacion de utilidad predictiva
-utility = BinaryAdaBoostClassifier.compute(
-    real_data=df_real, synthetic_data=df_synthetic,
-    target='default_flag')
-print(f"AUC real: {utility.real:.3f}")
-print(f"AUC synthetic: {utility.synthetic:.3f}")`,
-      sql:`-- Registro de versiones de datasets sinteticos
-CREATE TABLE synthetic_datasets (
-    dataset_id     SERIAL PRIMARY KEY,
-    version        VARCHAR(10),
-    model_type     VARCHAR(20),     -- CTGAN, GaussianCopula...
-    n_records      INTEGER,
-    n_features     INTEGER,
-    -- Metricas de calidad
-    ks_complement   NUMERIC(5,4),  -- similitud distribuciones
-    correlation_sim NUMERIC(5,4),  -- similitud correlaciones
-    auc_utility     NUMERIC(5,4),  -- utilidad predictiva
-    reident_risk    NUMERIC(5,4),  -- riesgo reidentificacion
-    -- Cumplimiento
-    lfpdppp_ok     BOOLEAN,
-    created_at     TIMESTAMPTZ DEFAULT NOW(),
-    created_by     VARCHAR(50)
-);
-
--- Comparativa de versiones
-SELECT version, model_type,
-    n_records,
-    ROUND(ks_complement*100,1)   AS ks_pct,
-    ROUND(correlation_sim*100,1) AS corr_pct,
-    ROUND(auc_utility,3)         AS utilidad,
-    ROUND(reident_risk*100,2)    AS riesgo_reident_pct,
-    lfpdppp_ok
-FROM synthetic_datasets ORDER BY created_at DESC;`
-    },
-    conclusions:[
-      'CTGAN preservó el 96% de las correlaciones del dataset original, incluyendo correlaciones no lineales entre DTI, ingresos y tasa de incumplimiento — la métrica crítica para que los datos sintéticos sean útiles en entrenamiento de modelos de riesgo crediticio.',
-      'El modelo entrenado sobre datos sintéticos alcanzó AUC 98.5% del modelo entrenado sobre datos reales — lo que significa que los datos sintéticos son prácticamente equivalentes para desarrollo y prueba de modelos downstream sin exponer datos personales.',
-      'El membership inference attack (ataque de reidentificación) obtuvo <0.52% de ventaja sobre el azar — estadísticamente indistinguible de adivinanza aleatoria, confirmando que el dataset sintético cumple con el estándar de privacidad diferencial requerido por LFPDPPP.',
-      'El gemelo digital habilita casos de uso imposibles con datos reales: compartir datasets entre equipos sin restricciones legales, entrenar modelos en entornos de desarrollo sin acceso a producción, y publicar resultados reproducibles en contextos regulados.',
-    ]
+    steps:[ /* ... */ ],
+    code:{ /* ... */ },
+    conclusions:[ /* ... */ ]
   },
   // ── P8 Geo Risk ─────────────────────────────
   {
     id:'p8',num:'08',icon:'🗺️',isAI:true,
+    file:'p8-geo-risk.html',
     title:'Riesgo Geográfico en Tiempo Real · Mitigación con IA',
     type:'Geo + IA',typeClass:'tai',
     source:'CENAPRED Atlas Nacional · INEGI API · OpenStreetMap',
@@ -1188,91 +772,14 @@ FROM synthetic_datasets ORDER BY created_at DESC;`
       {val:'Real-time',lbl:'Actualización',sub:'CENAPRED API + webhook'},
       {val:'<5s',lbl:'Recomendación IA',sub:'Por zona/municipio'},
     ],
-    steps:[
-      {num:'01',title:'Pipeline geoespacial',desc:'Python GeoPandas + SQL: ingesta CENAPRED, INEGI, OSM → índice compuesto por municipio en tiempo real'},
-      {num:'02',title:'Modelo de riesgo',desc:'Python XGBoost: predicción de siniestralidad por zona con features sísmicos, hidrológicos y socioeconómicos'},
-      {num:'03',title:'Agente IA de mitigación',desc:'Python LangChain: agente que genera recomendaciones de suscripción y límites de acumulación por zona'},
-    ],
-    code:{
-      python:`import geopandas as gpd
-from langchain_anthropic import ChatAnthropic
-from langchain_core.tools import tool
-
-# Construccion del indice de riesgo compuesto
-def build_risk_index(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    dims = ['sismico','hidrologico','vulnerabilidad_social',
-            'exposicion_crediticia','capacidad_respuesta']
-    for d in dims:
-        gdf[f'{d}_norm'] = (
-            (gdf[d] - gdf[d].min()) /
-            (gdf[d].max() - gdf[d].min()) * 100)
-    weights = {'sismico':0.25,'hidrologico':0.20,
-               'vulnerabilidad_social':0.20,
-               'exposicion_crediticia':0.20,
-               'capacidad_respuesta':0.15}
-    gdf['risk_score'] = sum(
-        gdf[f'{k}_norm'] * v for k,v in weights.items())
-    gdf['risk_tier'] = pd.cut(gdf['risk_score'],
-        bins=[0,30,55,75,100],
-        labels=['Bajo','Medio','Alto','Critico'])
-    return gdf
-
-# Agente IA para recomendaciones de suscripcion
-@tool
-def get_zone_risk(municipio_clave: str) -> dict:
-    """Perfil de riesgo completo de un municipio."""
-    return risk_gdf[risk_gdf['cve_mun']==municipio_clave
-        ].to_dict('records')[0]
-
-llm   = ChatAnthropic(model="claude-sonnet-4-6", temperature=0.1)
-agent = create_react_agent(llm, [get_zone_risk])`,
-      sql:`-- Analisis de concentracion de riesgo asegurador por estado
-WITH exposure_by_estado AS (
-  SELECT r.estado,
-    COUNT(*) AS municipios,
-    AVG(r.risk_score_total) AS avg_risk,
-    SUM(p.sum_asegurada_mn) AS total_exposure_mn,
-    SUM(p.sum_asegurada_mn)
-      FILTER (WHERE r.risk_tier IN ('Alto','Critico'))
-      AS exposure_alta_zona,
-    SUM(p.sum_asegurada_mn)
-      FILTER (WHERE r.risk_tier IN ('Alto','Critico')) /
-      NULLIF(SUM(p.sum_asegurada_mn),0) * 100
-      AS pct_exposicion_critica
-  FROM risk_scores_municipios r
-  LEFT JOIN polizas_vigentes p USING (cve_mun)
-  GROUP BY r.estado
-)
-SELECT * FROM exposure_by_estado
-ORDER BY pct_exposicion_critica DESC;`,
-      r:`library(sf); library(tmap); library(spdep)
-
-mex_mun <- st_read("municipios_mexico.shp") |>
-  st_transform(crs=4326) |>
-  left_join(risk_scores, by="CVE_MUN")
-
-# Autocorrelacion espacial — Moran's I
-nb    <- poly2nb(mex_mun, queen=TRUE)
-lw    <- nb2listw(nb, style="W")
-moran <- moran.test(mex_mun$risk_score_total, lw)
-# Moran I = 0.612 (p<0.001): riesgo geograficamente agrupado
-
-tmap_mode("view")
-tm_shape(mex_mun) +
-  tm_polygons("risk_score_total",
-    palette=c("#1a472a","#f5a623","#e63946","#9b2226"),
-    style="jenks", title="Indice de Riesgo")`
-    },
-    conclusions:[
-      'El índice geoespacial compuesto identifica zonas de riesgo no evidentes con análisis univariado: municipios costeros del Pacífico con riesgo sísmico moderado + alta densidad crediticia + baja resiliencia representan el 23% de la exposición aseguradora total con solo el 8% de las primas.',
-      'Moran I = 0.612 (p<0.001) confirma clustering geográfico del riesgo — justifica límites de acumulación regional y reaseguro catastrófico por cluster en lugar de límites estatales uniformes, reduciendo el costo de reaseguro en un estimado 15–20%.',
-      'El agente IA genera planes de suscripción específicos por municipio en <5 segundos: tipo de cobertura recomendada, límites de acumulación, exclusiones y prima técnica sugerida — acelerando la suscripción de seguros catastróficos de días a minutos.',
-      'R (sf, tmap, spdep) es el entorno idóneo para análisis geoespacial actuarial: genera mapas coropléticos interactivos y análisis de dependencia espacial exportables directamente en el formato de reporte CNSF sin licencias GIS comerciales.',
-    ]
+    steps:[ /* ... */ ],
+    code:{ /* ... */ },
+    conclusions:[ /* ... */ ]
   },
   // ── P9 Churn ────────────────────────────────
   {
     id:'p9',num:'09',icon:'📉',isAI:false,
+    file:'p9-churn-pipeline.html',
     title:'Churn Bancario · Pipeline ML End-to-End',
     type:'ML · Banca Retail',typeClass:'tmix',
     source:'IBM Telco Churn adaptado · CNBV · 2.5M clientes',
@@ -1283,73 +790,14 @@ tm_shape(mex_mun) +
       {val:'$294M',lbl:'ROI retención MXN',sub:'Top-20% intervenido'},
       {val:'3.4x',lbl:'Lift vs. aleatorio',sub:'Top-20% captura 68% churns'},
     ],
-    steps:[
-      {num:'01',title:'EDA & Feature Engineering',desc:'Python: 28 features construidas — RFM, velocidad de deterioro de saldo, señales CRM y variables macroeconómicas TIIE'},
-      {num:'02',title:'Modelado comparativo',desc:'Python: 5 algoritmos (LightGBM, XGBoost, RF, Red Neuronal, Logístico) con SMOTE y validación temporal out-of-time'},
-      {num:'03',title:'Deployment & ROI',desc:'FastAPI + MLflow: scoring batch diario 2.5M clientes en 12 min · Simulador de ROI de retención preventiva en MXN'},
-    ],
-    code:{
-      python:`import lightgbm as lgb
-from imblearn.over_sampling import SMOTE
-import shap
-
-# Feature: velocidad de deterioro de saldo
-def calc_balance_trend(df):
-    df['saldo_trend_90d'] = (
-        df['saldo_promedio_t0'] - df['saldo_promedio_t90']
-    ) / df['saldo_promedio_t90'].clip(1)
-    # Velocidad: % de caida por semana
-    df['velocidad_deterioro'] = df['saldo_trend_90d'] / 13
-    return df
-
-params = {
-    'objective':'binary', 'metric':'auc',
-    'num_leaves':63, 'learning_rate':0.05,
-    'feature_fraction':0.8, 'scale_pos_weight':4.5,
-    'n_estimators':800,
-}
-model = lgb.LGBMClassifier(**params)
-model.fit(X_train, y_train,
-    eval_set=[(X_val, y_val)],
-    callbacks=[lgb.early_stopping(50)])
-
-# SHAP — velocidad_deterioro: SHAP=0.182
-explainer   = shap.TreeExplainer(model)
-shap_values = explainer.shap_values(X_test)`,
-      sql:`-- Segmentos en riesgo por CLV y probabilidad de churn
-WITH churn_scores AS (
-  SELECT cliente_id, churn_prob, clv_anual_mxn,
-    NTILE(10) OVER (ORDER BY churn_prob DESC) AS decil_riesgo,
-    CASE
-      WHEN churn_prob >= 0.75 THEN 'Critico'
-      WHEN churn_prob >= 0.55 THEN 'Alto'
-      WHEN churn_prob >= 0.35 THEN 'Medio'
-      ELSE 'Bajo'
-    END AS nivel_riesgo
-  FROM scoring_churn_semanal
-  WHERE fecha_score = CURRENT_DATE
-)
-SELECT nivel_riesgo,
-  COUNT(*) AS clientes,
-  AVG(churn_prob) AS prob_media,
-  SUM(clv_anual_mxn) AS clv_en_riesgo_mxn,
-  -- ROI: 35% exito retencion, $350 costo/cliente
-  SUM(clv_anual_mxn)*0.35 - COUNT(*)*350 AS roi_neto_mxn
-FROM churn_scores
-WHERE decil_riesgo <= 2
-GROUP BY nivel_riesgo
-ORDER BY clv_en_riesgo_mxn DESC;`
-    },
-    conclusions:[
-      'LightGBM con validación out-of-time alcanzó AUC .924 — la feature más predictiva fue velocidad_deterioro (SHAP 0.182): clientes que reducen su saldo >2% por semana tienen 4.2x más probabilidad de churn en 90 días que el resto del portafolio.',
-      'El modelo en producción (FastAPI + MLflow) procesa 2.5M clientes en <12 minutos vía PySpark. Threshold 0.65 captura el top-15% de riesgo con 78% de precisión — accionable para campañas de retención preventiva con presupuesto limitado.',
-      'El simulador de ROI cuantifica el impacto: intervenir 50,000 clientes con 35% de éxito y CLV $12,400 MXN genera $218M MXN neto anual. El proyecto se paga en 2.8 meses desde producción — argumento económico para el comité de inversión.',
-      'Hallazgo crítico: clientes con queja sin resolver en <6 meses tienen 74% de probabilidad de churn — la señal binaria más fuerte. Resolver quejas en 48h reduciría el riesgo del segmento en 31% estimado sin costo de retención adicional.',
-    ]
+    steps:[ /* ... */ ],
+    code:{ /* ... */ },
+    conclusions:[ /* ... */ ]
   },
   // ── P10 Early Warning Pauta ─────────────────
   {
     id:'p10',num:'10',icon:'📡',isAI:true,
+    file:'p10-early-warning-pauta.html',
     title:'Early Warning · Abandono de Pauta Publicitaria',
     type:'Series de Tiempo · ML · Medios',typeClass:'tai',
     source:'IAB México · Valor Total Media · Reportes BMV · 63 meses',
@@ -1360,252 +808,18 @@ ORDER BY clv_en_riesgo_mxn DESC;`
       {val:'23%',lbl:'Marcas que reducen pauta',sub:'Abandono parcial/total·año'},
       {val:'60–90d',lbl:'Ventana de anticipación',sub:'Antes del abandono'},
     ],
-    steps:[
-      {num:'01',title:'Series de tiempo por canal',desc:'Python: ingesta IBOPE/Nielsen adaptado · GRP, SOV, Reach, CPM por marca · TV, Radio, Exteriores, Digital · 63 meses'},
-      {num:'02',title:'Detección de anomalías',desc:'Python: STL decomposition + Isolation Forest + CUSUM para detectar deterioro 8–12 semanas antes del abandono'},
-      {num:'03',title:'Clasificación + Forecast',desc:'Python: Prophet para forecast de inversión esperada → LightGBM clasifica riesgo de abandono · Airflow scoring semanal'},
-    ],
-    code:{
-      python:`from prophet import Prophet
-import lightgbm as lgb
-from statsmodels.tsa.seasonal import STL
-
-# Feature: caida de SOV vs maximo 12 semanas
-def build_time_features(df):
-    df = df.sort_values(['marca_id','medio','semana'])
-    grp = df.groupby(['marca_id','medio'])
-    # Lags 2, 4, 8, 12 semanas
-    for lag in [2, 4, 8, 12]:
-        df[f'grp_lag{lag}w'] = grp['grp'].shift(lag)
-    # Señal critica de abandono
-    df['sov_caida_vs_12w'] = (
-        df['sov_categoria'] /
-        grp['sov_categoria'].transform(
-            lambda x: x.rolling(12).max()) - 1)
-    return df
-
-# Forecast + Clasificacion
-m = Prophet(seasonality_mode='multiplicative')
-m.add_seasonality(name='monthly',period=4.33,fourier_order=5)
-m.fit(df_marca.rename(columns={'semana':'ds','inversion_mxn':'y'}))
-
-model = lgb.LGBMClassifier(
-    n_estimators=600, learning_rate=0.05,
-    num_leaves=48, scale_pos_weight=3.3)`,
-      sql:`-- Monitor semanal de marcas en riesgo de abandono
-WITH scores AS (
-  SELECT marca_id, nombre_marca, score_abandono,
-    CASE
-      WHEN score_abandono >= 0.75 THEN 'Critico'
-      WHEN score_abandono >= 0.55 THEN 'Alto'
-      WHEN score_abandono >= 0.35 THEN 'Medio'
-      ELSE 'Bajo'
-    END AS nivel_riesgo,
-    CASE
-      WHEN sov_caida_vs_12w < -0.30 THEN 'SOV -30% en 12 sem'
-      WHEN semanas_bajo_grp_umbral >= 4 THEN 'GRP bajo umbral'
-      WHEN racha_sin_radio >= 6 THEN 'Radio pausada 6+ sem'
-      ELSE 'Multiples señales'
-    END AS señal_principal,
-    facturacion_anual_mxn
-  FROM scoring_early_warning
-  WHERE fecha_score = CURRENT_DATE
-)
-SELECT nivel_riesgo, COUNT(*) AS marcas,
-  SUM(facturacion_anual_mxn) AS facturacion_riesgo_mxn
-FROM scores
-WHERE nivel_riesgo IN ('Critico','Alto')
-GROUP BY nivel_riesgo ORDER BY facturacion_riesgo_mxn DESC;`
-    },
-    conclusions:[
-      'La variable más predictiva es sov_caida_vs_12w (SHAP 0.192): caída de SOV >30% sostenida 8 semanas predice abandono con 68% de precisión — 9.4 semanas de ventana promedio para intervenir antes del abandono confirmado.',
-      'Radio es el indicador líder más consistente: en 6 de 8 marcas en riesgo crítico, la pausa en radio precedió la reducción en TV por 4–6 semanas. Monitorear continuidad de pauta radio es la señal más temprana y económica de detectar.',
-      'Base histórica real 2020–Q1 2026: 5 marcas BMV (KOF/FEMSA, Bimbo, Walmex, AMX, Liverpool) con 63 meses de series mensuales. Liverpool muestra riesgo Alto (68%) por caída de SOV 9.6%→8.8% en 2024.',
-      'Sistema en producción (Airflow · Lunes 7am): 120 marcas × 4 medios en 8 minutos con alertas Slack automáticas. En 6 meses retuvo 8 marcas preservando $480M MXN en facturación anual — ROI del proyecto: 57x.',
-    ]
+    steps:[ /* ... */ ],
+    code:{ /* ... */ },
+    conclusions:[ /* ... */ ]
   }
 ];
 
 // ─────────────────────────────────────────────
-// CHART CONFIGURATIONS PER PROJECT
+// CHART CONFIGURATIONS PER PROJECT (se mantienen pero no se usan por redirección)
 // ─────────────────────────────────────────────
 const CHARTS = {
-  p1:[
-    { title:'Curva ROC — Credit Scoring', type:'line', tall:false,
-      data:()=>({labels:[0,.05,.1,.15,.2,.3,.4,.5,.6,.7,.8,.9,1],datasets:[
-        {label:'XGBoost Calibrado (AUC=.91)',data:[0,.42,.62,.72,.79,.87,.91,.94,.96,.975,.985,.995,1],borderColor:'#00ddb4',borderWidth:2.5,fill:false,tension:.3,pointRadius:0},
-        {label:'Scorecard Logístico (AUC=.88)',data:[0,.35,.55,.65,.73,.82,.86,.90,.93,.96,.98,.993,1],borderColor:'#f5a623',borderWidth:2,fill:false,tension:.3,pointRadius:0,borderDash:[4,3]},
-        {label:'Azar',data:[0,.05,.1,.15,.2,.3,.4,.5,.6,.7,.8,.9,1],borderColor:'rgba(220,232,245,.2)',borderWidth:1,fill:false,tension:0,pointRadius:0},
-      ]}),
-      options:{scales:{x:{title:{display:true,text:'FPR'}},y:{title:{display:true,text:'TPR'}}}}
-    },
-    { title:'SHAP — Importancia de Variables', type:'bar', tall:false,
-      data:()=>({labels:['DTI Ratio','Historial pagos','Utiliz. crédito','Monto préstamo','Ingreso anual','Antigüedad emp.'],
-        datasets:[{label:'SHAP promedio',data:[.182,.164,.121,.094,.082,.061],backgroundColor:['#00ddb4','#00ddb4','#00c4a0','#f5a623','#f5a623','#8399b8'],borderRadius:5}]}),
-      options:{indexAxis:'y',scales:{x:{title:{display:true,text:'SHAP |valor|'}}}}
-    }
-  ],
-  p2:[
-    { title:'VaR vs. Retornos — Portafolio (2y)', type:'line', tall:false,
-      data:()=>{const n=24;const ret=[-.012,.008,-.005,.015,-.02,.011,.007,-.008,.018,-.015,.009,.004,-.011,.013,-.007,.019,-.023,.008,.012,-.009,.016,-.003,.007,-.018];
-        return{labels:Array.from({length:n},(_,i)=>`M${i+1}`),datasets:[
-          {label:'Retorno mensual',data:ret,borderColor:'#f5a623',borderWidth:1.5,fill:true,backgroundColor:'rgba(245,166,35,.06)',tension:.3,pointRadius:3,pointBackgroundColor:ret.map(r=>r<-0.025?'#fb7185':'#f5a623')},
-          {label:'VaR 95%',data:new Array(n).fill(-0.025),borderColor:'#fb7185',borderWidth:1.5,borderDash:[5,4],fill:false,pointRadius:0}
-        ]};},
-      options:{scales:{y:{title:{display:true,text:'Retorno'}}}}
-    },
-    { title:'Frontera Eficiente de Markowitz', type:'scatter', tall:false,
-      data:()=>({datasets:[
-        {label:'Frontera eficiente',data:Array.from({length:20},(_,i)=>({x:+(10+i*1.4).toFixed(1),y:+(6+i*1.2+Math.sin(i*.4)*.8).toFixed(2)})),type:'line',borderColor:'#f5a623',borderWidth:2,fill:false,tension:.4,pointRadius:0,showLine:true},
-        {label:'Activos',data:[{x:18.4,y:12.4,l:'AMXL'},{x:14.2,y:15.8,l:'WALMEX'},{x:28.6,y:8.4,l:'CEMEX'},{x:1.2,y:11.25,l:'CETES'}],backgroundColor:'rgba(245,166,35,.65)',pointRadius:7},
-        {label:'Máx. Sharpe',data:[{x:20.2,y:22.8}],backgroundColor:'#f5a623',pointRadius:12,pointStyle:'star'},
-      ]}),
-      options:{scales:{x:{title:{display:true,text:'Riesgo (%)'}},y:{title:{display:true,text:'Retorno (%)'}}}}
-    }
-  ],
-  p3:[
-    { title:'F1-Score por Umbral de Decisión', type:'line', tall:false,
-      data:()=>({labels:[.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85,.9],datasets:[
-        {label:'F1-Score',data:[.61,.68,.74,.79,.83,.87,.89,.88,.85,.79,.70,.58,.42],borderColor:'#ff4d6d',borderWidth:2.5,fill:true,backgroundColor:'rgba(255,77,109,.06)',tension:.4,pointRadius:3},
-        {label:'Precision',data:[.42,.48,.55,.62,.69,.76,.82,.87,.91,.94,.96,.97,.98],borderColor:'#f5a623',borderWidth:1.8,fill:false,tension:.4,pointRadius:0,borderDash:[4,3]},
-        {label:'Recall',data:[.98,.96,.93,.89,.85,.80,.73,.65,.56,.47,.38,.28,.20],borderColor:'#38bdf8',borderWidth:1.8,fill:false,tension:.4,pointRadius:0,borderDash:[3,4]},
-      ]}),
-      options:{scales:{x:{title:{display:true,text:'Threshold'}},y:{title:{display:true,text:'Score'},min:.2,max:1}}}
-    },
-    { title:'Distribución de Scores por Clase', type:'bar', tall:false,
-      data:()=>({labels:['0.0–0.1','0.1–0.2','0.2–0.3','0.3–0.4','0.4–0.5','0.5–0.6','0.6–0.7','0.7–0.8','0.8–0.9','0.9–1.0'],datasets:[
-        {label:'Legítima',data:[42000,28000,18000,9000,4200,2800,1200,600,280,120],backgroundColor:'rgba(56,189,248,.45)',borderColor:'#38bdf8',borderWidth:1,borderRadius:4},
-        {label:'Fraude',data:[120,180,280,420,680,1200,2800,4800,7200,9800],backgroundColor:'rgba(255,77,109,.5)',borderColor:'#ff4d6d',borderWidth:1,borderRadius:4},
-      ]}),
-      options:{scales:{y:{type:'log',title:{display:true,text:'# Transacciones (log)'}}}}
-    }
-  ],
-  p4:[
-    { title:'Proyección Lee-Carter — Mortalidad MX 2022–2040', type:'line', tall:false,
-      data:()=>{const yrs=Array.from({length:63+18},(_,i)=>1960+i);
-        const obs=Array.from({length:63},(_,i)=>10-(i*1.28)+(Math.sin(i*.3)*.8));
-        const proj=Array.from({length:18},(_,i)=>obs[62]-(i+1)*1.3);
-        const ic80u=proj.map((v,i)=>v+(i+1)*2.2);const ic80l=proj.map((v,i)=>v-(i+1)*2.2);
-        return{labels:yrs,datasets:[
-          {label:'κt observado',data:[...obs,...new Array(18).fill(null)],borderColor:'#00c896',borderWidth:2.5,fill:false,tension:.4,pointRadius:0},
-          {label:'κt proyectado',data:[...new Array(63).fill(null),...proj],borderColor:'#00c896',borderWidth:2,fill:false,tension:.4,borderDash:[5,3],pointRadius:0},
-          {label:'IC 80%',data:[...new Array(63).fill(null),...ic80u],borderColor:'rgba(0,200,150,.3)',borderWidth:1,fill:false,borderDash:[2,3],pointRadius:0},
-          {label:'',data:[...new Array(63).fill(null),...ic80l],borderColor:'rgba(0,200,150,.3)',borderWidth:1,fill:'-1',backgroundColor:'rgba(0,200,150,.06)',borderDash:[2,3],pointRadius:0},
-        ]};},
-      options:{scales:{y:{title:{display:true,text:'κt'}},x:{ticks:{maxTicksLimit:10}}}}
-    },
-    { title:'qx por Edad — Real vs. Tablas CNSF', type:'line', tall:false,
-      data:()=>({labels:Array.from({length:71},(_,i)=>20+i),datasets:[
-        {label:'Lee-Carter 2022',data:Array.from({length:71},(_,i)=>0.0008*Math.exp(0.09*(i))),borderColor:'#00c896',borderWidth:2.5,fill:false,tension:.4,pointRadius:0},
-        {label:'Tablas CNSF vigentes',data:Array.from({length:71},(_,i)=>0.0009*Math.exp(0.095*(i))),borderColor:'rgba(0,200,150,.4)',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,borderDash:[4,3]},
-      ]}),
-      options:{scales:{y:{type:'log',title:{display:true,text:'qx (escala log)'}},x:{title:{display:true,text:'Edad'}}}}
-    }
-  ],
-  p5:[
-    { title:'MRR@5 por Corpus — Semántico vs. Fijo', type:'bar', tall:false,
-      data:()=>({labels:['CNSF','CNBV','Basilea III','Fintech MX','FATF/GAFI','IFRS 17'],datasets:[
-        {label:'Chunking semántico',data:[.94,.91,.92,.90,.85,.81],backgroundColor:'rgba(167,139,250,.55)',borderColor:'#a78bfa',borderWidth:1.5,borderRadius:5},
-        {label:'Chunking fijo (tokens)',data:[.72,.68,.70,.65,.62,.59],backgroundColor:'rgba(167,139,250,.2)',borderColor:'rgba(167,139,250,.4)',borderWidth:1.5,borderRadius:5},
-      ]}),
-      options:{scales:{y:{min:.5,max:1,title:{display:true,text:'MRR@5'}}}}
-    },
-    { title:'Latencia de Respuesta — Distribución', type:'bar', tall:false,
-      data:()=>({labels:['<3s','3–4s','4–5s','5–6s','6–7s','7–8s','>8s'],datasets:[
-        {label:'% consultas',data:[8,22,31,24,10,4,1],backgroundColor:'rgba(167,139,250,.5)',borderColor:'#a78bfa',borderWidth:1.5,borderRadius:5}]}),
-      options:{scales:{y:{title:{display:true,text:'% consultas'}}}}
-    }
-  ],
-  p6:[
-    { title:'Monitoreo VaR en Tiempo Real — Portafolio Demo', type:'line', tall:false,
-      data:()=>{const n=30;const ret=Array.from({length:n},()=>(Math.random()-.48)*.04);
-        ret[8]=-.032;ret[19]=-.028;ret[24]=-.031;
-        return{labels:Array.from({length:n},(_,i)=>`D${i+1}`),datasets:[
-          {label:'Retorno diario',data:ret,borderColor:'#00f5d4',borderWidth:1.5,fill:true,backgroundColor:'rgba(0,245,212,.06)',tension:.3,pointRadius:ret.map(r=>r<-0.025?5:2),pointBackgroundColor:ret.map(r=>r<-0.025?'#fb7185':'#00f5d4')},
-          {label:'VaR 95%',data:new Array(n).fill(-0.025),borderColor:'#f5a623',borderWidth:1.5,borderDash:[4,3],fill:false,pointRadius:0},
-          {label:'VaR 99%',data:new Array(n).fill(-0.035),borderColor:'#fb7185',borderWidth:1.5,borderDash:[6,4],fill:false,pointRadius:0}
-        ]};},
-      options:{scales:{y:{title:{display:true,text:'Retorno diario'}}}}
-    },
-    { title:'Acciones del Agente IA — Distribución', type:'doughnut', tall:false,
-      data:()=>({labels:['Monitoreo OK','Alerta VaR 95%','Alerta VaR 99%','Reporte ejecutivo','Rebalanceo'],
-        datasets:[{data:[68,16,7,6,3],backgroundColor:['rgba(0,245,212,.5)','rgba(245,166,35,.5)','rgba(251,113,133,.6)','rgba(167,139,250,.5)','rgba(131,153,184,.5)'],borderColor:['#00f5d4','#f5a623','#fb7185','#a78bfa','#8399b8'],borderWidth:1.5}]}),
-      options:{plugins:{legend:{position:'right'}}}
-    }
-  ],
-  p7:[
-    { title:'Distribución Real vs. Sintética — DTI Ratio', type:'bar', tall:false,
-      data:()=>({labels:['0–5%','5–10%','10–15%','15–20%','20–25%','25–30%','30–35%','35–40%','40%+'],datasets:[
-        {label:'Datos reales',data:[4.2,8.8,12.4,16.8,18.4,16.2,12.8,6.8,3.6],backgroundColor:'rgba(129,140,248,.55)',borderColor:'#818cf8',borderWidth:1.5,borderRadius:5},
-        {label:'CTGAN sintético',data:[4.5,8.4,12.8,16.4,18.8,15.8,12.4,7.2,3.7],backgroundColor:'rgba(129,140,248,.2)',borderColor:'rgba(129,140,248,.5)',borderWidth:1.5,borderRadius:5},
-      ]}),
-      options:{scales:{y:{title:{display:true,text:'% registros'}}}}
-    },
-    { title:'Fidelidad Estadística por Métrica', type:'radar', tall:false,
-      data:()=>({labels:['KS Complement','TV Complement','Corr. Similarity','Boundary Adh.','Utilidad ML'],datasets:[
-        {label:'CTGAN',data:[.96,.94,.96,.98,.985],backgroundColor:'rgba(129,140,248,.15)',borderColor:'#818cf8',borderWidth:2,pointBackgroundColor:'#818cf8',pointRadius:4},
-        {label:'GaussianCopula',data:[.88,.84,.90,.95,.92],backgroundColor:'rgba(131,153,184,.1)',borderColor:'rgba(131,153,184,.5)',borderWidth:1.5,borderDash:[4,3],pointRadius:3},
-      ]}),
-      options:{scales:{r:{min:.8,max:1,ticks:{color:'rgba(220,232,245,.3)',backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.06)'},angleLines:{color:'rgba(255,255,255,.06)'},pointLabels:{color:'rgba(220,232,245,.5)',font:{size:9}}}}}
-    }
-  ],
-  p8:[
-    { title:'Índice de Riesgo por Estado — Top 15 Exposición', type:'bar', tall:false,
-      data:()=>({labels:['Guerrero','Oaxaca','Chiapas','Colima','Veracruz','Michoacán','Puebla','CDMX','Jalisco','Tabasco','Campeche','Yucatán','NL','Coah.','Chih.'],
-        datasets:[{label:'Risk Score (0–100)',data:[79,76,74,82,68,68,66,78,64,54,46,50,42,42,46],
-          backgroundColor:['#9b2226','#9b2226','#9b2226','#9b2226','#e63946','#e63946','#e63946','#e63946','#f5a623','#f5a623','#38bdf4','#38bdf4','#1a472a','#1a472a','#1a472a'],borderRadius:4}]}),
-      options:{indexAxis:'y',scales:{x:{title:{display:true,text:'Risk Score'},max:100},y:{ticks:{font:{size:9}}}}}
-    },
-    { title:'Perfil Multi-factor — Manzanillo, Colima', type:'radar', tall:false,
-      data:()=>({labels:['Riesgo Sísmico','Riesgo Hidrológico','Vuln. Social','Exposición Crediticia','(Inv.) Cap. Respuesta'],datasets:[
-        {label:'Manzanillo, Col.',data:[88,76,62,71,78],borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.12)',borderWidth:2,pointBackgroundColor:'#f97316'},
-        {label:'Promedio Nacional',data:[45,42,50,48,52],borderColor:'rgba(249,115,22,.35)',backgroundColor:'rgba(249,115,22,.04)',borderWidth:1.5,borderDash:[4,3],pointBackgroundColor:'rgba(249,115,22,.5)'},
-      ]}),
-      options:{scales:{r:{beginAtZero:true,max:100,ticks:{color:'rgba(220,232,245,.3)',backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.06)'},angleLines:{color:'rgba(255,255,255,.06)'},pointLabels:{color:'rgba(220,232,245,.5)',font:{size:9}}}}}
-    }
-  ],
-  p9:[
-    { title:'Curva ROC — 5 Modelos · Churn Bancario', type:'line', tall:false,
-      data:()=>{const fpr=[0,.04,.08,.12,.18,.25,.32,.42,.55,.7,.85,1];
-        return{labels:fpr,datasets:[
-          {label:'LightGBM (AUC=.924)',data:[0,.45,.62,.74,.82,.88,.91,.94,.965,.978,.988,1],borderColor:'#38bdf8',borderWidth:2.5,fill:false,tension:.35,pointRadius:0},
-          {label:'XGBoost (AUC=.911)',data:[0,.40,.58,.70,.78,.85,.88,.92,.952,.970,.984,1],borderColor:'#34d399',borderWidth:1.8,fill:false,tension:.35,pointRadius:0,borderDash:[5,3]},
-          {label:'Logístico (AUC=.812)',data:[0,.20,.38,.50,.62,.70,.75,.80,.860,.920,.960,1],borderColor:'rgba(131,153,184,.5)',borderWidth:1.5,fill:false,tension:.35,pointRadius:0,borderDash:[2,5]},
-          {label:'Azar',data:fpr,borderColor:'rgba(255,255,255,.1)',borderWidth:1,fill:false,pointRadius:0,borderDash:[2,4]},
-        ]};},
-      options:{scales:{x:{title:{display:true,text:'FPR'}},y:{title:{display:true,text:'TPR'},min:0,max:1}}}
-    },
-    { title:'SHAP — Top 8 Variables Predictivas', type:'bar', tall:false,
-      data:()=>({labels:['velocidad_deterioro','dias_sin_txn','num_productos','RFM_monetary','queja_pendiente','saldo_trend_90d','canal_digital','NPS_rolling'],
-        datasets:[{label:'SHAP |valor|',data:[.182,.164,.148,.121,.108,.082,.071,.064],
-          backgroundColor:['#38bdf8','#38bdf8','#60a5fa','#f5a623','#f5a623','#8399b8','#8399b8','#3a4d62'],borderRadius:5,borderSkipped:false}]}),
-      options:{indexAxis:'y',scales:{x:{title:{display:true,text:'SHAP |valor|'}},y:{ticks:{font:{size:9}}}}}
-    }
-  ],
-  p10:[
-    { title:'Inversión Publicitaria MX por Medio · 2020–2024 ($M MXN)', type:'bar', tall:false,
-      data:()=>({labels:['2020','2021','2022','2023','2024e'],datasets:[
-        {label:'Digital',data:[48600,58800,74000,79911,81720],backgroundColor:'rgba(232,121,249,.55)',borderColor:'#e879f9',borderWidth:1,borderRadius:3},
-        {label:'TV Abierta',data:[21800,24200,27600,29291,30200],backgroundColor:'rgba(232,121,249,.35)',borderColor:'rgba(232,121,249,.6)',borderWidth:1,borderRadius:3},
-        {label:'OOH',data:[5400,6800,7200,9119,10939],backgroundColor:'rgba(232,121,249,.2)',borderColor:'rgba(232,121,249,.4)',borderWidth:1,borderRadius:3},
-        {label:'Radio',data:[3990,3990,4574,5000,5200],backgroundColor:'rgba(232,121,249,.12)',borderColor:'rgba(232,121,249,.3)',borderWidth:1,borderRadius:3},
-      ]}),
-      options:{scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'$M MXN'},ticks:{callback:v=>'$'+Math.round(v/1000)+'B'}}}}
-    },
-    { title:'SOV Estimado · 5 Marcas BMV · 2020–2024 (%)', type:'line', tall:false,
-      data:()=>({labels:['2020','2021','2022','2023','2024'],datasets:[
-        {label:'AMX/Telcel',data:[20.4,21.2,22.0,22.8,23.1],borderColor:'#e879f9',borderWidth:2,fill:false,tension:.4,pointRadius:4},
-        {label:'Walmex',data:[14.8,15.2,15.8,16.4,16.9],borderColor:'rgba(232,121,249,.7)',borderWidth:1.8,fill:false,tension:.4,pointRadius:3},
-        {label:'KOF/FEMSA',data:[12.8,13.4,14.2,14.8,15.1],borderColor:'rgba(232,121,249,.5)',borderWidth:1.8,fill:false,tension:.4,pointRadius:3},
-        {label:'Liverpool ⚠',data:[7.8,8.6,9.2,9.6,8.8],borderColor:'#fb7185',borderWidth:2.5,fill:false,tension:.4,pointRadius:5,borderDash:[4,3]},
-      ]}),
-      options:{scales:{y:{title:{display:true,text:'SOV (%)'},min:5}}}
-    }
-  ]
+  // ... (se puede conservar o eliminar, no afecta la navegación)
 };
-
-
-
 
 // ─────────────────────────────────────────────
 // CHART.JS GLOBAL DEFAULTS
@@ -1635,40 +849,27 @@ function mergeOpts(extra={}) {
 }
 
 // ─────────────────────────────────────────────
-// NAVIGATION
+// NAVIGATION (redirección directa)
 // ─────────────────────────────────────────────
 function showHome(){
-  document.getElementById('portfolio-view').style.display='';
-  document.getElementById('project-view').style.display='none';
-  document.getElementById('sb-portfolio').style.display='';
-  document.getElementById('sb-project').style.display='none';
-  destroyCharts();
-  window.scrollTo(0,0);
-  document.title = 'Portafolio · Actuario & Data Scientist · AI Builder';
+  window.location.href = 'index.html';
 }
 
 function showProject(pid){
   const p = PROJECTS.find(x=>x.id===pid);
-  if(!p) return;
-  document.getElementById('portfolio-view').style.display='none';
-  document.getElementById('project-view').style.display='block';
-  document.getElementById('sb-portfolio').style.display='none';
-  document.getElementById('sb-project').style.display='flex';
-  document.title = p.title.replace(/&amp;/g,'&').replace(/<[^>]+>/g,'');
-  renderSidebarProjectNav(pid);
-  renderDashboard(p);
-  window.scrollTo(0,0);
+  if(p) window.location.href = p.file;
 }
 
 function renderSidebarProjectNav(currentId){
+  // Ya no se necesita porque redirigimos, pero se mantiene por compatibilidad
   const fin = document.getElementById('pnav-fin');
   const ai  = document.getElementById('pnav-ai');
+  if(!fin || !ai) return;
   fin.innerHTML=''; ai.innerHTML='';
   PROJECTS.forEach(p=>{
-    const isCurrent = p.id===currentId;
     const btn = document.createElement('button');
-    btn.className = `pnav-item ${isCurrent?'current':''} ${isCurrent&&p.isAI?'ai':''}`;
-    btn.onclick = ()=>showProject(p.id);
+    btn.className = 'pnav-item';
+    btn.onclick = () => window.location.href = p.file;
     const lang = p.langs[0];
     const lclass = lang==='Python'?'lang-py':lang==='R'?'lang-r':'lang-sql';
     btn.innerHTML = `<span class="pnav-num">${p.num}</span>${p.icon} ${p.title.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').split('·')[0].trim()}<span class="pnav-lang ${lclass}">${lang}</span>`;
@@ -1676,138 +877,7 @@ function renderSidebarProjectNav(currentId){
   });
 }
 
-// ─────────────────────────────────────────────
-// DASHBOARD RENDERER
-// ─────────────────────────────────────────────
-function renderDashboard(p){
-  const isAI = p.isAI;
-  const acc  = isAI ? 'var(--violet)' : 'var(--teal)';
-  const typeClass = p.typeClass;
-  const langBadges = p.langs.map(l=>{
-    const c=l==='Python'?'dl-py':l==='R'?'dl-r':'dl-sql';
-    return `<span class="dlang ${c}">${l}</span>`;
-  }).join('');
-  const metricsHTML = p.metrics.map(m=>`
-    <div class="dm">
-      <span class="dm-val" style="color:${acc}">${m.val}</span>
-      <div class="dm-lbl">${m.lbl}</div>
-      <div class="dm-sub">${m.sub}</div>
-    </div>`).join('');
-  const stepsHTML = p.steps.map(s=>`
-    <div class="mstep">
-      <div class="mstep-num">Paso ${s.num}</div>
-      <div class="mstep-title">${s.title}</div>
-      <div class="mstep-desc">${s.desc}</div>
-    </div>`).join('');
-  const concClass = isAI?'vt':'';
-  const concItems = p.conclusions.map(c=>`<div class="conc-item">${c}</div>`).join('');
-  const chartConfs = CHARTS[p.id]||[];
-  const chartsHTML = chartConfs.map((c,i)=>`
-    <div class="chart-box${chartConfs.length===1?' wide':''}">
-      <div class="cb-title">${c.title}</div>
-      <div class="chart-wrap${c.tall?' tall':''}"><canvas id="chart-${p.id}-${i}"></canvas></div>
-    </div>`).join('');
-
-  // Code tabs — determine which tabs to show
-  const codeKeys = Object.keys(p.code||{});
-  const tabsHTML = codeKeys.map((k,i)=>{
-    const lbl = k==='python'?'Python':k==='r'?'R':'SQL';
-    const ac  = k==='python'?'active-py':k==='r'?'active-r':'active-sql';
-    return `<button class="ctab ${i===0?ac:''}" onclick="switchTab('${p.id}','${k}',this)">${lbl}</button>`;
-  }).join('');
-  const codeBlocksHTML = codeKeys.map((k,i)=>`
-    <pre class="cblock" id="code-${p.id}-${k}" style="${i===0?'':'display:none'}">${highlight(p.code[k])}</pre>`).join('');
-
-  document.getElementById('dash-content').innerHTML = `
-    <div class="dash-header">
-      <div class="dash-title-wrap">
-        <div class="dash-eyebrow">
-          <span>${p.num}</span>
-          <span style="color:${acc}">${p.icon} ${isAI?'Proyecto IA':'Proyecto Financiero'}</span>
-        </div>
-        <h2 class="dash-title">${p.title}</h2>
-        <div class="dash-lang-row">${langBadges}<span class="chip ${p.typeClass==='tai'?'cv':p.typeClass==='tfin'?'ct':'ca'}" style="margin-left:.3rem">${p.type}</span></div>
-        <div class="dash-src" style="margin-top:.5rem">📂 ${p.source}</div>
-      </div>
-    </div>
-    <div class="dash-metrics">${metricsHTML}</div>
-    <div class="method-row">${stepsHTML}</div>
-    <div class="charts-row">${chartsHTML}</div>
-    <div class="code-panel">
-      <div class="code-tabs">${tabsHTML}</div>
-      <div class="code-body">${codeBlocksHTML}</div>
-    </div>
-    <div class="dash-conc">
-      <div class="dash-conc-title ${concClass}">Conclusiones &amp; hallazgos clave</div>
-      <div class="conc-list">${concItems}</div>
-    </div>`;
-
-  // Initialize charts after DOM is ready
-  destroyCharts();
-  setTimeout(()=>{
-    chartConfs.forEach((conf,i)=>{
-      const canvas = document.getElementById(`chart-${p.id}-${i}`);
-      if(!canvas) return;
-      const opts = mergeOpts(conf.options||{});
-      if(conf.type==='doughnut'||conf.type==='radar'){
-        delete opts.scales;
-      }
-      const ch = new Chart(canvas, {type:conf.type, data:conf.data(), options:opts});
-      activeCharts.push(ch);
-    });
-  }, 60);
-}
-
-function switchTab(pid, lang, btn){
-  const panel = btn.closest('.code-panel');
-  panel.querySelectorAll('.ctab').forEach(t=>t.className='ctab');
-  panel.querySelectorAll('.cblock').forEach(b=>b.style.display='none');
-  const ac = lang==='python'?'active-py':lang==='r'?'active-r':'active-sql';
-  btn.classList.add(ac);
-  document.getElementById(`code-${pid}-${lang}`).style.display='';
-}
-
-function destroyCharts(){
-  activeCharts.forEach(c=>{try{c.destroy()}catch(e){}});
-  activeCharts=[];
-}
-
-// ─────────────────────────────────────────────
-// SYNTAX HIGHLIGHT (lightweight)
-// ─────────────────────────────────────────────
-function highlight(code){
-  return code
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/#[^\n]*/g, m=>`<span class="cc">${m}</span>`)
-    .replace(/\b(import|from|def|return|for|if|else|elif|in|not|and|or|True|False|None|class|with|as|try|except|lambda|SELECT|FROM|WHERE|JOIN|GROUP|ORDER|BY|CREATE|TABLE|VIEW|WITH|INSERT|INTO|CASE|WHEN|THEN|END|PARTITION|OVER|HAVING|DISTINCT|NULL|LEFT|RIGHT|INNER|OUTER|library|function|install\.packages)\b/g,
-      m=>`<span class="ck">${m}</span>`)
-    .replace(/'([^'\\]*(\\.[^'\\]*)*)'/g,m=>`<span class="cs">${m}</span>`)
-    .replace(/"([^"\\]*(\\.[^"\\]*)*)"/g,m=>`<span class="cs">${m}</span>`)
-    .replace(/\b(\d+\.?\d*)\b/g,m=>`<span class="cn">${m}</span>`);
-}
-
-// ─────────────────────────────────────────────
-// COLORES Y GRUPOS POR PROYECTO
-// ─────────────────────────────────────────────
-const PROJ_COLORS = {
-  p1:'#00ddb4',  // Teal    — Credit Scoring
-  p2:'#f5a623',  // Amber   — Portfolio VaR
-  p3:'#ff4d6d',  // Rose    — Fraude
-  p4:'#00c896',  // Emerald — Mortalidad
-  p5:'#a78bfa',  // Violet  — RAG
-  p6:'#00f5d4',  // Cyan    — Risk Copilot
-  p7:'#818cf8',  // Indigo  — Sintético
-  p8:'#f97316',  // Orange  — Geo Risk
-  p9:'#38bdf8',  // Sky     — Churn
-  p10:'#e879f9'  // Fuchsia — Early Warning
-};
-const PROJ_GROUP = {
-  p1:'fin', p2:'fin',
-  p3:'riesgo', p4:'riesgo',
-  p5:'ia', p6:'ia', p7:'ia', p8:'ia',
-  p9:'fin',
-  p10:'media'
-};
+function renderDashboard(p){ /* ya no se usa */ }
 
 // ─────────────────────────────────────────────
 // RENDER PORTFOLIO CARDS
@@ -1835,20 +905,20 @@ function renderCards(){
     const card = document.createElement('div');
     card.className = 'proj-card';
     card.style.cssText = `--pc:${col};--pcd:${col}18`;
-    card.onclick = ()=>showProject(p.id);
+    card.onclick = ()=>window.location.href = p.file;   // redirige al archivo externo
     card.innerHTML = `
       <div class="proj-card-num">${p.num} · ${p.type}</div>
       <div class="proj-card-title">${p.title.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&')}</div>
       <div class="proj-card-desc">${p.source.split('·')[0].trim()}</div>
       <div style="display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.6rem">${langBadges}</div>
       <div class="proj-card-kpi">${kpi.val} <span style="font-size:.65rem;font-weight:400;color:rgba(220,232,245,.45)">${kpi.lbl}</span></div>
-      <div class="proj-card-open">▶ Abrir dashboard interactivo →</div>`;
+      <div class="proj-card-open">▶ Abrir dashboard completo →</div>`;
     if(containers[group]) containers[group].appendChild(card);
 
     // Sidebar nav
     const btn = document.createElement('button');
     btn.className = `pnav-item${p.isAI?' ai-link':''}`;
-    btn.onclick = ()=>showProject(p.id);
+    btn.onclick = ()=>window.location.href = p.file;
     const lc = p.langs[0]==='Python'?'lang-py':p.langs[0]==='R'?'lang-r':'lang-sql';
     btn.innerHTML = `<span class="pnav-num">${p.num}</span>${p.icon} ${p.title.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').split('·')[0].trim()}<span class="pnav-lang ${lc}">${p.langs[0]}</span>`;
     btn.style.setProperty('--hc', col);
@@ -1868,6 +938,16 @@ function type(){
   else{tel.textContent=p.slice(0,--ci);if(ci===0){dl=false;pi=(pi+1)%phrases.length;}}
   setTimeout(type,dl?42:85);
 }
+
+// Colores y grupos (deben estar definidos antes)
+const PROJ_COLORS = {
+  p1:'#00ddb4', p2:'#f5a623', p3:'#ff4d6d', p4:'#00c896', p5:'#a78bfa',
+  p6:'#00f5d4', p7:'#818cf8', p8:'#f97316', p9:'#38bdf8', p10:'#e879f9'
+};
+const PROJ_GROUP = {
+  p1:'fin', p2:'fin', p3:'riesgo', p4:'riesgo',
+  p5:'ia', p6:'ia', p7:'ia', p8:'ia', p9:'fin', p10:'media'
+};
 
 // Init
 renderCards();
