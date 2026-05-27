@@ -201,6 +201,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px
   .dash-header,.tabs-wrap{padding-left:1.2rem;padding-right:1.2rem}
   .factor-grid{grid-template-columns:repeat(3,1fr)}
 }
+
+/* HEATMAP SORT BUTTONS */
+.sort-btn{font-family:var(--fm);font-size:.58rem;padding:.2rem .55rem;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .18s;letter-spacing:.04em}
+.sort-btn:hover{color:var(--orange);border-color:rgba(249,115,22,.3)}
+.sort-btn.active{color:var(--orange);background:var(--orange-dim);border-color:rgba(249,115,22,.35)}
+
 </style>
 </head>
 <body>
@@ -298,7 +304,44 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px
         <div class="leg-item"><div class="leg-box" style="background:rgba(155,34,38,.75)"></div>Crítico (&gt;75)</div>
         <div class="leg-item" style="margin-left:auto;font-family:var(--fm);font-size:.6rem;color:var(--muted)">Hover para detalle · Score 0–100</div>
       </div>
+
+    <!-- ══ MATRIZ DE CORRELACIÓN DE CALOR ══ -->
+    <div class="sec-title" style="margin-top:1.8rem">Matriz de Calor · Variables de Riesgo por Estado</div>
+    <p class="sec-sub">32 estados · 6 variables · Score 0–100 · Hover para valor exacto · Ordenable por variable</p>
+    <div class="chart-box full" style="margin-bottom:1.6rem;padding:1.4rem">
+      <div class="cb-label" style="margin-bottom:1rem">
+        Correlación Multivariable de Riesgo Geoespacial
+        <span class="cb-badge">32 estados MX · CENAPRED + INEGI</span>
+        <span style="margin-left:auto;display:flex;gap:.4rem;align-items:center">
+          <span style="font-family:var(--fm);font-size:.58rem;color:var(--muted2)">Ordenar por:</span>
+          <button class="sort-btn active" onclick="sortMatrix('score',this)">Score</button>
+          <button class="sort-btn" onclick="sortMatrix('sism',this)">Sísmico</button>
+          <button class="sort-btn" onclick="sortMatrix('hid',this)">Hidrológico</button>
+          <button class="sort-btn" onclick="sortMatrix('soc',this)">Vulner.</button>
+          <button class="sort-btn" onclick="sortMatrix('exp',this)">Exposición</button>
+          <button class="sort-btn" onclick="sortMatrix('resp',this)">Respuesta</button>
+        </span>
+        <button class="info-btn" onclick="toggleInfo(this)">ℹ</button>
+        <div class="info-panel" style="margin-top:.6rem;width:100%">
+          <div class="te-row"><span class="te-tag def">DEF</span><span class="te-txt"><strong>Matriz de calor multivariable</strong>: cada columna es un estado y cada fila una variable de riesgo. La intensidad del color representa el nivel de riesgo relativo: naranja intenso = riesgo alto, azul = riesgo bajo.</span></div>
+          <div class="te-row"><span class="te-tag meta">META</span><span class="te-txt">Permite identificar de un vistazo qué estados acumulan riesgo alto en múltiples dimensiones simultáneamente (Colima, Guerrero, Oaxaca) vs. estados con perfil de riesgo heterogéneo (alta sismicidad pero baja exposición crediticia).</span></div>
+          <div class="te-row"><span class="te-tag uso">USO</span><span class="te-txt">Usar el botón de ordenamiento para descubrir clústeres de riesgo: ordenar por "Sísmico" agrupa la costa del Pacífico; por "Exposición" sube CDMX y NL al frente — información crítica para límites de acumulación diferenciados por tipo de riesgo.</span></div>
+        </div>
+      </div>
+      <!-- Heatmap container -->
+      <div style="position:relative;overflow:hidden">
+        <svg id="risk-heatmap" style="width:100%;display:block;overflow:visible"></svg>
+        <div id="hm-tooltip" style="display:none;position:fixed;pointer-events:none;background:#0d0f16;border:1px solid rgba(249,115,22,.45);border-radius:7px;padding:.45rem .75rem;font-family:var(--fm);font-size:.7rem;color:#dce8f5;z-index:9999;white-space:nowrap;line-height:1.85"></div>
+      </div>
+      <!-- Legend -->
+      <div style="display:flex;align-items:center;gap:.5rem;margin-top:1rem;justify-content:center">
+        <span style="font-family:var(--fm);font-size:.6rem;color:var(--muted2)">Bajo riesgo</span>
+        <div id="hm-legend-grad" style="width:160px;height:10px;border-radius:5px;background:linear-gradient(90deg,#1e3a5f,#2563a8,#94a3b8,#f97316,#9b2226)"></div>
+        <span style="font-family:var(--fm);font-size:.6rem;color:var(--muted2)">Alto riesgo</span>
+        <span style="font-family:var(--fm);font-size:.58rem;color:var(--muted);margin-left:1.2rem">*Respuesta: invertida — mayor capacidad = menor riesgo</span>
+      </div>
     </div>
+
 
     <!-- Factor cards -->
     <div class="sec-title">Factores del Índice Compuesto</div>
@@ -976,6 +1019,333 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 // Init Tab 1 (active on load)
 tabsInited.atlas=true;
 initAtlasCharts();
+
+// ══════════════════════════════════════════════════
+// ── MATRIZ DE CALOR · D3-style SVG puro
+// ══════════════════════════════════════════════════
+(function initHeatmap(){
+
+  // ── Dataset: 32 estados, 6 variables ──────────────
+  // score, sism, hid, soc, exp, resp (todos 0-100)
+  // resp está invertida para coloreo: 100-resp = riesgo real
+  const STATES = [
+    {n:'Aguascalientes',  score:44, sism:30, hid:42, soc:46, exp:48, resp:52},
+    {n:'Baja California', score:48, sism:62, hid:38, soc:42, exp:45, resp:55},
+    {n:'Baja Cal. Sur',   score:35, sism:48, hid:52, soc:30, exp:22, resp:40},
+    {n:'Campeche',        score:46, sism:14, hid:68, soc:48, exp:36, resp:48},
+    {n:'Chiapas',         score:74, sism:85, hid:78, soc:82, exp:38, resp:25},
+    {n:'Chihuahua',       score:46, sism:38, hid:55, soc:45, exp:42, resp:52},
+    {n:'Ciudad de México',score:78, sism:80, hid:55, soc:48, exp:92, resp:68},
+    {n:'Coahuila',        score:42, sism:28, hid:48, soc:40, exp:52, resp:58},
+    {n:'Colima',          score:82, sism:92, hid:75, soc:55, exp:48, resp:28},
+    {n:'Durango',         score:48, sism:38, hid:58, soc:52, exp:38, resp:42},
+    {n:'Guanajuato',      score:60, sism:45, hid:52, soc:58, exp:68, resp:52},
+    {n:'Guerrero',        score:79, sism:88, hid:72, soc:82, exp:42, resp:22},
+    {n:'Hidalgo',         score:62, sism:52, hid:60, soc:65, exp:55, resp:42},
+    {n:'Jalisco',         score:64, sism:58, hid:65, soc:48, exp:72, resp:55},
+    {n:'Estado de México',score:70, sism:74, hid:56, soc:58, exp:82, resp:60},
+    {n:'Michoacán',       score:68, sism:72, hid:65, soc:68, exp:48, resp:35},
+    {n:'Morelos',         score:62, sism:70, hid:52, soc:58, exp:54, resp:46},
+    {n:'Nayarit',         score:54, sism:62, hid:68, soc:55, exp:32, resp:38},
+    {n:'Nuevo León',      score:58, sism:35, hid:62, soc:38, exp:72, resp:65},
+    {n:'Oaxaca',          score:76, sism:88, hid:65, soc:78, exp:42, resp:28},
+    {n:'Puebla',          score:66, sism:65, hid:62, soc:62, exp:58, resp:45},
+    {n:'Querétaro',       score:46, sism:38, hid:46, soc:52, exp:54, resp:56},
+    {n:'Quintana Roo',    score:55, sism:12, hid:72, soc:42, exp:55, resp:48},
+    {n:'San Luis Potosí', score:52, sism:35, hid:55, soc:58, exp:48, resp:45},
+    {n:'Sinaloa',         score:52, sism:42, hid:72, soc:52, exp:45, resp:44},
+    {n:'Sonora',          score:44, sism:45, hid:52, soc:38, exp:40, resp:48},
+    {n:'Tabasco',         score:54, sism:22, hid:84, soc:58, exp:42, resp:44},
+    {n:'Tamaulipas',      score:54, sism:32, hid:68, soc:48, exp:55, resp:52},
+    {n:'Tlaxcala',        score:50, sism:52, hid:46, soc:56, exp:44, resp:50},
+    {n:'Veracruz',        score:68, sism:55, hid:78, soc:65, exp:58, resp:38},
+    {n:'Yucatán',         score:50, sism:15, hid:62, soc:48, exp:42, resp:52},
+    {n:'Zacatecas',       score:56, sism:32, hid:45, soc:65, exp:42, resp:38},
+  ];
+
+  const VARS = [
+    {key:'score', label:'Score Compuesto', short:'Score',  pct:100, invert:false, color:'#f97316'},
+    {key:'sism',  label:'Sísmico (25%)',   short:'Sísmico',pct:25,  invert:false, color:'#ff4d6d'},
+    {key:'hid',   label:'Hidrológico (20%)',short:'Hidrol.',pct:20, invert:false, color:'#60a5fa'},
+    {key:'soc',   label:'Vulner. Social (20%)',short:'Vuln.',pct:20,invert:false, color:'#f5a623'},
+    {key:'exp',   label:'Exposición Créd. (20%)',short:'Expos.',pct:20,invert:false,color:'#a78bfa'},
+    {key:'resp',  label:'Cap. Respuesta (15%)',short:'Resp.',pct:15,invert:true, color:'#34d399'},
+  ];
+
+  // Color scale: 0–100 → blue (low) to orange/red (high)
+  function riskColor(val, invert) {
+    const v = invert ? (100 - val) : val; // invert capacity → risk
+    // Stops: 0=deep blue, 30=mid blue, 50=slate, 65=amber, 80=orange, 100=deep red
+    if(v < 30)  { const t=v/30;     return lerpRGB([22,58,110],[37,99,168],t); }
+    if(v < 50)  { const t=(v-30)/20; return lerpRGB([37,99,168],[100,116,139],t); }
+    if(v < 65)  { const t=(v-50)/15; return lerpRGB([100,116,139],[249,115,22],t); }
+    if(v < 80)  { const t=(v-65)/15; return lerpRGB([249,115,22],[220,60,20],t); }
+                { const t=(v-80)/20; return lerpRGB([220,60,20],[155,34,38],t); }
+  }
+  function lerpRGB(a,b,t){
+    return `rgb(${Math.round(a[0]+(b[0]-a[0])*t)},${Math.round(a[1]+(b[1]-a[1])*t)},${Math.round(a[2]+(b[2]-a[2])*t)})`;
+  }
+  function textColor(val, invert){
+    const v = invert?(100-val):val;
+    return v>55?'rgba(255,255,255,.92)':'rgba(255,255,255,.65)';
+  }
+
+  let currentData = [...STATES];
+  const svg    = document.getElementById('risk-heatmap');
+  const tipEl  = document.getElementById('hm-tooltip');
+
+  function render(){
+    svg.innerHTML = '';
+    const nCols  = currentData.length;  // 32 estados
+    const nRows  = VARS.length;         // 6 variables
+
+    // Layout
+    const LABEL_W  = 116;  // left variable labels
+    const LABEL_H  = 92;   // top state headers — tall for rotated text
+    const CELL_H   = 38;
+    const SVG_W    = svg.clientWidth || svg.parentElement.clientWidth || 900;
+    const CELL_W   = Math.max(18, Math.floor((SVG_W - LABEL_W) / nCols));
+    const SVG_H    = LABEL_H + nRows * CELL_H + 4;
+
+    svg.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+    svg.style.height = SVG_H + 'px';
+
+    const ns = 'http://www.w3.org/2000/svg';
+    function el(tag, attrs, parent){
+      const e = document.createElementNS(ns, tag);
+      for(const[k,v] of Object.entries(attrs)) e.setAttribute(k,v);
+      if(parent) parent.appendChild(e);
+      return e;
+    }
+    function txt(content, attrs, parent){
+      const t = el('text', attrs, parent);
+      t.textContent = content;
+      return t;
+    }
+
+    // Background
+    el('rect',{x:0,y:0,width:SVG_W,height:SVG_H,fill:'#08090e'}, svg);
+
+    // ── Row labels (variables) ────────────────────────
+    VARS.forEach((v, ri) => {
+      const y = LABEL_H + ri * CELL_H;
+      // Row bg alternate
+      el('rect',{x:0,y,width:SVG_W,height:CELL_H,
+        fill: ri%2===0?'rgba(255,255,255,.018)':'rgba(255,255,255,.008)'}, svg);
+      // Variable color strip
+      el('rect',{x:2,y:y+6,width:3,height:CELL_H-12,rx:1.5,fill:v.color}, svg);
+      // Label
+      txt(v.short, {
+        x: 9, y: y+CELL_H/2+1,
+        'dominant-baseline':'middle',
+        fill:'rgba(220,232,245,.75)',
+        'font-family':'JetBrains Mono,monospace',
+        'font-size':'9',
+        'font-weight':'500',
+      }, svg);
+      // Weight label
+      if(v.pct<100) txt(v.pct+'%', {
+        x: LABEL_W-6, y: y+CELL_H/2+1,
+        'dominant-baseline':'middle',
+        'text-anchor':'end',
+        fill:'rgba(220,232,245,.3)',
+        'font-family':'JetBrains Mono,monospace',
+        'font-size':'7.5',
+      }, svg);
+    });
+
+    // ── Column headers (state names) ─────────────────
+    // LABEL_H must be tall enough for rotated labels — enforced above
+    const ABBR_MAP = {
+      'Aguascalientes':'AGS','Baja California':'BC','Baja Cal. Sur':'BCS',
+      'Campeche':'CAMP','Chiapas':'CHIS','Chihuahua':'CHIH',
+      'Ciudad de México':'CDMX','Coahuila':'COAH','Colima':'COL',
+      'Durango':'DGO','Guanajuato':'GTO','Guerrero':'GRO',
+      'Hidalgo':'HGO','Jalisco':'JAL','Estado de México':'MEX',
+      'Michoacán':'MICH','Morelos':'MOR','Nayarit':'NAY',
+      'Nuevo León':'NL','Oaxaca':'OAX','Puebla':'PUE',
+      'Querétaro':'QRO','Quintana Roo':'QROO','San Luis Potosí':'SLP',
+      'Sinaloa':'SIN','Sonora':'SON','Tabasco':'TAB',
+      'Tamaulipas':'TAMPS','Tlaxcala':'TLAX','Veracruz':'VER',
+      'Yucatán':'YUC','Zacatecas':'ZAC'
+    };
+
+    // Header band background
+    el('rect',{
+      x:LABEL_W, y:0, width:nCols*CELL_W, height:LABEL_H,
+      fill:'rgba(255,255,255,.022)'
+    }, svg);
+
+    currentData.forEach((state, ci) => {
+      const x  = LABEL_W + ci * CELL_W;
+      const cx = x + CELL_W / 2;
+      const abbr = ABBR_MAP[state.n] || state.n.slice(0,4).toUpperCase();
+
+      // Tier color for the label accent
+      const sc = state.score;
+      const tierStroke = sc>=75?'rgba(155,34,38,.9)':sc>=55?'rgba(249,115,22,.8)':sc>=30?'rgba(245,166,35,.7)':'rgba(52,211,153,.7)';
+      const tierFill   = sc>=75?'rgba(155,34,38,.18)':sc>=55?'rgba(249,115,22,.12)':sc>=30?'rgba(245,166,35,.10)':'rgba(52,211,153,.08)';
+
+      // Alternating column tint in header
+      if(ci%2===0){
+        el('rect',{x,y:0,width:CELL_W,height:LABEL_H,fill:'rgba(255,255,255,.015)'}, svg);
+      }
+
+      // Score-colored top stripe (3px)
+      el('rect',{x:x+1,y:1,width:CELL_W-2,height:3,rx:1,fill:tierStroke}, svg);
+
+      // Score mini-pill inside header at bottom
+      const pillW = Math.min(CELL_W-4, 28);
+      el('rect',{
+        x: cx - pillW/2, y: LABEL_H-14,
+        width: pillW, height: 12, rx:4,
+        fill: tierFill,
+        stroke: tierStroke,
+        'stroke-width': '0.6'
+      }, svg);
+      txt(sc.toString(),{
+        x: cx, y: LABEL_H-8,
+        'text-anchor':'middle',
+        'dominant-baseline':'middle',
+        fill:'rgba(220,232,245,.85)',
+        'font-family':'JetBrains Mono,monospace',
+        'font-size':'7',
+        'font-weight':'700',
+        style:'pointer-events:none'
+      }, svg);
+
+      // Connector line: from label pivot to top of cells
+      el('line',{
+        x1:cx, y1:LABEL_H-16,
+        x2:cx, y2:LABEL_H,
+        stroke:'rgba(255,255,255,.08)',
+        'stroke-width':'1'
+      }, svg);
+
+      // Rotated label — pivot at cell center, bottom of header area
+      const g = el('g',{transform:`translate(${cx},${LABEL_H-18})`}, svg);
+      const t = document.createElementNS(ns,'text');
+      t.setAttribute('transform','rotate(-70)');
+      t.setAttribute('text-anchor','start');
+      t.setAttribute('dominant-baseline','middle');
+      t.setAttribute('fill','rgba(220,232,245,.82)');
+      t.setAttribute('font-family','JetBrains Mono,monospace');
+      t.setAttribute('font-size','8.5');
+      t.setAttribute('font-weight','500');
+      t.setAttribute('letter-spacing','0.03em');
+      t.style.pointerEvents='none';
+      t.textContent = abbr;
+      g.appendChild(t);
+    });
+
+    // ── Cells ─────────────────────────────────────────
+    currentData.forEach((state, ci) => {
+      const x = LABEL_W + ci * CELL_W;
+
+      VARS.forEach((v, ri) => {
+        const y    = LABEL_H + ri * CELL_H;
+        const val  = state[v.key];
+        const fill = riskColor(val, v.invert);
+        const tc   = textColor(val, v.invert);
+
+        // Cell rect
+        const cell = el('rect', {
+          x: x+1, y: y+1,
+          width: CELL_W-2, height: CELL_H-2,
+          rx: 3, fill,
+          style: 'cursor:pointer;transition:filter .15s'
+        }, svg);
+
+        // Value text (only if cell wide enough)
+        if(CELL_W >= 22){
+          txt(val.toString(), {
+            x: x + CELL_W/2,
+            y: y + CELL_H/2 + 1,
+            'text-anchor': 'middle',
+            'dominant-baseline': 'middle',
+            fill: tc,
+            'font-family': 'JetBrains Mono,monospace',
+            'font-size': CELL_W < 26 ? '7.5' : '9',
+            'font-weight': '600',
+            style: 'pointer-events:none'
+          }, svg);
+        }
+
+        // Hover events
+        const riskV = v.invert ? (100-val) : val;
+        const tierLabel = riskV>=75?'🔴 Crítico':riskV>=55?'🟠 Alto':riskV>=30?'🟡 Medio':'🟢 Bajo';
+        const invertNote = v.invert ? ' <span style="color:rgba(220,232,245,.4);font-size:.62rem">(invertida: mayor cap. = menor riesgo)</span>' : '';
+
+        cell.addEventListener('mouseenter', function(e){
+          this.style.filter='brightness(1.35)';
+          tipEl.innerHTML =
+            `<span style="color:#f97316;font-weight:700">${state.n}</span><br>` +
+            `<span style="color:rgba(220,232,245,.6)">${v.label}:</span> ` +
+            `<span style="color:#dce8f5;font-weight:700">${val}/100</span> ` +
+            `<span style="margin-left:4px">${tierLabel}</span>${invertNote}`;
+          tipEl.style.display='block';
+        });
+        cell.addEventListener('mousemove', function(e){
+          tipEl.style.left=(e.clientX+14)+'px';
+          tipEl.style.top =(e.clientY-42)+'px';
+        });
+        cell.addEventListener('mouseleave', function(){
+          this.style.filter='';
+          tipEl.style.display='none';
+        });
+      });
+
+      // Column separator every 4 states
+      if(ci>0 && ci%4===0){
+        el('line',{
+          x1:x,y1:LABEL_H,x2:x,y2:LABEL_H+VARS.length*CELL_H,
+          stroke:'rgba(255,255,255,.08)',
+          'stroke-width':'1'
+        }, svg);
+      }
+    });
+
+    // Outer border
+    el('rect',{
+      x:LABEL_W,y:LABEL_H,
+      width:nCols*CELL_W,height:nRows*CELL_H,
+      fill:'none',stroke:'rgba(255,255,255,.07)','stroke-width':'1'
+    }, svg);
+
+    // Row dividers
+    for(let ri=1;ri<nRows;ri++){
+      const y=LABEL_H+ri*CELL_H;
+      el('line',{x1:LABEL_W,y1:y,x2:LABEL_W+nCols*CELL_W,y2:y,
+        stroke:'rgba(255,255,255,.06)','stroke-width':'1'}, svg);
+    }
+  }
+
+  // ── Sort ───────────────────────────────────────────
+  window.sortMatrix = function(key, btn){
+    document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    // For 'resp': sort ascending (lower resp = higher risk = left side)
+    const v = VARS.find(vv=>vv.key===key);
+    if(v && v.invert){
+      currentData = [...STATES].sort((a,b)=>a[key]-b[key]); // low resp (high risk) first
+    } else {
+      currentData = [...STATES].sort((a,b)=>b[key]-a[key]); // high risk first
+    }
+    render();
+  };
+
+  // Initial render sorted by score descending
+  currentData = [...STATES].sort((a,b)=>b.score-a.score);
+  render();
+
+  // Re-render on resize
+  let resizeTimer;
+  window.addEventListener('resize',()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(render,180);
+  });
+})();
+
 </script>
 </body>
 </html>
