@@ -260,7 +260,7 @@ footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--border2);fo
   .chart-box.wide{grid-column:span 1}
   .sgrid{grid-template-columns:1fr}
   .method-row{grid-template-columns:1fr}
-  .pgrid{grid-template-columns:1fr}
+  .pgrid,.pgrid-10{grid-template-columns:1fr}
   #sb-project{flex-direction:row;flex-wrap:wrap;width:100%;gap:.5rem}
   #sb-project .back-btn{display:flex!important;flex:0 0 auto}
   #pnav-fin,#pnav-ai{flex-direction:row;flex-wrap:wrap;gap:.15rem}
@@ -275,9 +275,14 @@ footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--border2);fo
   .main,#project-view{padding:1rem .75rem 2.5rem}
   h1{font-size:clamp(1.3rem,6vw,1.8rem)}
   .hero-ctas{flex-direction:column;align-items:stretch}
-  .cta-tab{justify-content:center}
+  .cta-tab{justify-content:center;text-align:center}
   .name{font-size:.82rem}
 }
+
+/* SORT BUTTONS (heatmap p8) */
+.sort-btn{font-family:var(--fm);font-size:.58rem;padding:.2rem .55rem;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .18s}
+.sort-btn:hover{color:var(--amber);border-color:rgba(245,166,35,.3)}
+.sort-btn.active{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,166,35,.35)}
 
 /* ── HERO TABS ── */
 .hero-ctas{display:flex;gap:.55rem;flex-wrap:wrap;margin-top:1.4rem}
@@ -393,8 +398,8 @@ footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--border2);fo
     <div>
       <div class="slabel">Quién soy</div>
       <p class="about-text">La actuaría me enganchó desde que entendí que los datos no son solo números — son decisiones con consecuencias. No fue un giro repentino hacia Data Science: fue la curiosidad natural de quien siempre quiso ver qué tan lejos llega <strong>un modelo bien hecho</strong>.</p>
-      <p class="about-text" style="margin-top:.55rem">Me obsesiono con los detalles. No en el sentido de perfeccionista ansioso, sino de que si algo vale la pena, <strong>vale la pena hacerlo bien</strong>. Fuera del trabajo: side projects que nadie pidió pero que yo necesitaba construir, deporte para resetear el cerebro, y viajes que me recuerdan que hay problemas más grandes e interesantes que los míos.</p>
-      <p class="about-text" style="margin-top:.55rem">Lo que la gente no espera encontrar en un actuario: que pueda explicarle a <em>cualquier persona</em> — técnica o no — qué está pasando en los datos y <strong>por qué le debería importar</strong>. El storytelling no es decoración del análisis; es la mitad del trabajo.</p>
+      <p class="about-text" style="margin-top:.55rem">Me obsesiono con los detalles. No en el sentido de perfeccionista ansioso, sino de que si algo vale la pena, <strong>vale la pena hacerlo bien</strong>. Fuera del trabajo: side projects que nadie pidió pero que necesitaba construir, deporte para resetear el cerebro, y viajes que recuerdan que hay problemas más grandes e interesantes.</p>
+      <p class="about-text" style="margin-top:.55rem">Lo que la gente no espera de un actuario: que pueda explicarle a <em>cualquier persona</em> — técnica o no — qué está pasando en los datos y <strong>por qué le debería importar</strong>. El storytelling no es decoración del análisis; es la mitad del trabajo.</p>
     </div>
     <div>
       <div class="slabel">En números</div>
@@ -419,9 +424,9 @@ footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--border2);fo
           <div class="cicon"><svg viewBox="0 0 24 24"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></div>
           linkedin.com/in/alejandromanueln
         </a>
-        <a href="https://github.com/tu-usuario" target="_blank" class="contact-item">
+        <a href="https://github.com/ManuelNietoD" target="_blank" class="contact-item">
           <div class="cicon"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></div>
-          github.com/tu-usuario
+          github.com/ManuelNietoD
         </a>
         <a href="mailto:meme.nieto.amn@gmail.com" class="contact-item">
           <div class="cicon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
@@ -497,8 +502,8 @@ footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--border2);fo
         <div class="tl-year">Jul 2024 · Presente<span class="tl-type work">Trabajo</span></div>
         <div class="tl-title">Líder Analytics Digital</div>
         <div class="tl-org" style="color:#34d399">Grupo Firmas Globales · San Nicolás de los Garza, NL</div>
-        <div class="tl-desc">Liderazgo de estrategia analytics digital end-to-end. <strong style="color:rgba(220,232,245,.78)">Automaticé 4 pipelines ETL/ELT en nube</strong> que eliminaron reportes manuales diarios, comprimiendo preparación de datos de horas a minutos. Desarrollé apps Streamlit con agentes de IA integrados para análisis de métricas en lenguaje natural. Implementé modelos ML de segmentación de audiencia y optimización de ingreso con impacto directo en decisiones comerciales del grupo.</div>
-        <div class="tl-tags"><span class="tl-tag">Python</span><span class="tl-tag">Streamlit</span><span class="tl-tag">Agentes IA</span><span class="tl-tag">ETL/ELT</span><span class="tl-tag">SQL avanzado</span><span class="tl-tag">GCP</span><span class="tl-tag">Snowflake</span><span class="tl-tag">Power BI</span></div>
+        <div class="tl-desc">Liderazgo de estrategia analytics digital end-to-end. <strong style="color:rgba(220,232,245,.78)">Automaticé 4 pipelines ETL/ELT en nube</strong> que eliminaron reportes manuales diarios — de horas a minutos. Desarrollé apps Streamlit con agentes de IA para análisis de métricas en lenguaje natural. Implementé modelos ML de segmentación de audiencia y optimización de ingreso con impacto directo en decisiones comerciales del grupo.</div>
+        <div class="tl-tags"><span class="tl-tag">Python</span><span class="tl-tag">Streamlit</span><span class="tl-tag">Agentes IA</span><span class="tl-tag">ETL/ELT</span><span class="tl-tag">SQL avanzado</span><span class="tl-tag">GCP · Snowflake</span><span class="tl-tag">Power BI</span></div>
       </div>
 
       <div class="tl-item">
@@ -506,8 +511,8 @@ footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--border2);fo
         <div class="tl-year">Dic 2023 · Jul 2024<span class="tl-type work">Trabajo</span></div>
         <div class="tl-title">Analista de Datos · Prevención de Fraudes</div>
         <div class="tl-org" style="color:#34d399">Hey Banco · Monterrey, NL</div>
-        <div class="tl-desc">Desarrollé modelo correlacional en <strong style="color:rgba(220,232,245,.78)">Python + PostgreSQL + AWS</strong> combinando datos transaccionales de débito y crédito con variables de comportamiento para detección de patrones de fraude — mejora en clasificación de casos sospechosos con reducción de falsos negativos. Implementé queries avanzados para <strong style="color:rgba(220,232,245,.78)">alertas automáticas y bloqueos preventivos en tiempo real</strong>. Diseñé reportes de monitoreo con KPIs de seguridad consumidos diariamente por operaciones.</div>
-        <div class="tl-tags"><span class="tl-tag">Python</span><span class="tl-tag">SQL · PostgreSQL</span><span class="tl-tag">AWS</span><span class="tl-tag">Detección fraude</span><span class="tl-tag">Alertas RT</span><span class="tl-tag">KPIs</span></div>
+        <div class="tl-desc">Desarrollé modelo correlacional en <strong style="color:rgba(220,232,245,.78)">Python · PostgreSQL · AWS</strong> sobre datos transaccionales de débito y crédito para detección de patrones de fraude — mejora en clasificación con reducción de falsos negativos. Implementé queries avanzados para <strong style="color:rgba(220,232,245,.78)">alertas automáticas y bloqueos preventivos en tiempo real</strong>. Diseñé reportes de monitoreo con KPIs de seguridad consumidos diariamente por el equipo de operaciones.</div>
+        <div class="tl-tags"><span class="tl-tag">Python</span><span class="tl-tag">SQL · PostgreSQL</span><span class="tl-tag">AWS</span><span class="tl-tag">Detección fraude</span><span class="tl-tag">Alertas RT</span><span class="tl-tag">KPIs seguridad</span></div>
       </div>
 
       <div class="tl-item">
@@ -515,7 +520,7 @@ footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--border2);fo
         <div class="tl-year">May 2023 · Dic 2023<span class="tl-type work">Trabajo</span></div>
         <div class="tl-title">Auxiliar Multifactorial · Riesgo de Mercado</div>
         <div class="tl-org" style="color:#34d399">Afore Invercap · Monterrey, NL</div>
-        <div class="tl-desc">Construí <strong style="color:rgba(220,232,245,.78)">tablero dinámico en R · Shiny</strong> para métricas UAIR presentado ante Consejo Directivo — primera herramienta interactiva de monitoreo de riesgo de la institución, reemplazando reportes estáticos en Excel. Realicé análisis cuantitativo de exposición al riesgo de mercado con <strong style="color:rgba(220,232,245,.78)">simulaciones Monte Carlo</strong> y pruebas de hipótesis. Automaticé reportes diarios de cumplimiento <strong style="color:rgba(220,232,245,.78)">CONSAR</strong>, eliminando trabajo manual recurrente del equipo de riesgo.</div>
+        <div class="tl-desc">Construí <strong style="color:rgba(220,232,245,.78)">tablero dinámico en R · Shiny</strong> para métricas UAIR presentado ante Consejo Directivo — primera herramienta interactiva de monitoreo de riesgo, reemplazando reportes estáticos en Excel. Realicé análisis cuantitativo con <strong style="color:rgba(220,232,245,.78)">simulaciones Monte Carlo</strong> para exposición al riesgo de mercado. Automaticé reportes diarios de cumplimiento <strong style="color:rgba(220,232,245,.78)">CONSAR</strong>, eliminando trabajo manual recurrente del equipo.</div>
         <div class="tl-tags"><span class="tl-tag">R · Shiny</span><span class="tl-tag">Monte Carlo</span><span class="tl-tag">CONSAR · UAIR</span><span class="tl-tag">VaR · CVaR</span><span class="tl-tag">Automatización</span></div>
       </div>
 
@@ -575,39 +580,38 @@ footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--border2);fo
         <div class="tl-tags"><span class="tl-tag">Inglés B1</span><span class="tl-tag">Cambridge</span></div>
       </div>
 
-      <!-- CERTIFICACIONES REALES — LinkedIn verificadas -->
       <div class="tl-item">
         <div class="tl-dot course"></div>
-        <div class="tl-year">Mar. 2026<span class="tl-type course" style="background:rgba(0,0,0,.25);color:#dce8f5;border:1px solid rgba(255,255,255,.15)">Anthropic</span></div>
-        <div class="tl-title" style="display:flex;align-items:center;gap:.55rem">
+        <div class="tl-year">Mar. 2026<span class="tl-type course" style="background:rgba(0,0,0,.3);color:#dce8f5;border:1px solid rgba(255,255,255,.18)">Anthropic</span></div>
+        <div class="tl-title" style="display:flex;align-items:center;gap:.55rem;flex-wrap:wrap">
           Claude Code in Action
           <a href="https://www.linkedin.com/in/alejandromanueln" target="_blank" rel="noopener"
-             style="display:inline-flex;align-items:center;gap:.3rem;font-family:var(--fm);font-size:.58rem;color:var(--teal);background:var(--teal-dim);border:1px solid rgba(0,221,180,.25);border-radius:6px;padding:.1rem .45rem;text-decoration:none;transition:all .2s;white-space:nowrap"
+             style="display:inline-flex;align-items:center;gap:.28rem;font-family:var(--fm);font-size:.57rem;color:var(--teal);background:var(--teal-dim);border:1px solid rgba(0,221,180,.25);border-radius:6px;padding:.1rem .42rem;text-decoration:none;transition:all .2s;white-space:nowrap"
              onmouseover="this.style.background='rgba(0,221,180,.2)'" onmouseout="this.style.background='var(--teal-dim)'">
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             Ver credencial
           </a>
         </div>
-        <div class="tl-org" style="color:rgba(220,232,245,.6)">Anthropic · ID: 36wy3vnmtyer</div>
+        <div class="tl-org" style="color:rgba(220,232,245,.55)">Anthropic · ID: 36wy3vnmtyer</div>
         <div class="tl-desc">Certificación en uso avanzado de Claude Code — herramienta de coding agéntico para automatización de flujos de desarrollo, generación de código, testing y pipelines end-to-end con IA.</div>
-        <div class="tl-tags"><span class="tl-tag">Claude Code</span><span class="tl-tag">Anthropic</span><span class="tl-tag">AI Coding</span><span class="tl-tag">Agentes IA</span><span class="tl-tag">mar. 2026</span></div>
+        <div class="tl-tags"><span class="tl-tag">Claude Code</span><span class="tl-tag">Anthropic</span><span class="tl-tag">AI Coding</span><span class="tl-tag">Agentes IA</span></div>
       </div>
 
       <div class="tl-item">
         <div class="tl-dot course"></div>
         <div class="tl-year">Feb. 2026<span class="tl-type course" style="background:rgba(249,115,22,.1);color:var(--amber);border:1px solid rgba(249,115,22,.25)">Admetricks</span></div>
-        <div class="tl-title" style="display:flex;align-items:center;gap:.55rem">
+        <div class="tl-title" style="display:flex;align-items:center;gap:.55rem;flex-wrap:wrap">
           Ad Intelligence de Admetricks
           <a href="https://www.linkedin.com/in/alejandromanueln" target="_blank" rel="noopener"
-             style="display:inline-flex;align-items:center;gap:.3rem;font-family:var(--fm);font-size:.58rem;color:var(--teal);background:var(--teal-dim);border:1px solid rgba(0,221,180,.25);border-radius:6px;padding:.1rem .45rem;text-decoration:none;transition:all .2s;white-space:nowrap"
+             style="display:inline-flex;align-items:center;gap:.28rem;font-family:var(--fm);font-size:.57rem;color:var(--teal);background:var(--teal-dim);border:1px solid rgba(0,221,180,.25);border-radius:6px;padding:.1rem .42rem;text-decoration:none;transition:all .2s;white-space:nowrap"
              onmouseover="this.style.background='rgba(0,221,180,.2)'" onmouseout="this.style.background='var(--teal-dim)'">
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             Ver credencial
           </a>
         </div>
-        <div class="tl-org" style="color:rgba(220,232,245,.6)">Admetricks, a Similarweb Company · ID: 4DM37R1K5</div>
+        <div class="tl-org" style="color:rgba(220,232,245,.55)">Admetricks, a Similarweb Company · ID: 4DM37R1K5</div>
         <div class="tl-desc">Certificación en inteligencia publicitaria digital: monitoreo de pauta competitiva, análisis de inversión en medios, share of voice y métricas de audiencia — aplicado a estrategia de medios y analytics de plataformas digitales.</div>
-        <div class="tl-tags"><span class="tl-tag">Ad Intelligence</span><span class="tl-tag">Admetricks</span><span class="tl-tag">Similarweb</span><span class="tl-tag">Medios digitales</span><span class="tl-tag">feb. 2026</span></div>
+        <div class="tl-tags"><span class="tl-tag">Ad Intelligence</span><span class="tl-tag">Admetricks</span><span class="tl-tag">Similarweb</span><span class="tl-tag">Medios digitales</span></div>
       </div>
 
     </div>
@@ -679,7 +683,9 @@ footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--border2);fo
   <footer>
     <span style="color:var(--muted2)">// <span style="color:var(--teal)">Alejandro Manuel Nieto Delgado</span> · Actuario · DS · Analytics · BI · AI Agents</span>
     <span style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">
-      <a href="https://github.com/ManuelNietoD" target="_blank" style="color:var(--muted2);text-decoration:none;display:flex;align-items:center;gap:.3rem;transition:color .2s" onmouseover="this.style.color='#00ddb4'" onmouseout="this.style.color='#8399b8'">
+      <a href="https://github.com/ManuelNietoD" target="_blank" rel="noopener"
+         style="color:var(--muted2);text-decoration:none;display:flex;align-items:center;gap:.3rem;transition:color .2s"
+         onmouseover="this.style.color='#00ddb4'" onmouseout="this.style.color='#8399b8'">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
         ManuelNietoD
       </a>
@@ -1717,14 +1723,26 @@ function showHome(){
   document.title = 'Portafolio · Actuario & Data Scientist · AI Builder';
 }
 
+// Archivos externos por proyecto
+const PROJECT_FILES={
+  p1:'p1-credit-scoring.html',p2:'p2-portfolio-var.html',
+  p3:'p3-fraud-detection.html',p4:'p4-mortality-tables.html',
+  p5:'p5-rag-regulatorio.html',p6:'p6-risk-copilot.html',
+  p7:'p7-synthetic-data.html',p8:'p8-geo-risk.html',
+  p9:'p9-churn-pipeline.html',p10:'p10-early-warning-pauta.html',
+};
+
 function showProject(pid){
-  const p = PROJECTS.find(x=>x.id===pid);
+  const file=PROJECT_FILES[pid];
+  if(file){window.location.href=file;return;}
+  // fallback embebido
+  const p=PROJECTS.find(x=>x.id===pid);
   if(!p) return;
   document.getElementById('portfolio-view').style.display='none';
   document.getElementById('project-view').style.display='block';
   document.getElementById('sb-portfolio').style.display='none';
   document.getElementById('sb-project').style.display='flex';
-  document.title = p.title.replace(/&amp;/g,'&').replace(/<[^>]+>/g,'');
+  document.title=p.title.replace(/&amp;/g,'&').replace(/<[^>]+>/g,'');
   renderSidebarProjectNav(pid);
   renderDashboard(p);
   window.scrollTo(0,0);
@@ -1950,14 +1968,12 @@ document.querySelectorAll('.card').forEach((c,i)=>{
 });
 </script>
 
-<style>@keyframes fPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.75)}}</style>
+<style>@keyframes fPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.72)}}</style>
 <script>
 (function(){
   var d=new Date();
-  var mm=String(d.getMonth()+1).padStart(2,'0');
-  var yyyy=d.getFullYear();
   var el=document.getElementById('footer-date');
-  if(el) el.textContent=mm+'-'+yyyy;
+  if(el) el.textContent=String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();
 })();
 </script>
 </body>
